@@ -6,32 +6,34 @@
 //  Copyright © 2018, Alibaba Group Holding Limited
 //
 
+#include <cstring>
 #include <errno.h>
 #include <float.h>
+#include <fstream>
+#include <iostream>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <cstring>
-#include <fstream>
-#include <iostream>
 #include <vector>
+#include <dlfcn.h>
+
 #if defined(_MSC_VER)
 #include <Windows.h>
 #undef min
 #undef max
 #else
-#include <sys/time.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <dirent.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <sys/types.h>
 #endif
 
 #include "core/Backend.hpp"
+#include "revertMNNModel.hpp"
 #include <MNN/Interpreter.hpp>
 #include <MNN/MNNDefine.h>
 #include <MNN/Tensor.hpp>
-#include "revertMNNModel.hpp"
 /**
  TODOs:
  1. dynamically get CPU related info.
@@ -43,18 +45,18 @@ struct Model {
 };
 
 #if !defined(_MSC_VER)
-inline bool file_exist(const char* file) {
+inline bool file_exist(const char *file) {
     struct stat buffer;
     return stat(file, &buffer) == 0;
 }
 #endif
 
-std::vector<Model> findModelFiles(const char* dir) {
+std::vector<Model> findModelFiles(const char *dir) {
     std::vector<Model> models;
 #if defined(_MSC_VER)
     WIN32_FIND_DATA ffd;
     HANDLE hFind = INVALID_HANDLE_VALUE;
-    std::string mnn_model_pattern = std::string(dir) + "\\*.mnn"; 
+    std::string mnn_model_pattern = std::string(dir) + "\\*.mnn";
     hFind = FindFirstFile(mnn_model_pattern.c_str(), &ffd);
     if (INVALID_HANDLE_VALUE == hFind) {
         std::cout << "open " << dir << " failed: " << strerror(errno) << std::endl;
@@ -62,25 +64,25 @@ std::vector<Model> findModelFiles(const char* dir) {
     }
     do {
         Model m;
-        m.name       = ffd.cFileName;
+        m.name = ffd.cFileName;
         m.model_file = std::string(dir) + "\\" + m.name;
-        if(INVALID_FILE_ATTRIBUTES != GetFileAttributes(m.model_file.c_str()) && GetLastError() != ERROR_FILE_NOT_FOUND) {
+        if (INVALID_FILE_ATTRIBUTES != GetFileAttributes(m.model_file.c_str()) && GetLastError() != ERROR_FILE_NOT_FOUND) {
             models.push_back(std::move(m));
         }
     } while (FindNextFile(hFind, &ffd) != 0);
     FindClose(hFind);
 #else
-    DIR* root;
+    DIR *root;
     if ((root = opendir(dir)) == NULL) {
         std::cout << "open " << dir << " failed: " << strerror(errno) << std::endl;
         return models;
     }
 
-    struct dirent* ent;
+    struct dirent *ent;
     while ((ent = readdir(root)) != NULL) {
         Model m;
         if (ent->d_name[0] != '.') {
-            m.name       = ent->d_name;
+            m.name = ent->d_name;
             m.model_file = std::string(dir) + "/" + m.name;
             if (file_exist(m.model_file.c_str())) {
                 models.push_back(std::move(m));
@@ -92,8 +94,8 @@ std::vector<Model> findModelFiles(const char* dir) {
     return models;
 }
 
-void setInputData(MNN::Tensor* tensor) {
-    float* data = tensor->host<float>();
+void setInputData(MNN::Tensor *tensor) {
+    float *data = tensor->host<float>();
     for (int i = 0; i < tensor->elementSize(); i++) {
         data[i] = Revert::getRandValue();
     }
@@ -116,33 +118,43 @@ static inline uint64_t getTimeInUs() {
     return time;
 }
 
-std::vector<float> doBench(Model& model, int loop, int warmup = 10, int forward = MNN_FORWARD_CPU, bool only_inference = true,
-                           int numberThread = 4, int precision = 2) {
+std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward = MNN_FORWARD_CPU, bool only_inference = true,
+                           int numberThread = 4, int precision = 2, int batch = 1) {
     auto revertor = std::unique_ptr<Revert>(new Revert(model.model_file.c_str()));
     revertor->initialize();
-    auto modelBuffer      = revertor->getBuffer();
+    auto modelBuffer = revertor->getBuffer();
     const auto bufferSize = revertor->getBufferSize();
     auto net = std::shared_ptr<MNN::Interpreter>(MNN::Interpreter::createFromBuffer(modelBuffer, bufferSize));
     revertor.reset();
     MNN::ScheduleConfig config;
     config.numThread = numberThread;
-    config.type      = static_cast<MNNForwardType>(forward);
+    config.type = static_cast<MNNForwardType>(forward);
     MNN::BackendConfig backendConfig;
     backendConfig.precision = (MNN::BackendConfig::PrecisionMode)precision;
     backendConfig.power = MNN::BackendConfig::Power_High;
     config.backendConfig = &backendConfig;
 
     std::vector<float> costs;
-    MNN::Session* session = net->createSession(config);
-    net->releaseModel();
-    MNN::Tensor* input    = net->getSessionInput(session, NULL);
+    MNN::Session *session = net->createSession(config);
+    MNN::Tensor *input = net->getSessionInput(session, NULL);
+
+    auto inputShape = input->shape();
+
+    std::cout << "Input shape : " << inputShape[0] << " " << inputShape[1] << " " << inputShape[2] << " " << inputShape[3] << " " << std::endl;
+
+    if (inputShape[0] != batch) {
+        inputShape[0] = batch;
+        net->resizeTensor(input, inputShape);
+        net->resizeSession(session);
+        std::cout << "Resized to " << batch << std::endl;
+    }
 
     // if the model has not the input dimension, umcomment the below code to set the input dims
     // std::vector<int> dims{1, 3, 224, 224};
     // net->resizeTensor(input, dims);
     // net->resizeSession(session);
 
-    const MNN::Backend* inBackend = net->getBackend(session, input);
+    const MNN::Backend *inBackend = net->getBackend(session, input);
 
     std::shared_ptr<MNN::Tensor> givenTensor(MNN::Tensor::createHostTensorFromDevice(input, false));
 
@@ -168,7 +180,7 @@ std::vector<float> doBench(Model& model, int loop, int warmup = 10, int forward 
     return costs;
 }
 
-void displayStats(const std::string& name, const std::vector<float>& costs) {
+void displayStats(const std::string &name, const std::vector<float> &costs) {
     float max = 0, min = FLT_MAX, sum = 0, avg;
     for (auto v : costs) {
         max = fmax(max, v);
@@ -181,39 +193,37 @@ void displayStats(const std::string& name, const std::vector<float>& costs) {
 }
 static inline std::string forwardType(MNNForwardType type) {
     switch (type) {
-        case MNN_FORWARD_CPU:
-            return "CPU";
-        case MNN_FORWARD_VULKAN:
-            return "Vulkan";
-        case MNN_FORWARD_OPENCL:
-            return "OpenCL";
-        case MNN_FORWARD_METAL:
-            return "Metal";
-        default:
-            break;
+    case MNN_FORWARD_CPU:
+        return "CPU";
+    case MNN_FORWARD_VULKAN:
+        return "Vulkan";
+    case MNN_FORWARD_OPENCL:
+        return "OpenCL";
+    case MNN_FORWARD_METAL:
+        return "Metal";
+    default:
+        break;
     }
     return "N/A";
 }
 
-
-
 #ifdef __ANDROID__
 #include <errno.h>
-#include <unistd.h>
 #include <sys/prctl.h>
 #include <sys/syscall.h>
+#include <unistd.h>
 
 #define BUFFER_SIZE 1024
 
 static uint32_t getNumberOfCPU() {
-    FILE* fp = fopen("/proc/cpuinfo", "rb");
+    FILE *fp = fopen("/proc/cpuinfo", "rb");
     if (!fp) {
         return 1;
     }
     uint32_t number = 0;
     char buffer[BUFFER_SIZE];
     while (!feof(fp)) {
-        char* str = fgets(buffer, BUFFER_SIZE, fp);
+        char *str = fgets(buffer, BUFFER_SIZE, fp);
         if (!str) {
             break;
         }
@@ -231,7 +241,7 @@ static uint32_t getNumberOfCPU() {
 static int getCPUMaxFreqKHz(int cpuID) {
     char path[256];
     sprintf(path, "/sys/devices/system/cpu/cpufreq/stats/cpu%d/time_in_state", cpuID);
-    FILE* fp = fopen(path, "rb");
+    FILE *fp = fopen(path, "rb");
     if (!fp) {
         sprintf(path, "/sys/devices/system/cpu/cpu%d/cpufreq/stats/time_in_state", cpuID);
         fp = fopen(path, "rb");
@@ -250,7 +260,7 @@ static int getCPUMaxFreqKHz(int cpuID) {
     int maxfrequency = 0;
     while (!feof(fp)) {
         int frequency = 0;
-        int history   = fscanf(fp, "%d %*d", &frequency);
+        int history = fscanf(fp, "%d %*d", &frequency);
         if (history != 1) {
             break;
         }
@@ -262,7 +272,7 @@ static int getCPUMaxFreqKHz(int cpuID) {
     return maxfrequency;
 }
 
-static int sortCPUIDByMaxFrequency(std::vector<int>& cpuIDs, int* littleClusterOffset) {
+static int sortCPUIDByMaxFrequency(std::vector<int> &cpuIDs, int *littleClusterOffset) {
     const int cpuNumbers = cpuIDs.size();
     *littleClusterOffset = 0;
     if (cpuNumbers == 0) {
@@ -271,8 +281,8 @@ static int sortCPUIDByMaxFrequency(std::vector<int>& cpuIDs, int* littleClusterO
     std::vector<int> cpusFrequency;
     cpusFrequency.resize(cpuNumbers);
     for (int i = 0; i < cpuNumbers; ++i) {
-        int frequency    = getCPUMaxFreqKHz(i);
-        cpuIDs[i]        = i;
+        int frequency = getCPUMaxFreqKHz(i);
+        cpuIDs[i] = i;
         cpusFrequency[i] = frequency;
         // MNN_PRINT("cpu fre: %d, %d\n", i, frequency);
     }
@@ -280,11 +290,11 @@ static int sortCPUIDByMaxFrequency(std::vector<int>& cpuIDs, int* littleClusterO
         for (int j = i + 1; j < cpuNumbers; ++j) {
             if (cpusFrequency[i] < cpusFrequency[j]) {
                 // id
-                int temp  = cpuIDs[i];
+                int temp = cpuIDs[i];
                 cpuIDs[i] = cpuIDs[j];
                 cpuIDs[j] = temp;
                 // frequency
-                temp             = cpusFrequency[i];
+                temp = cpusFrequency[i];
                 cpusFrequency[i] = cpusFrequency[j];
                 cpusFrequency[j] = temp;
             }
@@ -303,21 +313,19 @@ static int sortCPUIDByMaxFrequency(std::vector<int>& cpuIDs, int* littleClusterO
     return 0;
 }
 
-
 //#define CPU_SETSIZE 1024
-#define __NCPUBITS  (8 * sizeof (unsigned long))
+#define __NCPUBITS (8 * sizeof(unsigned long))
 
 #endif
 
-void set_cpu_affinity()
-{
+void set_cpu_affinity() {
 #ifdef __ANDROID__
     int cpu_core_num = sysconf(_SC_NPROCESSORS_CONF);
     //LOG_MCNN_CL_INF("cpu core num = %d\n", cpu_core_num);
     int cpu_id = 0;
     cpu_set_t mask;
     CPU_ZERO(&mask);
-    
+
     auto numberOfCPUs = getNumberOfCPU();
     static std::vector<int> sortedCPUIDs;
     static int littleClusterOffset = 0;
@@ -330,30 +338,27 @@ void set_cpu_affinity()
     }
 
     printf("max core:");
-    for (cpu_id = 0; cpu_id < littleClusterOffset; cpu_id++)
-    {
+    for (cpu_id = 0; cpu_id < littleClusterOffset; cpu_id++) {
         printf("%d ", sortedCPUIDs[cpu_id]);
         CPU_SET(sortedCPUIDs[cpu_id], &mask);
     }
     printf("\n");
 
-
     int sys_call_res = syscall(__NR_sched_setaffinity, gettid(), sizeof(mask), &mask);
     //LOG_MCNN_CL_INF("sys call res = %d\n", sys_call_res);
-    if (sys_call_res)
-    {
+    if (sys_call_res) {
         printf("set_cpu_affinity errno = %d\n", (int)errno);
     }
 #endif
 }
 
-
-int main(int argc, const char* argv[]) {
+int main(int argc, const char *argv[]) {
     std::cout << "MNN benchmark" << std::endl;
-    int loop               = 10;
-    int warmup             = 10;
+    auto handle = dlopen("libMNN_CL.so", RTLD_NOW);
+    int loop = 10;
+    int warmup = 10;
     MNNForwardType forward = MNN_FORWARD_CPU;
-    int numberThread       = 4;
+    int numberThread = 4;
     if (argc <= 2) {
         std::cout << "Usage: " << argv[0] << " models_folder [loop_count] [warmup] [forwardtype] [numberThread] [precision]" << std::endl;
         return 1;
@@ -374,16 +379,20 @@ int main(int argc, const char* argv[]) {
     if (argc >= 7) {
         precision = atoi(argv[6]);
     }
-    std::cout << "Forward type: **" << forwardType(forward) << "** thread=" << numberThread << "** precision=" <<precision << std::endl;
+    int batch = 1;
+    if (argc >= 8) {
+        batch = atoi(argv[7]);
+    }
+    std::cout << "Forward type: **" << forwardType(forward) << "** thread=" << numberThread << "** precision=" << precision << std::endl;
     std::vector<Model> models = findModelFiles(argv[1]);
 
     std::cout << "--------> Benchmarking... loop = " << argv[2] << ", warmup = " << warmup << std::endl;
-    
+
     /* not called yet */
     // set_cpu_affinity();
-    
-    for (auto& m : models) {
-        std::vector<float> costs = doBench(m, loop, warmup, forward, false, numberThread, precision);
+
+    for (auto &m : models) {
+        std::vector<float> costs = doBench(m, loop, warmup, forward, false, numberThread, precision, batch);
         displayStats(m.name, costs);
     }
 }
