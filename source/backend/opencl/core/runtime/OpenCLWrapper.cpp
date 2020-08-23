@@ -43,6 +43,7 @@ static const std::vector<std::string> gOpencl_library_paths = {
     "/usr/local/lib/libpocl.so",
     "/usr/lib64/libOpenCL.so",
     "/usr/lib32/libOpenCL.so",
+    "/usr/lib/x86_64-linux-gnu/libOpenCL.so",
     "libOpenCL.so"
 #endif
 };
