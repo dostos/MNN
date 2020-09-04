@@ -253,6 +253,15 @@ void Tensor::setType(int type) {
     }
 }
 
+void Tensor::setName(std::string name) {
+    mName = name;
+}
+
+const std::string& Tensor::getName() const {
+    return mName;
+}
+
+
 std::vector<int> Tensor::shape() const {
     std::vector<int> result;
     for (int i = 0; i < mBuffer.dimensions; ++i) {

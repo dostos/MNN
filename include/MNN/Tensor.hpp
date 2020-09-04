@@ -10,6 +10,7 @@
 #define Tensor_hpp
 
 #include <vector>
+#include <string>
 #include <MNN/HalideRuntime.h>
 #include <MNN/MNNDefine.h>
 
@@ -173,6 +174,9 @@ public:
     inline halide_type_t getType() const {
         return mBuffer.type;
     }
+    
+    void setName(std::string name);
+    const std::string& getName() const;
 
     /**
      * @brief visit host memory, data type is represented by `T`.
@@ -268,6 +272,7 @@ public:
 private:
     halide_buffer_t mBuffer;
     struct InsideDescribe* mDescribe;
+    std::string mName;
 
 private:
     friend class TensorUtils;
