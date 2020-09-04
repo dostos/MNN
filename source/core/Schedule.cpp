@@ -129,6 +129,7 @@ static bool _setUpTensorInfo(std::vector<std::shared_ptr<Tensor>>& allTensors, c
     for (int i = 0; i < tensors.size(); ++i) {
         tensors[i].reset(new Tensor(4)); // NCHW, TODO
         tensors[i]->setType(DataType_DT_FLOAT);
+        tensors[i]->setName(net->tensorName()->GetAsString(i)->c_str());
     }
     // Set Input Tensor, if the type of input is not the same with ExtraTensorDescribe, use input parameter
     for (int opIndex = 0; opIndex < net->oplists()->size(); ++opIndex) {

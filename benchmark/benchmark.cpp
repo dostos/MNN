@@ -30,6 +30,8 @@
 #endif
 
 #include "core/Backend.hpp"
+#include "core/Session.hpp"
+#include "core/TensorUtils.hpp"
 #include "revertMNNModel.hpp"
 #include <MNN/Interpreter.hpp>
 #include <MNN/MNNDefine.h>
@@ -125,6 +127,7 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
     auto modelBuffer = revertor->getBuffer();
     const auto bufferSize = revertor->getBufferSize();
     auto net = std::shared_ptr<MNN::Interpreter>(MNN::Interpreter::createFromBuffer(modelBuffer, bufferSize));
+
     revertor.reset();
     MNN::ScheduleConfig config;
     config.numThread = numberThread;
@@ -136,7 +139,13 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
 
     std::vector<float> costs;
     MNN::Session *session = net->createSession(config);
+    MNN::Session *session2 = net->createSession(config);
     MNN::Tensor *input = net->getSessionInput(session, NULL);
+
+    for(auto i : session->getTensors()) {
+        std::cout << i.first << std::endl;
+        i.second->printShape();
+    }
 
     auto inputShape = input->shape();
 
@@ -146,7 +155,20 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
         inputShape[0] = batch;
         net->resizeTensor(input, inputShape);
         net->resizeSession(session);
+        net->resizeSession(session2);
         std::cout << "Resized to " << batch << std::endl;
+    }
+    
+    for(auto i : session->getTensors()) {
+        std::cout << i.first << std::endl;
+        std::cout << i.second->getName() << std::endl;
+        i.second->printShape();
+    }
+    
+    for(auto i : session2->getTensors()) {
+        std::cout << i.first << std::endl;
+        std::cout << i.second->getName() << std::endl;
+        i.second->printShape();
     }
 
     // if the model has not the input dimension, umcomment the below code to set the input dims
