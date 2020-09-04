@@ -102,6 +102,7 @@ public:
      */
     const std::map<std::string, Tensor*>& getOutputAll() const;
     const std::map<std::string, Tensor*>& getInputAll() const;
+    const std::vector<std::pair<int, std::shared_ptr<Tensor>>>& getTensors() const;
 
     /**
      * @brief check session is valid or not.

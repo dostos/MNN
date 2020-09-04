@@ -314,6 +314,11 @@ uint64_t OpenCLRuntime::GetKernelWaveSize(const cl::Kernel &kernel) {
     return kernelWaveSize;
 }
 
+uint64_t OpenCLRuntime::getMaxLocalMem() const {
+    return mFirstGPUDevicePtr->getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
+
+}
+
 double OpenCLRuntime::getCostTime(const cl::Event *event){
     //cl_int res = mCommandQueuePtr->finish();
     cl_int res = event->wait();

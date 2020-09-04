@@ -209,6 +209,10 @@ const std::map<std::string, Tensor*>& Session::getOutputAll() const {
     return mOutputs;
 }
 
+const std::vector<std::pair<int, std::shared_ptr<Tensor>>>& Session::getTensors() const {
+    return mTensors;
+}
+
 ErrorCode Session::releaseCache() {
     for (auto& p : mPipelines) {
         auto code = p->releaseCache();

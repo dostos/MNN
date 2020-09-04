@@ -46,7 +46,7 @@ add_custom_target (GenVCSHDR DEPENDS "${CMAKE_CURRENT_LIST_DIR}/include/MNN/VCS.
 # Required for OpenCL/OpenGL/Vulkan CodeGen
 include(FindPythonInterp REQUIRED)
 # build options
-option(MNN_USE_SYSTEM_LIB "For opencl and vulkan, use system lib or use dlopen" ON)
+option(MNN_USE_SYSTEM_LIB "For opencl and vulkan, use system lib or use dlopen" OFF)
 option(MNN_BUILD_HARD "Build -mfloat-abi=hard or not" OFF)
 option(MNN_BUILD_SHARED_LIBS "MNN build shared or static lib" ON)
 option(MNN_FORBID_MULTI_THREAD "Disable Multi Thread" OFF)
@@ -275,12 +275,14 @@ endif()
 include_directories(${CMAKE_CURRENT_LIST_DIR}/include/
                     ${CMAKE_CURRENT_LIST_DIR}/source/
                     ${CMAKE_CURRENT_LIST_DIR}/schema/current/
-                    ${CMAKE_CURRENT_LIST_DIR}/3rd_party/
-                    ${CMAKE_CURRENT_LIST_DIR}/3rd_party/flatbuffers/include
-                    ${CMAKE_CURRENT_LIST_DIR}/3rd_party/half
-                    ${CMAKE_CURRENT_LIST_DIR}/3rd_party/imageHelper
-                    ${CMAKE_CURRENT_LIST_DIR}/3rd_party/OpenCLHeaders/
                   )
+
+include_directories(SYSTEM
+${CMAKE_CURRENT_LIST_DIR}/3rd_party/
+${CMAKE_CURRENT_LIST_DIR}/3rd_party/flatbuffers/include
+${CMAKE_CURRENT_LIST_DIR}/3rd_party/half
+${CMAKE_CURRENT_LIST_DIR}/3rd_party/imageHelper
+${CMAKE_CURRENT_LIST_DIR}/3rd_party/OpenCLHeaders/)
 
 
 set(MNN_OBJECTS_TO_LINK "")
