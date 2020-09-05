@@ -1,4 +1,6 @@
-add_custom_command(OUTPUT "${CMAKE_CURRENT_LIST_DIR}/execution/cl/opencl_program.cc"
+add_custom_command(OUTPUT 
+        "${CMAKE_CURRENT_LIST_DIR}/execution/cl/__opencl_program.cc" # Hack to always rebuild
+        "${CMAKE_CURRENT_LIST_DIR}/execution/cl/opencl_program.cc"
     COMMAND ${PYTHON_EXECUTABLE}
     "${CMAKE_CURRENT_LIST_DIR}/execution/cl/opencl_codegen.py"
     "${CMAKE_CURRENT_LIST_DIR}/execution/cl/"
