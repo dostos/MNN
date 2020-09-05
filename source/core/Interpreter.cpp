@@ -21,7 +21,6 @@ struct Content {
     AutoStorage<uint8_t> buffer;
     const Net* net = nullptr;
     std::vector<std::unique_ptr<Session>> sessions;
-    std::map<const Tensor*, const Session*> tensorMap;
 };
 
 Interpreter* Interpreter::createFromFile(const char* file) {
@@ -130,15 +129,6 @@ Session* Interpreter::createSession(const ScheduleConfig& config) {
 
 bool Interpreter::releaseSession(Session* session) {
     for (auto iter = mNet->sessions.begin(); iter != mNet->sessions.end(); iter++) {
-        // TODO Delete tensormap
-        for (auto tIter = mNet->tensorMap.begin(); tIter != mNet->tensorMap.end();) {
-            if (tIter->second == session) {
-                tIter = mNet->tensorMap.erase(tIter);
-                continue;
-            }
-            tIter++;
-        }
-
         if ((*iter).get() == session) {
             mNet->sessions.erase(iter);
             return true;
@@ -157,30 +147,22 @@ Tensor* Interpreter::getSessionInput(const Session* session, const char* name) {
         return nullptr;
     }
     auto tensor = session->getInput(name);
-    mNet->tensorMap.insert(std::make_pair(tensor, session));
     return tensor;
 }
 
 Tensor* Interpreter::getSessionOutput(const Session* session, const char* name) {
     MNN_ASSERT(nullptr != session);
     auto tensor = session->getOutput(name);
-    mNet->tensorMap.insert(std::make_pair(tensor, session));
     return tensor;
 }
 
 const std::map<std::string, Tensor*>& Interpreter::getSessionInputAll(const Session* session) const {
     auto& tensors = session->getInputAll();
-    for (auto& iter : tensors) {
-        mNet->tensorMap.insert(std::make_pair(iter.second, session));
-    }
     return tensors;
 }
 
 const std::map<std::string, Tensor*>& Interpreter::getSessionOutputAll(const Session* session) const {
     auto& tensors = session->getOutputAll();
-    for (auto& iter : tensors) {
-        mNet->tensorMap.insert(std::make_pair(iter.second, session));
-    }
     return tensors;
 }
 
@@ -252,9 +234,14 @@ void Interpreter::resizeTensor(Tensor* tensor, const std::vector<int>& dims) {
         tensor->buffer().dim[i].extent = dims[i];
     }
 
-    auto relatedSessionIter = mNet->tensorMap.find(tensor);
-    MNN_ASSERT(relatedSessionIter != mNet->tensorMap.end());
-    ((MNN::Session*)relatedSessionIter->second)->setNeedResize();
+    for(auto& iter : mNet->sessions) {
+        for(auto t : iter->getTensors()) {
+            if(t.second.get() == tensor) {
+                iter->setNeedResize();
+                break;
+            }
+        }
+    }
 }
 
 const char* Interpreter::bizCode() const {
