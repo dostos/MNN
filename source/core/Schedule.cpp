@@ -409,7 +409,9 @@ Schedule::ScheduleInfo Schedule::schedule(const Net* net, const std::vector<Sche
             std::make_pair(net->tensorName()->GetAsString(index)->c_str(), allTensors[index].get()));
     }
 
+    size_t index = 0;
     for (auto& t : allTensors) {
+        TensorUtils::getDescribe(t.get())->name = net->tensorName()->GetAsString(index++)->c_str();
         schedule.allTensors.emplace_back(std::make_pair(0, std::move(t)));
     }
 

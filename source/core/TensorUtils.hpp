@@ -10,6 +10,7 @@
 #define TensorUtils_hpp
 
 #include <MNN/Tensor.hpp>
+#include <string>
 #include "Tensor_generated.h"
 
 #ifdef CONST
@@ -46,6 +47,7 @@ public:
         TRAINABLE,
     };
     Usage usage = NORMAL;
+    std::string name;
 };
 typedef Tensor::InsideDescribe::Usage TensorUsage;
 
