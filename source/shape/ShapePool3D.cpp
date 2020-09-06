@@ -55,8 +55,8 @@ public:
     }
 
     virtual float onComputeFlops(const MNN::Op* op, const std::vector<Tensor*>& inputs,
-                                 const std::vector<Tensor*>& outputs) const override {
-        auto size  = (float)outputs[0]->elementSize() / 1024.0f / 1024.0f;
+                                 const std::vector<Tensor*>& outputs, const int batch) const override {
+        auto size  = (float)outputs[0]->elementSize() / 1024.0f / 1024.0f * batch / outputs[0]->batch();
         auto layer = op->main_as_Pool3D();
         float flopsPerElement = 1;
         for (auto kernel: *layer->kernels()) {
