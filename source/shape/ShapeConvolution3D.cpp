@@ -59,7 +59,7 @@ public:
     }
 
     virtual float onComputeFlops(const MNN::Op* op, const std::vector<Tensor*>& inputs,
-                                 const std::vector<Tensor*>& outputs) const override {
+                                 const std::vector<Tensor*>& outputs, const int batch) const override {
         auto layer = op->main_as_Convolution3D()->common();
         int oSize = outputs[0]->length(1);
         float flopsPerElement = inputs[0]->length(1);

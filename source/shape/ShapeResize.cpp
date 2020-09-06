@@ -31,8 +31,8 @@ class ResizeComputer : public SizeComputer {
         return true;
     }
     virtual float onComputeFlops(const MNN::Op *op, const std::vector<Tensor *> &inputs,
-                                 const std::vector<Tensor *> &outputs) const override {
-        return (float)outputs[0]->elementSize() / 1024.0f / 1024.0f * 4;
+                                 const std::vector<Tensor *> &outputs, const int batch) const override {
+        return (float)outputs[0]->elementSize() / 1024.0f / 1024.0f * 4 * batch / outputs[0]->batch();
     }
 };
 

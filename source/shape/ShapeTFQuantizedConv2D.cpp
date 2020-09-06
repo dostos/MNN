@@ -52,7 +52,7 @@ class TFQuantizedConv2DComputer : public SizeComputer {
     }
 
     virtual float onComputeFlops(const MNN::Op* op, const std::vector<Tensor*>& inputs,
-                                 const std::vector<Tensor*>& outputs) const override {
+                                 const std::vector<Tensor*>& outputs, const int batch) const override {
         auto layer = op->main_as_TfQuantizedConv2D()->common();
         auto kw    = layer->kernelX();
         auto kh    = layer->kernelY();
@@ -62,7 +62,7 @@ class TFQuantizedConv2DComputer : public SizeComputer {
         }
         auto ic    = inputs[0]->channel();
         auto oc    = outputs[0]->channel();
-        auto oSize = outputs[0]->width() * outputs[0]->height() * outputs[0]->batch();
+        auto oSize = outputs[0]->width() * outputs[0]->height() * batch;
 
         return (float)oSize * kw * kh * (ic * oc / group) / FLOPS_M;
     }
