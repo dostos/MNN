@@ -26,6 +26,7 @@ struct ScheduleConfig {
     MNNForwardType type = MNN_FORWARD_CPU;
     /** number of threads in parallel */
     int numThread = 4;
+    int maxBatch = 10;
 
     /** subpath to run */
     struct Path {
@@ -188,6 +189,8 @@ public:
      */
     ErrorCode runSessionWithCallBackInfo(const Session* session, const TensorCallBackWithInfo& before,
                                          const TensorCallBackWithInfo& end, bool sync = false) const;
+
+    ErrorCode runSessionBatch(Session* session, const std::vector<int>& batchIndexes) const;
 
     /**
      * @brief get input tensor for given name.

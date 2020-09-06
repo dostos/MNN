@@ -33,10 +33,12 @@ void depthwise_conv2d_s1(GLOBAL_SIZE_2_DIMS __read_only image2d_t input, __read_
                                   __private const int inChannelBlocks, 
                                   __private const int2 outputShape,
                                   __private const int2 filterShape,
-                                  __private const int2 paddingShape) {
+                                  __private const int2 paddingShape,
+                                  __private const int4 batchIndexes) {
+    const int batch = getBatchIndex(batchIndexes, get_global_id(1) / outputShape.x);
 
     const int outChannelWidthIdx = get_global_id(0);
-    const int outHeightBlockIdx     = get_global_id(1);
+    const int outHeightBlockIdx     = mad24(batch, outputShape.x, get_global_id(1) % outputShape.x);
     DEAL_NON_UNIFORM_DIM2(outChannelWidthIdx, outHeightBlockIdx);
     int ow4              = (outputShape.y + 3) / 4;
     const int outChannelBlockIdx = outChannelWidthIdx / ow4;
@@ -56,7 +58,7 @@ void depthwise_conv2d_s1(GLOBAL_SIZE_2_DIMS __read_only image2d_t input, __read_
     const int inWidthOffset3             = inWidthOffset0 + 3;
 
     int heightIdx            = outHeightBlockIdx % outputShape.x - paddingShape.x;
-    const int outBatchIdx = mul24((outHeightBlockIdx / outputShape.x), inputShape.x);
+    const int outBatchIdx = mul24(batch, inputShape.x);
     const int inCurIdx = mul24(inChannelBlockIdx, inputShape.y);
 
     const int inWidthIdx0 = select(inCurIdx + inWidthOffset0, -1, (inWidthOffset0 < 0 || inWidthOffset0 >= inputShape.y));
@@ -135,10 +137,12 @@ void depthwise_conv2d(GLOBAL_SIZE_2_DIMS __read_only image2d_t input, __read_onl
                                __private const int2 filterShape,
                                __private const int2 paddingShape,
                                __private const int2 dilationShape,
-                               __private const int2 strideShape) {
+                               __private const int2 strideShape,
+                               __private const int4 batchIndexes) {
+    const int batch = getBatchIndex(batchIndexes, get_global_id(1) / outputShape.x);
 
     const int outChannelWidthIdx = get_global_id(0);
-    const int outHeightIdx     = get_global_id(1);
+    const int outHeightIdx     = mad24(batch, outputShape.x, get_global_id(1) % outputShape.x);
     DEAL_NON_UNIFORM_DIM2(outChannelWidthIdx, outHeightIdx);
 
     int ow4              = (outputShape.y + 3) / 4;
@@ -158,7 +162,7 @@ void depthwise_conv2d(GLOBAL_SIZE_2_DIMS __read_only image2d_t input, __read_onl
     const int inWidthOffset3  = inWidthOffset2 + strideShape.y;
     int heightIdx = mad24(outHeightIdx % outputShape.x, strideShape.x, -paddingShape.x);
 
-    const int outBatchIdx = mul24((outHeightIdx / outputShape.x), inputShape.x);
+    const int outBatchIdx = mul24(batch, inputShape.x);
 
     const int inCurIdx = mul24(inChannelBlockIdx, inputShape.y);
     for (int kh = 0; kh < filterShape.x; kh++) {

@@ -114,6 +114,21 @@ ErrorCode Session::run() const {
     return NO_ERROR;
 }
 
+ErrorCode Session::runBatch(const std::vector<int>& batchIndexes) const {
+    if (mNeedResize) {
+        MNN_ERROR("Can't run session because not resized\n");
+        return COMPUTE_SIZE_ERROR;
+    }
+    for (auto& iter : mPipelines) {
+        iter->prepareBatch(batchIndexes);
+        auto error = iter->execute();
+        if (NO_ERROR != error) {
+            return error;
+        }
+    }
+    return NO_ERROR;
+}
+
 ErrorCode Session::runWithCallBack(const TensorCallBackWithInfo& before, const TensorCallBackWithInfo& end,
                                    bool sync) const {
     if (mNeedResize) {

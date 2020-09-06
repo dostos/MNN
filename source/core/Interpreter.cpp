@@ -141,6 +141,10 @@ ErrorCode Interpreter::runSession(Session* session) const {
     return session->run();
 }
 
+ErrorCode Interpreter::runSessionBatch(Session* session, const std::vector<int>& batchIndexes) const {
+    return session->runBatch(batchIndexes);
+}
+
 Tensor* Interpreter::getSessionInput(const Session* session, const char* name) {
     MNN_ASSERT(nullptr != session);
     if (session == nullptr) {

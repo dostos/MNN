@@ -24,14 +24,17 @@
 
 #define MNN_CHECK_NOTNULL(X) MNN_ASSERT(X != NULL)
 
+
+const char *__GetErrorString(cl_int error);
+
 #define MNN_CHECK_CL_SUCCESS(error)                  \
     if (error != CL_SUCCESS) {                       \
-        MNN_PRINT("ERROR CODE : %d \n", (int)error); \
+        MNN_PRINT("ERROR CODE : %d %s \n", (int)error, __GetErrorString(error)); \
+        MNN_ASSERT(error == CL_SUCCESS)\
     }
 #ifdef MNN_USE_LIB_WRAPPER
 
 namespace MNN {
-
 void LoadOpenCLSymbols();
 void UnLoadOpenCLSymbols();
 

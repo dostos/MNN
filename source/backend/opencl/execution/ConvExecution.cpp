@@ -12,6 +12,7 @@
 #include "core/ConvolutionCommon.hpp"
 #include "core/Macro.h"
 #include "core/TensorUtils.hpp"
+#include "core/BatchUtils.hpp"
 #include "backend/opencl/core/OpenCLBackend.hpp"
 #include "backend/opencl/core/OpenCLRunningUtils.hpp"
 
@@ -333,7 +334,7 @@ ConvExecution::ConvExecution(const std::vector<Tensor *> &inputs, const MNN::Op 
     mOpenCLBackend                 = static_cast<OpenCLBackend *>(backend);
     const auto *conv2dParams       = op->main_as_Convolution2D();
     const auto *conv2dCommonParams = conv2dParams->common();
-    mConv2dCommonParams            = conv2dCommonParams;
+    mConv2dCommonParams            = conv2dCommonParams;    
     mStrides                       = {conv2dCommonParams->strideY(), conv2dCommonParams->strideX()};
     mDilations                     = {conv2dCommonParams->dilateY(), conv2dCommonParams->dilateX()};
 
@@ -498,6 +499,16 @@ ConvExecution::~ConvExecution() {
 }
 
 ErrorCode ConvExecution::onResize(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) {
+    int numBatch = outputs[0]->batch();
+    std::vector<int> batchIndexes(numBatch);
+    for(int i = 0; i < numBatch; i++) {
+        batchIndexes[i] = i;
+    }
+    return onResize(inputs, outputs, batchIndexes);
+}
+
+ErrorCode ConvExecution::onResize(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs, const std::vector<int>& batchIndexes) {
+    
 #ifdef LOG_VERBOSE
     MNN_PRINT("Start ConvExecution onResize !\n");
 #endif
@@ -533,6 +544,11 @@ ErrorCode ConvExecution::onResize(const std::vector<Tensor *> &inputs, const std
     mPaddings[0] = std::max(mPaddings[0], 0);
     mPaddings[1] = std::max(mPaddings[1], 0);
 
+    int inputImageShape[2]  = {inputHeight, inputWidth};
+    int outputImageShape[2] = {height, width};
+
+    std::array<int32_t, 4> batchBits = getBatchBits(batchIndexes);
+
     if (kernelHeight == kernelWidth && kernelHeight == 1 && mPaddings[0] == 0 && mPaddings[1] == 0) {
         if(mConv1x1Opt){
 
@@ -541,7 +557,7 @@ ErrorCode ConvExecution::onResize(const std::vector<Tensor *> &inputs, const std
 
             if(mUseLocalMem){
                 mGlobalWorkSize = {static_cast<uint32_t>(UP_DIV(outputShape.at(3), 4)), static_cast<uint32_t>(UP_DIV(outputShape.at(2), 4)),
-                static_cast<uint32_t>(outputShape.at(0) * outputShape.at(1))};
+                static_cast<uint32_t>(batchIndexes.size() * outputShape.at(1))};
                 std::vector<uint32_t> lws{UNIT, UNIT, 1};
                 mLocalWorkSize = lws;
                 kernel->setArg(idx++, mGlobalWorkSize[0]);
@@ -554,9 +570,10 @@ ErrorCode ConvExecution::onResize(const std::vector<Tensor *> &inputs, const std
                 kernel->setArg(idx++, static_cast<int>(inputChannelBlocks));
                 kernel->setArg(idx++, height);
                 kernel->setArg(idx++, width);
+                kernel->setArg(idx++, batchBits.size() * sizeof(int32_t), batchBits.data());
             }else{
                 mGlobalWorkSize = {static_cast<uint32_t>(UP_DIV(outputShape.at(3), 4) * UP_DIV(outputShape.at(2), 4)),
-                           static_cast<uint32_t>(outputShape.at(0) * outputShape.at(1))};
+                           static_cast<uint32_t>(batchIndexes.size() * outputShape.at(1))};
                 kernel->setArg(idx++, mGlobalWorkSize[0]);
                 kernel->setArg(idx++, mGlobalWorkSize[1]);
                 kernel->setArg(idx++, UP_DIV(width, 4));
@@ -567,6 +584,7 @@ ErrorCode ConvExecution::onResize(const std::vector<Tensor *> &inputs, const std
                 kernel->setArg(idx++, static_cast<int>(inputChannelBlocks));
                 kernel->setArg(idx++, height);
                 kernel->setArg(idx++, width);
+                kernel->setArg(idx++, batchBits.size() * sizeof(int32_t), batchBits.data());
                 
                 mLocalWorkSize          = conv2d1x1LocalWSOpt(mGlobalWorkSize, mMaxWorkGroupSize);
             }
@@ -575,12 +593,10 @@ ErrorCode ConvExecution::onResize(const std::vector<Tensor *> &inputs, const std
         }else{
             mGlobalWorkSize = {
             static_cast<uint32_t>(UP_DIV(outputShape.at(3), 4) * static_cast<uint32_t>(UP_DIV(outputShape.at(2), 4))),
-            static_cast<uint32_t>(outputShape.at(0) * outputShape.at(1))};
+            static_cast<uint32_t>(batchIndexes.size() * outputShape.at(1))};
             
             auto kernel             = &mKernel;
             uint32_t idx            = 0;
-            int inputImageShape[2]  = {inputHeight, inputWidth};
-            int outputImageShape[2] = {height, width};
             int stideShape[2]       = {mStrides[0], mStrides[1]};
             kernel->setArg(idx++, mGlobalWorkSize[0]);
             kernel->setArg(idx++, mGlobalWorkSize[1]);
@@ -593,19 +609,20 @@ ErrorCode ConvExecution::onResize(const std::vector<Tensor *> &inputs, const std
             kernel->setArg(idx++, sizeof(outputImageShape), outputImageShape);
             kernel->setArg(idx++, sizeof(stideShape), stideShape);
             kernel->setArg(idx++, UP_DIV(width, 4));
+            kernel->setArg(idx++, batchBits.size() * sizeof(int32_t), batchBits.data());
             mLocalWorkSize          = conv2d1x1LocalWS(mGlobalWorkSize, mMaxWorkGroupSize);
 
         }
     } else {
+        // Default conv_2d
         mGlobalWorkSize         = {static_cast<uint32_t>(UP_DIV(outputShape.at(3), 4) * UP_DIV(outputShape.at(2), 4)),
-                           static_cast<uint32_t>(outputShape.at(0) * outputShape.at(1))};
+                           static_cast<uint32_t>(batchIndexes.size() * outputShape.at(1))};
 
-        int inputImageShape[2]  = {inputHeight, inputWidth};
-        int outputImageShape[2] = {height, width};
         int kernelShape[2]      = {kernelHeight, kernelWidth};
         int strideShape[2]      = {mStrides[0], mStrides[1]};
         int paddingShape[2]     = {mPaddings[0] / 2, mPaddings[1] / 2};
-        int dilationShape[2]    = {mDilations[0], mDilations[1]};
+        int dilationShape[2]    = {mDilations[0], mDilations[1]}; 
+
         uint32_t idx            = 0;
         auto kernel             = &mKernel;
         kernel->setArg(idx++, mGlobalWorkSize[0]);
@@ -622,6 +639,7 @@ ErrorCode ConvExecution::onResize(const std::vector<Tensor *> &inputs, const std
         kernel->setArg(idx++, sizeof(paddingShape), paddingShape);
         kernel->setArg(idx++, sizeof(dilationShape), dilationShape);
         kernel->setArg(idx++, UP_DIV(width, 4));
+        kernel->setArg(idx++, batchBits.size() * sizeof(int32_t), batchBits.data());
         
         mLocalWorkSize          = conv2dGeneralLocalWS(mGlobalWorkSize, kernelHeight * kernelWidth, mMaxWorkGroupSize);
         

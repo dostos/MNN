@@ -38,6 +38,11 @@ public:
      */
     ErrorCode prepare();
     /**
+     * @brief prepare batch execution (no reallocation)
+     * @return result code.
+     */
+    ErrorCode prepareBatch(const std::vector<int>& batchIndexes);
+    /**
      * @brief execute all units.
      * @return result code.
      */
@@ -72,6 +77,11 @@ public:
          */
         ErrorCode prepare(Backend* major, Backend* backup);
         /**
+        * @brief prepare batch execution (no reallocation)
+         * @return result code.
+         */
+        ErrorCode prepareBatch(const std::vector<int>& batchIndexes);
+        /**
          * @brief execute unit.
          * @return result code.
          */
@@ -102,6 +112,7 @@ public:
 
     private:
         bool mConst                   = false;
+        std::vector<int> mLastbatchIndexes;
     };
 
 protected:

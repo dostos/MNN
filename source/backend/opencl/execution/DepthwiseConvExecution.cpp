@@ -10,6 +10,7 @@
 #include "core/Macro.h"
 #include <string.h>
 #include "core/TensorUtils.hpp"
+#include "core/BatchUtils.hpp"
 #include "backend/opencl/core/OpenCLRunningUtils.hpp"
 
 namespace MNN {
@@ -80,13 +81,22 @@ DepthwiseConvExecution::~DepthwiseConvExecution() {
 }
 
 ErrorCode DepthwiseConvExecution::onResize(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) {
+    int numBatch = outputs[0]->batch();
+    std::vector<int> batchIndexes(numBatch);
+    for(int i = 0; i < numBatch; i++) {
+        batchIndexes[i] = i;
+    }
+    return onResize(inputs, outputs, batchIndexes);
+}
+
+ErrorCode DepthwiseConvExecution::onResize(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs, const std::vector<int>& batchIndexes) {
     auto input                   = inputs[0];
     auto output                  = outputs[0];
     std::vector<int> inputShape  = tensorShapeFormat(input);
     std::vector<int> outputShape = tensorShapeFormat(output);
 
     mGlobalWorkSize = {static_cast<uint32_t>(UP_DIV(outputShape.at(3), 4) * UP_DIV(outputShape.at(2), 4)),
-                       static_cast<uint32_t>(outputShape.at(0) * outputShape.at(1))};
+                       static_cast<uint32_t>(batchIndexes.size() * outputShape.at(1))};
 
     if (mConv2dCommonParams->padMode() == PadMode_SAME) {
         int kernelHeightSize = (mConv2dCommonParams->kernelY() - 1) * mConv2dCommonParams->dilateY() + 1;
@@ -135,6 +145,8 @@ ErrorCode DepthwiseConvExecution::onResize(const std::vector<Tensor *> &inputs, 
         kernel->setArg(idx++, sizeof(dilationShape), dilationShape);
         kernel->setArg(idx++, sizeof(strideShape), strideShape);
     }
+    std::array<int32_t, 4> batchBits = getBatchBits(batchIndexes);
+    kernel->setArg(idx++, batchBits.size() * sizeof(int32_t), batchBits.data());
     
     mLocalWorkSize  = depthwiseConvLocalWS(mGlobalWorkSize, mMaxWorkGroupSize);
 

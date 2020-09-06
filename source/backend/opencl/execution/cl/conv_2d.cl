@@ -46,11 +46,16 @@ void conv_2d_1x1_mali(GLOBAL_SIZE_2_DIMS __private const int out_w_blocks, __rea
                           __global const FLOAT *kernel_ptr,
                           __global const FLOAT *bias_ptr,
                           __write_only image2d_t output,
-                          __private const int in_c_block, __private const int out_h,
-                          __private const int out_w) {
+                          __private const int in_c_block, 
+                          __private const int out_h,
+                          __private const int out_w,
+                          __private const int4 batchIndexes) {
+
+
+    const int batch = getBatchIndex(batchIndexes, get_global_id(1) / out_h);
 
     const int out_c_w_idx = get_global_id(0); //c/4 w
-    const int out_b_h_idx  = get_global_id(1); //b h
+    const int out_b_h_idx  = mad24(batch, out_h, get_global_id(1) % out_h); //b h
 
     DEAL_NON_UNIFORM_DIM2(out_c_w_idx, out_b_h_idx);
 
@@ -157,15 +162,18 @@ void conv_2d_1x1_mali(GLOBAL_SIZE_2_DIMS __private const int out_w_blocks, __rea
 __kernel void conv_2d_1x1_local(GLOBAL_SIZE_3_DIMS __read_only image2d_t input, __read_only image2d_t weights,
                           __read_only image2d_t bias,
                           __write_only image2d_t output,
-                          __private const int in_c_block, __private const int out_h,
-                          __private const int out_w) {
+                          __private const int in_c_block, 
+                          __private const int out_h,
+                          __private const int out_w,
+                          __private const int4 batchIndexes) {
 
     const int row = get_local_id(0); 
     const int col = get_local_id(1); 
+    const int batch = getBatchIndex(batchIndexes, get_global_id(2) / out_h);
 
     const int out_c_idx = get_global_id(0); //c/4
     const int out_w_idx = get_global_id(1); //w
-    const int out_b_h_idx  = get_global_id(2); //b h
+    const int out_b_h_idx  = mad24(batch, out_h, get_global_id(2) % out_h); //b h
 
     DEAL_NON_UNIFORM_DIM3(out_c_idx, out_w_idx, out_b_h_idx);
 
@@ -269,10 +277,13 @@ void conv_2d_1x1(GLOBAL_SIZE_2_DIMS __read_only image2d_t input, __read_only ima
                           __private const int2 input_shape,
                           __private const int in_channel_block, __private const int2 output_shape,
                           __private const int2 stride_shape,
-                          __private const int output_width_4) {
+                          __private const int output_width_4,
+                          __private const int4 batchIndexes) {
+
+    const int batch = getBatchIndex(batchIndexes, get_global_id(1) / output_shape.x);
 
     const int output_channel_width_idx = get_global_id(0);
-    const int output_batch_height_idx  = get_global_id(1);
+    const int output_batch_height_idx  = mad24(batch, output_shape.x, get_global_id(1) % output_shape.x);
     DEAL_NON_UNIFORM_DIM2(output_channel_width_idx, output_batch_height_idx);
 
     const int output_channel_block_idx = output_channel_width_idx / output_width_4;
@@ -293,8 +304,7 @@ void conv_2d_1x1(GLOBAL_SIZE_2_DIMS __read_only image2d_t input, __read_only ima
     intput_width_idx2 = select(intput_width_idx2, INT_MIN, intput_width_idx2 >= input_shape.y);
     intput_width_idx3 = select(intput_width_idx3, INT_MIN, intput_width_idx3 >= input_shape.y);
 
-    int batch_index            = output_batch_height_idx / output_shape.x;
-    int input_height_block_idx = mul24((output_batch_height_idx % output_shape.x), stride_shape.x) + batch_index * input_shape.x;
+    int input_height_block_idx = mul24((output_batch_height_idx % output_shape.x), stride_shape.x) + batch * input_shape.x;
 
     FLOAT4 in0;
     FLOAT4 in1;
@@ -376,10 +386,13 @@ void conv_2d(GLOBAL_SIZE_2_DIMS __read_only image2d_t input, __read_only image2d
                       __private const int2 stride_shape,
                       __private const int2 padding_shape,
                       __private const int2 dilation_shape,
-                      __private const int out_width_blocks) {
+                      __private const int out_width_blocks,
+                      __private const int4 batchIndexes) {
+    const int batch = getBatchIndex(batchIndexes, get_global_id(1) / output_shape.x);
 
     const int output_channel_width_idx = get_global_id(0);
-    const int output_batch_height_idx  = get_global_id(1);
+    const int output_batch_height_idx  = mad24(batch, output_shape.x, get_global_id(1) % output_shape.x);
+
     DEAL_NON_UNIFORM_DIM2(output_channel_width_idx, output_batch_height_idx);
 
     const int out_channel_block_idx = output_channel_width_idx / out_width_blocks;
@@ -403,7 +416,8 @@ void conv_2d(GLOBAL_SIZE_2_DIMS __read_only image2d_t input, __read_only image2d
     int in_height_start    = mad24(select(0, (-height_start + dilation_shape.x - 1) / dilation_shape.x, height_start < 0), dilation_shape.x, height_start);
     int in_height_end      = min(mad24(weights_shape.x, dilation_shape.x, height_start), input_shape.x);
 
-    const int batch_idx          = mul24((output_batch_height_idx / output_shape.x), input_shape.x);
+    // Batch offset for input image
+    const int batch_idx          =  mul24(batch, input_shape.x);
     const int weights_h_idx = mul24(out_channel_block_idx, mul24(weights_shape.y, weights_shape.x)) + mul24(select(0, (-height_start + dilation_shape.x - 1) / dilation_shape.x, height_start < 0), weights_shape.y);
 
     FLOAT4 in0, in1, in2, in3;

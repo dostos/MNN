@@ -45,6 +45,17 @@ public:
     virtual ErrorCode onResize(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) {
         return NO_ERROR;
     }
+    
+    /**
+     * @brief response shape change of input or output tensors.
+     * @param inputs    input tensors
+     * @param outputs   output tensors
+     * @return resize result
+     */
+    virtual ErrorCode onResize(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs, const std::vector<int>& batchIndexes) {
+        MNN_ASSERT(false);
+        return NO_ERROR;
+    }
 
     /**
      * @brief if the session will not be resized any more,

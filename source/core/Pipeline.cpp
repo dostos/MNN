@@ -294,6 +294,44 @@ ErrorCode Pipeline::Unit::prepare(Backend* bn, Backend* cpuBn) {
     return code;
 }
 
+ErrorCode Pipeline::Unit::prepareBatch(const std::vector<int>& batchIndexes) {
+    // Recompute flops
+    if(mLastbatchIndexes.size() != batchIndexes.size()) {
+        for (auto t : mInputs) {
+            bool valid = true;
+            for (int i = 0; i < t->dimensions(); ++i) {
+                if (t->length(i) <= 0) {
+                    valid = false;
+                    break;
+                }
+            }
+            if (!valid) {
+                MNN_ERROR("The %s's input is not ready\n", mContent->name.c_str());
+                return COMPUTE_SIZE_ERROR;
+            }
+        }
+        bool ready = SizeComputer::computeOutputSize(mOriginOp, mInputs, mOutputs);
+        for (auto o : mOutputs) {
+            if (o->size() <= 0) {
+                ready = false;
+            }
+            if (o->dimensions() < 4 && TensorUtils::getDescribe(o)->dimensionFormat == MNN_DATA_FORMAT_NC4HW4) {
+                for (auto index = o->dimensions(); index < 4; ++index) {
+                    o->setLength(index, 1);
+                }
+            }
+        }
+        mContent->flops = SizeComputer::computeFlops(mOriginOp, mInputs, mOutputs, batchIndexes.size());
+    }
+
+    if(batchIndexes != mLastbatchIndexes) {
+        mLastbatchIndexes = batchIndexes;
+        return mExecution->onResize(mInputs, mOutputs, batchIndexes);
+    } else {
+        return NO_ERROR;
+    }
+}
+
 Pipeline::Pipeline(const std::vector<Schedule::PipelineInfo>& infos, Backend* backend, Backend* cpuBackend) {
     SizeComputerSuite::init();
     MNN_ASSERT(nullptr != backend);
@@ -323,6 +361,17 @@ ErrorCode Pipeline::prepare() {
         }
     }
     mBackend->onResizeEnd();
+    return NO_ERROR;
+}
+
+
+ErrorCode Pipeline::prepareBatch(const std::vector<int>& batchIndexes) {
+    for(auto & u : mUnits) {
+        auto code = u->prepareBatch(batchIndexes);
+        if (NO_ERROR != code) {
+            return code;
+        }
+    }
     return NO_ERROR;
 }
 

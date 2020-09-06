@@ -38,6 +38,11 @@ public:
      */
     ErrorCode run() const;
     /**
+     * @brief infer batches
+     * @return result code.
+     */
+    ErrorCode runBatch(const std::vector<int>& batchIndexes) const;
+    /**
      * @brief infer with callbacks and sync option.
      * @param enterCallback callback before each op.
      * @param exitCallback  callback after each op.

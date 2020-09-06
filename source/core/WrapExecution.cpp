@@ -104,6 +104,15 @@ ErrorCode WrapExecution::onResize(const std::vector<Tensor*>& inputs, const std:
     }
     return result;
 }
+ErrorCode WrapExecution::onResize(const std::vector<Tensor*>& inputs, const std::vector<Tensor*>& outputs, const std::vector<int>& batchIndexes) {
+    // Allocate if it tensors are not available
+    if(mWrapInputTensors.empty()) {
+        onResize(inputs, outputs);
+    }
+    
+    return mExecution->onResize(mWrapInputTensors, outputs, batchIndexes);
+}
+
 
 ErrorCode WrapExecution::onExecute(const std::vector<Tensor*>& inputs, const std::vector<Tensor*>& outputs) {
     MNN_ASSERT(mWrapInputTensors.size() == inputs.size());

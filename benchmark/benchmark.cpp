@@ -120,6 +120,24 @@ static inline uint64_t getTimeInUs() {
     return time;
 }
 
+std::vector<int> createRandomBatch(int maxBatch) {
+    std::set<int> batchIndexes;
+
+    int numBatch = (rand() % maxBatch) + 1;
+
+    while(batchIndexes.size() < numBatch) {
+        batchIndexes.insert(rand() % maxBatch);
+    };
+
+    std::cout << "Selected batch indexes : ";
+    for(int i : batchIndexes) {
+        std::cout << i << " ";
+    }
+    std::cout << std::endl;
+
+    return std::vector<int>(batchIndexes.begin(), batchIndexes.end());
+}
+
 std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward = MNN_FORWARD_CPU, bool only_inference = true,
                            int numberThread = 4, int precision = 2, int batch = 1) {
     auto revertor = std::unique_ptr<Revert>(new Revert(model.model_file.c_str()));
@@ -132,6 +150,7 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
     MNN::ScheduleConfig config;
     config.numThread = numberThread;
     config.type = static_cast<MNNForwardType>(forward);
+    config.maxBatch = batch;
     MNN::BackendConfig backendConfig;
     backendConfig.precision = (MNN::BackendConfig::PrecisionMode)precision;
     backendConfig.power = MNN::BackendConfig::Power_High;
@@ -141,34 +160,16 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
     MNN::Session *session = net->createSession(config);
     MNN::Session *session2 = net->createSession(config);
     MNN::Tensor *input = net->getSessionInput(session, NULL);
-
-    for(auto i : session->getTensors()) {
-        std::cout << i.first << std::endl;
-        i.second->printShape();
-    }
-
     auto inputShape = input->shape();
 
-    std::cout << "Input shape : " << inputShape[0] << " " << inputShape[1] << " " << inputShape[2] << " " << inputShape[3] << " " << std::endl;
+    std::cout << "Input shape : ";
+    input->printShape();
 
     if (inputShape[0] != batch) {
         inputShape[0] = batch;
         net->resizeTensor(input, inputShape);
         net->resizeSession(session);
-        net->resizeSession(session2);
         std::cout << "Resized to " << batch << std::endl;
-    }
-    
-    for(auto i : session->getTensors()) {
-        std::cout << i.first << std::endl;
-        std::cout << i.second->getName() << std::endl;
-        i.second->printShape();
-    }
-    
-    for(auto i : session2->getTensors()) {
-        std::cout << i.first << std::endl;
-        std::cout << i.second->getName() << std::endl;
-        i.second->printShape();
     }
 
     // if the model has not the input dimension, umcomment the below code to set the input dims
@@ -179,6 +180,11 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
     const MNN::Backend *inBackend = net->getBackend(session, input);
 
     std::shared_ptr<MNN::Tensor> givenTensor(MNN::Tensor::createHostTensorFromDevice(input, false));
+    
+    // TODO : Read real image?
+    for(int i = 0; i < givenTensor->elementSize(); i++) {
+        givenTensor->host<float>()[i] = 255.f * static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+    }
 
     auto outputTensor = net->getSessionOutput(session, NULL);
     std::shared_ptr<MNN::Tensor> expectTensor(MNN::Tensor::createHostTensorFromDevice(outputTensor, false));
@@ -186,6 +192,7 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
     for (int i = 0; i < warmup; ++i) {
         input->copyFromHostTensor(givenTensor.get());
         net->runSession(session);
+        //net->runSessionBatch(session, createRandomBatch(batch));
         outputTensor->copyToHostTensor(expectTensor.get());
     }
 
@@ -193,7 +200,9 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
         auto timeBegin = getTimeInUs();
 
         input->copyFromHostTensor(givenTensor.get());
+
         net->runSession(session);
+        //net->runSessionBatch(session, createRandomBatch(batch));
         outputTensor->copyToHostTensor(expectTensor.get());
 
         auto timeEnd = getTimeInUs();
