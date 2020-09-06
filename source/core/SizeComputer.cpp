@@ -85,15 +85,22 @@ bool SizeComputer::opNeedContent(OpType type, int index) {
     }
     return true;
 }
+
 float SizeComputer::computeFlops(const MNN::Op* op, const std::vector<Tensor*>& inputs, const std::vector<Tensor*>& outputs) {
+    // Assumption : batch of inputs / outputs are all same
+    return computeFlops(op, inputs, outputs, outputs[0]->batch());
+}
+
+float SizeComputer::computeFlops(const MNN::Op* op, const std::vector<Tensor*>& inputs,
+                                const std::vector<Tensor*>& outputs, const int batch) {
     auto computeFactory = SizeComputerSuite::get();
     auto computer = computeFactory->search(op->type());
     if (nullptr != computer) {
-        return computer->onComputeFlops(op, inputs, outputs);
+        return computer->onComputeFlops(op, inputs, outputs, batch);
     }
     auto sumFlops = 0.0f;
     for (auto output : outputs) {
-        sumFlops += (float)output->elementSize() / 1024.0f / 1024.0f;
+        sumFlops += (float)output->elementSize() / 1024.0f / 1024.0f * batch / output->batch();
     }
     return sumFlops;
 }
