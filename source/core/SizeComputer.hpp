@@ -52,6 +52,15 @@ public:
      */
     virtual float onComputeFlops(const MNN::Op* op, const std::vector<Tensor*>& inputs,
                                  const std::vector<Tensor*>& outputs) const;
+    /**
+     * @brief calculate the flops of this op with the info of inputs size for specific # of batch
+     * @param op        given op.
+     * @param inputs    given input tensors.
+     * @param outputs   given output tensors.
+     * @return the flops in M.
+     */
+    virtual float onComputeFlops(const MNN::Op* op, const std::vector<Tensor*>& inputs,
+                                 const std::vector<Tensor*>& outputs, const int batch) const;
 
     /**
      * @brief calculate input and output tensors' shape for any registed op.

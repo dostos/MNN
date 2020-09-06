@@ -64,8 +64,8 @@ class InterpComputer : public SizeComputer {
         return true;
     }
     virtual float onComputeFlops(const MNN::Op* op, const std::vector<Tensor*>& inputs,
-                                 const std::vector<Tensor*>& outputs) const override {
-        auto elementInM = (float)outputs[0]->elementSize() / 1024.0f / 1024.0f;
+                                 const std::vector<Tensor*>& outputs, const int batch) const override {
+        auto elementInM = (float)outputs[0]->elementSize() / 1024.0f / 1024.0f * batch / outputs[0]->batch();
         auto interp     = op->main_as_Interp();
         auto unit       = 0;
         switch (interp->resizeType()) {

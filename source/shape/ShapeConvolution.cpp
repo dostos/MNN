@@ -77,19 +77,19 @@ public:
         TensorUtils::getDescribe(outputs[0])->dimensionFormat = TensorUtils::getDescribe(inputs[0])->dimensionFormat;
         return true;
     }
-
+    
     virtual float onComputeFlops(const MNN::Op* op, const std::vector<Tensor*>& inputs,
-                                 const std::vector<Tensor*>& outputs) const override {
+                                 const std::vector<Tensor*>& outputs, const int batch) const override {
         auto layer = op->main_as_Convolution2D()->common();
         auto kw    = layer->kernelX();
         auto kh    = layer->kernelY();
         auto group = layer->group();
         auto ic    = inputs[0]->channel();
         auto oc    = outputs[0]->channel();
-        auto oSize = outputs[0]->width() * outputs[0]->height() * outputs[0]->batch();
+        auto oSize = outputs[0]->width() * outputs[0]->height() * batch;
 
         auto flops = (float)oSize * kw * kh * (ic * oc / group) / FLOPS_M;
-        return flops;
+        return flops;            
     }
 };
 
@@ -100,11 +100,12 @@ public:
         MNN_ASSERT(1 == inputs.size() && 1 == outputs.size());
         return ConvolutionSizeComputer::onComputeSize(op, inputs, outputs);
     }
+    
     virtual float onComputeFlops(const MNN::Op* op, const std::vector<Tensor*>& inputs,
-                                 const std::vector<Tensor*>& outputs) const override {
+                                 const std::vector<Tensor*>& outputs, const int batch) const override {
         auto output = outputs[0];
         auto layer = op->main_as_Convolution2D()->common();
-        auto oSize = output->batch() * output->height() * output->width() * output->channel();
+        auto oSize = batch * output->height() * output->width() * output->channel();
         auto flops = (float)oSize * layer->kernelY() * layer->kernelX() / FLOPS_M;
         return flops;
     }
