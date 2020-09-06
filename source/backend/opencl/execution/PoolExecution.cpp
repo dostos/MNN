@@ -9,6 +9,7 @@
 #include "backend/opencl/execution/PoolExecution.hpp"
 #include "core/Macro.h"
 #include "core/TensorUtils.hpp"
+#include "core/BatchUtils.hpp"
 #include "backend/opencl/core/OpenCLBackend.hpp"
 
 namespace MNN {
@@ -44,6 +45,16 @@ PoolExecution::PoolExecution(const std::vector<Tensor *> &inputs, const MNN::Op 
 }
 
 ErrorCode PoolExecution::onResize(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) {
+    int numBatch = outputs[0]->batch();
+    std::vector<int> batchIndexes(numBatch);
+    for(int i = 0; i < numBatch; i++) {
+        batchIndexes[i] = i;
+    }
+    return onResize(inputs, outputs, batchIndexes);
+}
+
+ErrorCode PoolExecution::onResize(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs, const std::vector<int>& batchIndexes) {
+    
 #ifdef LOG_VERBOSE
     MNN_PRINT("start PoolExecution onResize !\n");
 #endif
@@ -70,7 +81,7 @@ ErrorCode PoolExecution::onResize(const std::vector<Tensor *> &inputs, const std
     std::vector<int> inputShape  = tensorShapeFormat(input);
     std::vector<int> outputShape = tensorShapeFormat(output);
 
-    const int batch        = outputShape.at(0);
+    const int batch        = batchIndexes.size();
     const int outputHeight = outputShape.at(1);
     const int outputWidth  = outputShape.at(2);
     const int channels     = outputShape.at(3);
@@ -103,11 +114,14 @@ ErrorCode PoolExecution::onResize(const std::vector<Tensor *> &inputs, const std
     mKernel.setArg(idx++, sizeof(strideShape), strideShape);
     mKernel.setArg(idx++, sizeof(kernelShape), kernelShape);
     mKernel.setArg(idx++, openCLImage(output));
+    std::array<int32_t, 4> batchBits = getBatchBits(batchIndexes);
+    mKernel.setArg(idx++, batchBits.size() * sizeof(int32_t), batchBits.data());
 #ifdef LOG_VERBOSE
     MNN_PRINT("end PoolExecution onResize !\n");
 #endif
     return NO_ERROR;
 }
+
 
 std::vector<uint32_t> PoolExecution::poolLocalWS(const std::vector<uint32_t> &gws, const uint32_t maxWorkGroupSize) {
     std::vector<uint32_t> lws(4, 0);

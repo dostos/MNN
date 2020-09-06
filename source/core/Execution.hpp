@@ -53,7 +53,6 @@ public:
      * @return resize result
      */
     virtual ErrorCode onResize(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs, const std::vector<int>& batchIndexes) {
-        MNN_ASSERT(false);
         return NO_ERROR;
     }
 

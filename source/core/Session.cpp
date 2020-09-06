@@ -121,6 +121,9 @@ ErrorCode Session::runBatch(const std::vector<int>& batchIndexes) const {
     }
     for (auto& iter : mPipelines) {
         iter->prepareBatch(batchIndexes);
+    }
+    
+    for (auto& iter : mPipelines) {
         auto error = iter->execute();
         if (NO_ERROR != error) {
             return error;

@@ -11,6 +11,7 @@
 
 #include "core/TensorUtils.hpp"
 #include "core/SizeComputer.hpp"
+#include <iostream>
 #include <map>
 #include <mutex>
 #include <thread>
@@ -426,6 +427,7 @@ public:
 
 static const auto __opencl_global_initializer = []() {
     MNNInsertExtraBackendCreator(MNN_FORWARD_OPENCL, new CLBackendCreator, true);
+    std::cout << "Opencl Backend Loaded" << std::endl;
     return true;
 }();
 } // namespace OpenCL

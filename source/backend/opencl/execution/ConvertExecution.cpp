@@ -10,6 +10,7 @@
 #include "core/Macro.h"
 #include "backend/cpu/CPUTensorConvert.hpp"
 #include "core/TensorUtils.hpp"
+#include "core/BatchUtils.hpp"
 
 namespace MNN {
     namespace OpenCL {
@@ -26,13 +27,22 @@ namespace MNN {
         }
 
         ErrorCode ConvertExecution::onResize(const std::vector<Tensor*>& inputs, const std::vector<Tensor*>& outputs) {
+            int numBatch = outputs[0]->batch();
+            std::vector<int> batchIndexes(numBatch);
+            for(int i = 0; i < numBatch; i++) {
+                batchIndexes[i] = i;
+            }
+            return onResize(inputs, outputs, batchIndexes);
+        }
+
+        ErrorCode ConvertExecution::onResize(const std::vector<Tensor*>& inputs, const std::vector<Tensor*>& outputs, const std::vector<int>& batchIndexes) {
             Tensor* input  = inputs[0];
             Tensor* output = outputs[0];
 
             std::vector<int> inputShape  = tensorShapeFormat(input);
             std::vector<int> outputShape = tensorShapeFormat(output);
 
-            const int batch    = inputShape.at(0);
+            const int batch    = batchIndexes.size();
             const int height   = inputShape.at(1);
             const int width    = inputShape.at(2);
             const int channels = inputShape.at(3);
@@ -49,6 +59,9 @@ namespace MNN {
 
             mKernel.setArg(idx++, openCLImage(input));
             mKernel.setArg(idx++, openCLImage(output));
+            mKernel.setArg(idx++, height);
+            std::array<int32_t, 4> batchBits = getBatchBits(batchIndexes);
+            mKernel.setArg(idx++, batchBits.size() * sizeof(int32_t), batchBits.data());
 
             auto runtime                    = mOpenCLBackend->getOpenCLRuntime();
             mGlobalWorkSize = {static_cast<uint32_t>(channelBlocks), static_cast<uint32_t>(width),
@@ -57,6 +70,7 @@ namespace MNN {
             mLocalWorkSize = localWS3DDefault(gws, mMaxWorkGroupSize, mOpenCLBackend->getOpenCLRuntime());
             return NO_ERROR;
         }
+        
 
         ErrorCode ConvertExecution::onExecute(const std::vector<Tensor*>& inputs, const std::vector<Tensor*>& outputs) {
 #ifdef LOG_VERBOSE

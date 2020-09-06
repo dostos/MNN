@@ -120,10 +120,11 @@ static inline uint64_t getTimeInUs() {
     return time;
 }
 
-std::vector<int> createRandomBatch(int maxBatch) {
+std::vector<int> createRandomBatch(int maxBatch, int numBatch = -1) {
     std::set<int> batchIndexes;
 
-    int numBatch = (rand() % maxBatch) + 1;
+    if(numBatch == -1)
+        numBatch = (rand() % maxBatch) + 1;
 
     while(batchIndexes.size() < numBatch) {
         batchIndexes.insert(rand() % maxBatch);
@@ -139,7 +140,7 @@ std::vector<int> createRandomBatch(int maxBatch) {
 }
 
 std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward = MNN_FORWARD_CPU, bool only_inference = true,
-                           int numberThread = 4, int precision = 2, int batch = 1) {
+                           int numberThread = 4, int precision = 2, int batch = 1, bool shuffle = false) {
     auto revertor = std::unique_ptr<Revert>(new Revert(model.model_file.c_str()));
     revertor->initialize();
     auto modelBuffer = revertor->getBuffer();
@@ -158,7 +159,6 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
 
     std::vector<float> costs;
     MNN::Session *session = net->createSession(config);
-    MNN::Session *session2 = net->createSession(config);
     MNN::Tensor *input = net->getSessionInput(session, NULL);
     auto inputShape = input->shape();
 
@@ -191,8 +191,10 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
     // Warming up...
     for (int i = 0; i < warmup; ++i) {
         input->copyFromHostTensor(givenTensor.get());
-        net->runSession(session);
-        //net->runSessionBatch(session, createRandomBatch(batch));
+        if(shuffle)
+            net->runSessionBatch(session, createRandomBatch(batch));
+        else 
+            net->runSession(session);
         outputTensor->copyToHostTensor(expectTensor.get());
     }
 
@@ -200,9 +202,10 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
         auto timeBegin = getTimeInUs();
 
         input->copyFromHostTensor(givenTensor.get());
-
-        net->runSession(session);
-        //net->runSessionBatch(session, createRandomBatch(batch));
+        if(shuffle)
+            net->runSessionBatch(session, createRandomBatch(batch));
+        else 
+            net->runSession(session);
         outputTensor->copyToHostTensor(expectTensor.get());
 
         auto timeEnd = getTimeInUs();
@@ -386,7 +389,9 @@ void set_cpu_affinity() {
 int main(int argc, const char *argv[]) {
     std::cout << "MNN benchmark" << std::endl;
     auto handle = dlopen("libMNN_CL.so", RTLD_NOW);
+    FUNC_PRINT_ALL(handle, p);  
     int loop = 10;
+
     int warmup = 10;
     MNNForwardType forward = MNN_FORWARD_CPU;
     int numberThread = 4;
@@ -414,6 +419,10 @@ int main(int argc, const char *argv[]) {
     if (argc >= 8) {
         batch = atoi(argv[7]);
     }
+    int shuffle = 0;
+    if (argc >= 9) {
+        shuffle = atoi(argv[8]);
+    }
     std::cout << "Forward type: **" << forwardType(forward) << "** thread=" << numberThread << "** precision=" << precision << std::endl;
     std::vector<Model> models = findModelFiles(argv[1]);
 
@@ -423,7 +432,7 @@ int main(int argc, const char *argv[]) {
     // set_cpu_affinity();
 
     for (auto &m : models) {
-        std::vector<float> costs = doBench(m, loop, warmup, forward, false, numberThread, precision, batch);
+        std::vector<float> costs = doBench(m, loop, warmup, forward, false, numberThread, precision, batch, shuffle > 0);
         displayStats(m.name, costs);
     }
 }

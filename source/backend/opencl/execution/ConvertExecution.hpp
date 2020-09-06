@@ -23,6 +23,7 @@ namespace MNN {
             
             virtual ErrorCode onExecute(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) override;
             virtual ErrorCode onResize(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) override;
+            virtual ErrorCode onResize(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs, const std::vector<int>& batchIndexes) override;
             
         private:
             enum TensorConvertType {

@@ -13,17 +13,19 @@ __kernel void pooling(GLOBAL_SIZE_3_DIMS __read_only image2d_t input,
                       __private const int2 input_shape, __private const int output_height, __private const int2 pad_shape,
                       __private const int2 stride_shape,
                       __private const int2 kernel_shape,
-                      __write_only image2d_t output) {
+                      __write_only image2d_t output,
+                      __private const int4 batchIndexes) {
+    const int batch = getBatchIndex(batchIndexes, get_global_id(2) / output_height);
+
     const int output_channel_idx      = get_global_id(0);
     const int output_width_idx        = get_global_id(1);
-    const int output_batch_height_idx = get_global_id(2);
+    const int output_batch_height_idx = mad24(batch, output_height, get_global_id(2) % output_height);
 
     DEAL_NON_UNIFORM_DIM3(output_channel_idx, output_width_idx, output_batch_height_idx);
     const int output_width = global_size_dim1;
 
-    const int output_batch_idx    = output_batch_height_idx / output_height;
-    const int output_height_idx   = output_batch_height_idx - mul24(output_batch_idx, output_height);
-    const int input_start         = mul24(output_batch_idx, input_shape.x);
+    const int output_height_idx   = output_batch_height_idx - mul24(batch, output_height);
+    const int input_start         = mul24(batch, input_shape.x);
     const int input_height_start  = mad24(output_height_idx, stride_shape.x, -pad_shape.x);
     const int input_width_start   = mad24(output_width_idx, stride_shape.y, -pad_shape.y);
     const int input_channel_start = mul24(output_channel_idx, input_shape.y);

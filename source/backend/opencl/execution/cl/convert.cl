@@ -5,10 +5,15 @@ __constant sampler_t SAMPLER = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP |
 
 __kernel void convert(
                       __private const int global_size_dim0, __private const int global_size_dim1, __private const int global_size_dim2,
-                      __read_only image2d_t input, __write_only image2d_t output) {
+                      __read_only image2d_t input, __write_only image2d_t output,
+                      __private const int height,
+                      __private const int4 batchIndexes) {
+    const int batch = getBatchIndex(batchIndexes, get_global_id(2) / height);
+
     const int channel_block_idx = get_global_id(0);
     const int w                 = get_global_id(1);
-    const int hb                = get_global_id(2);
+    const int hb                = mad24(batch, height, get_global_id(2) % height);
+    
     if (channel_block_idx < global_size_dim0 && w < global_size_dim1 && hb < global_size_dim2) {
         const int width = global_size_dim1;
         

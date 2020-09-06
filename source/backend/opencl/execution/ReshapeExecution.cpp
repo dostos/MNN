@@ -26,7 +26,18 @@ ReshapeExecution::ReshapeExecution(const std::vector<Tensor *> &inputs, const MN
 }
 
 ErrorCode ReshapeExecution::onResize(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) {
-    auto input = inputs[0];
+    int numBatch = outputs[0]->batch();
+    std::vector<int> batchIndexes(numBatch);
+    for(int i = 0; i < numBatch; i++) {
+        batchIndexes[i] = i;
+    }
+    return onResize(inputs, outputs, batchIndexes);
+}
+
+ErrorCode ReshapeExecution::onResize(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs, const std::vector<int>& batchIndexes) {
+    // TODO : Update
+
+     auto input = inputs[0];
     auto output = outputs[0];
 #ifdef LOG_VERBOSE
     MNN_PRINT("mDimType = %d , %d\n", mDimType, TensorUtils::getDescribe(input)->dimensionFormat);
