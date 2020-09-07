@@ -1,5 +1,4 @@
 #include "BatchUtils.hpp"
-#include <MNN/MNNDefine.h>
 
 namespace MNN {
 
