@@ -131,6 +131,7 @@ bool OpenCLSymbols::LoadOpenCLLibrary() {
     }
     for (const auto &opencl_lib : gOpencl_library_paths) {
         if (LoadLibraryFromPath(opencl_lib)) {
+            MNN_PRINT("Found opencl library : %s", opencl_lib.c_str());
             return true;
         }
     }

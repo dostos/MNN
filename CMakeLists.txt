@@ -136,6 +136,8 @@ if(MNN_OPENCL_PROFILER)
   add_definitions(-DENABLE_OPENCL_TIME_PROFILER)
 endif()
 
+add_definitions(-DLOG_VERBOSE)
+
 # backend options
 option(MNN_METAL "Enable Metal" OFF)
 option(MNN_OPENCL "Enable OpenCL" ON)

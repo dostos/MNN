@@ -16,7 +16,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <vector>
-#include <dlfcn.h>
 
 #if defined(_MSC_VER)
 #include <Windows.h>
@@ -388,8 +387,6 @@ void set_cpu_affinity() {
 
 int main(int argc, const char *argv[]) {
     std::cout << "MNN benchmark" << std::endl;
-    auto handle = dlopen("libMNN_CL.so", RTLD_NOW);
-    FUNC_PRINT_ALL(handle, p);  
     int loop = 10;
 
     int warmup = 10;
