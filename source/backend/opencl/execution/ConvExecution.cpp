@@ -384,8 +384,8 @@ ConvExecution::ConvExecution(const std::vector<Tensor *> &inputs, const MNN::Op 
     if (kernelHeight == kernelWidth && kernelHeight == 1 && mConv2dCommonParams->padX() == 0 &&
         mConv2dCommonParams->padY() == 0) {
         mConv1x1Opt = (mStrides[0] == 1 && mStrides[1] == 1 && !(gpuType == GpuType::ADRENO));
-
-        if((gpuType == GpuType::ADRENO)){
+#if 0
+        if(gpuType == GpuType::ADRENO){
             uint64_t useLocalSize = UNIT*UNIT*4*sizeof(float)*4;
             if(useLocalSize >= mOpenCLBackend->getOpenCLRuntime()->getMaxLocalMem()){
                 mUseLocalMem = false;
@@ -394,6 +394,7 @@ ConvExecution::ConvExecution(const std::vector<Tensor *> &inputs, const MNN::Op 
                 mUseLocalMem=true;
             }
         }
+#endif
         
         if(!mUseLocalMem){
             if(mConv1x1Opt){
