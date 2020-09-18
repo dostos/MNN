@@ -56,7 +56,7 @@ public:
     uint32_t maxFreq() const;
     uint64_t getMaxWorkGroupSize(const ::cl::Kernel &kernel);
     uint64_t GetKernelWaveSize(const cl::Kernel &kernel);
-    uint64_t getMaxLocalMem() const;
+    //uint64_t getMaxLocalMem() const;
     GpuType getGpuType();
     uint64_t maxAllocSize() const;
     void setCommandQueueProfileEnable();
