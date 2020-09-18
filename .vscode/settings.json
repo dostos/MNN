@@ -1,0 +1,10 @@
+{
+    "cmake.debugConfig": {
+        "args": [
+            "${workspaceRoot}/benchmark/models",
+            "3",
+            "3",
+            "3"
+        ]
+    }
+}

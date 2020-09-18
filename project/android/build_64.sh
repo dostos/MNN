@@ -1,7 +1,7 @@
 #!/bin/bash
 cmake ../../../ \
 -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
--DCMAKE_BUILD_TYPE=Release \
+-DCMAKE_BUILD_TYPE=Debug \
 -DANDROID_ABI="arm64-v8a" \
 -DANDROID_STL=c++_static \
 -DANDROID_NATIVE_API_LEVEL=android-21  \

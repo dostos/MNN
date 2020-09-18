@@ -427,7 +427,6 @@ public:
 
 static const auto __opencl_global_initializer = []() {
     MNNInsertExtraBackendCreator(MNN_FORWARD_OPENCL, new CLBackendCreator, true);
-    std::cout << "Opencl Backend Loaded" << std::endl;
     return true;
 }();
 } // namespace OpenCL
