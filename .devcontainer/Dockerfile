@@ -1,10 +1,10 @@
-FROM ubuntu:18.04
+FROM nvidia/opencl:devel-ubuntu18.04
 
 RUN apt-get update && apt-get install -y -q \
     build-essential \
     gcc-8 g++-8 gpgconf \
     ocl-icd-opencl-dev opencl-clhpp-headers \
-    git cmake gdb wget unzip
+    git cmake gdb wget unzip python
 
 ENV ANDROID_NDK_HOME /opt/android-ndk
 ENV ANDROID_NDK_VERSION r21c
@@ -27,5 +27,5 @@ RUN mkdir /opt/android-ndk-tmp && \
 # add to PATH
 ENV PATH ${PATH}:${ANDROID_NDK_HOME}
 
-RUN mkdir /dynamic_batching
-WORKDIR /dynamic_batching
+RUN mkdir /mnn
+WORKDIR /mnn
