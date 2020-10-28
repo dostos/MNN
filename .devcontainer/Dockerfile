@@ -1,10 +1,10 @@
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 
 RUN apt-get update && apt-get install -y -q \
     build-essential \
     gcc-8 g++-8 gpgconf \
     ocl-icd-opencl-dev opencl-clhpp-headers \
-    git cmake gdb wget unzip python
+    git cmake gdb wget unzip python pip
 
 ENV ANDROID_NDK_HOME /opt/android-ndk
 ENV ANDROID_NDK_VERSION r21c
