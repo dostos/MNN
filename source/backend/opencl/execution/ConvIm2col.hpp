@@ -27,6 +27,14 @@ private:
 
     int mInputDepth;
     bool mIsConv1x1;
+    int obxohxow_4;
+    std::vector<int> mIm2colSize;
+    std::vector<int> mGemmSize;
+    std::vector<int> mCol2imSize;
+
+    std::shared_ptr<cl::Image2D> mSrcTexture;
+    std::shared_ptr<cl::Image2D> mDstTexture;
+    
 
     std::vector<int> mStrides{1, 1};
     std::vector<int> mPaddings{0, 0};
