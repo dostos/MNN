@@ -356,6 +356,9 @@ bool ImageBufferConvertor::convertBufferToImage(const Tensor *buffer, const Open
         case ARGUMENT:
             kernelName = "arg_buffer_to_image";
             break;
+        case IM2COL_CONV2D_FILTER:
+            kernelName = "im2col_conv2d_filter_buffer_to_image";
+            break;
         default:
             break;
     }
@@ -397,7 +400,11 @@ bool ImageBufferConvertor::convertBufferToImage(const Tensor *buffer, const Open
         mBufferToImageKernel.setArg(idx++, sizeof(kernelShape),kernelShape);
         mBufferToImageKernel.setArg(idx++, static_cast<uint32_t>(channelHeightWidthSumSize));
         mBufferToImageKernel.setArg(idx++, static_cast<uint32_t>(heightWidthSumSize));
-    }else {
+    } else if(type == IM2COL_CONV2D_FILTER) {
+        mBufferToImageKernel.setArg(idx++,)
+
+    } 
+    else {
         mBufferToImageKernel.setArg(idx++, static_cast<uint32_t>(formattedBufferShape[1]));
         mBufferToImageKernel.setArg(idx++, static_cast<uint32_t>(formattedBufferShape[2]));
         mBufferToImageKernel.setArg(idx++, static_cast<uint32_t>(formattedBufferShape[3]));
