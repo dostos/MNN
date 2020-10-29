@@ -1,9 +1,10 @@
 FROM ubuntu:20.04
 
+ENV DEBIAN_FRONTEND=noninteractive 
 ENV TZ=Asia/Seoul
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-RUN apt-get update && apt-get install -y -q \
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y -q \
     build-essential \
     gcc-8 g++-8 gpgconf \
     ocl-icd-opencl-dev opencl-clhpp-headers \
