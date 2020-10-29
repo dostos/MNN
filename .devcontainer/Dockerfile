@@ -1,5 +1,7 @@
 FROM ubuntu:20.04
 
+ENV DEBIAN_FRONTEND noninteractive
+
 RUN DEBIAN_FRONTEND=noninteractive \ 
     TZ=Asia/Seoul \
     apt-get update && apt-get install -y -q \
