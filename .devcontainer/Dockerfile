@@ -1,10 +1,12 @@
-FROM ubuntu:20.04
+FROM ubuntu:20.10
 
-RUN apt-get update && DEBIAN_FRONTEND="noninteractive" apt-get install -y -q \
+RUN DEBIAN_FRONTEND=noninteractive \ 
+    TZ=Asia/Seoul \
+    apt-get update && apt-get install -y -q \
     build-essential \
     gcc-8 g++-8 gpgconf \
     ocl-icd-opencl-dev opencl-clhpp-headers \
-    git cmake gdb wget unzip
+    git cmake gdb wget unzip python
 
 ENV ANDROID_NDK_HOME /opt/android-ndk
 ENV ANDROID_NDK_VERSION r21c
