@@ -1,6 +1,6 @@
 FROM ubuntu:20.04
 
-RUN apt-get update && apt-get install -y -q \
+RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y -q \
     build-essential \
     gcc-8 g++-8 gpgconf \
     ocl-icd-opencl-dev opencl-clhpp-headers \
