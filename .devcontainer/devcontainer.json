@@ -13,7 +13,8 @@
 	"extensions": [
 		"ms-vscode.cmake-tools",
 		"ms-vscode.cpptools"
-	]
+	],
+	"containerEnv": { "TZ" :"Asia/Seoul" },
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
 	// Uncomment the next line to run commands after the container is created - for example installing curl.
