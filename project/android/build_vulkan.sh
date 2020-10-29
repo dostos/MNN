@@ -21,7 +21,7 @@ cd build_vulkan
 cmake ../../ \
 -DNDK_CCACHE=ccache \
 -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK/build/cmake/android.toolchain.cmake \
--DANDROID_ABI="armeabi-v7a" \
+-DANDROID_ABI="arm64-v8a" \
 -DCMAKE_BUILD_TYPE=Release \
 -DANDROID_STL=c++_static \
 -DANDROID_NATIVE_API_LEVEL=android-21  \

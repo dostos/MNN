@@ -1,85 +1,86 @@
-//
-//  GLConvolution.cpp
-//  MNN
-//
-//  Created by MNN on 2019/01/31.
-//  Copyright © 2018, Alibaba Group Holding Limited
-//
+#include "backend/opencl/execution/ConvIm2col.hpp"
 
-#include "backend/opengl/GLConvolution.hpp"
-#include <MNN/AutoTime.hpp>
 
-#include <sstream>
-#include "AllShader.hpp"
-#include "backend/opengl/GLBackend.hpp"
-#include "core/Macro.h"
-#include "backend/opengl/GLConvolutionIm2col.hpp"
-#include "backend/opengl/GLUtils.hpp"
 namespace MNN {
-namespace OpenGL {
+namespace OpenCL {
 
-GLConvolutionIm2col::~GLConvolutionIm2col() {
+
+ConvIm2ColExecution::~ConvIm2ColExecution() {
 }
 
 #define UNIT 4
 #define UNIT2 16
-GLConvolutionIm2col::GLConvolutionIm2col(const std::vector<Tensor *> &inputs, const Op *convOp, Backend *bn) : GPUConvolution(convOp, bn) {
-    auto totalWeightSize = ALIGN_UP4(mCommon->outputCount()) * ALIGN_UP4(mInputDepth) * (mCommon->kernelY() * mCommon->kernelX());
-    mGLBackend = (GLBackend *)bn;
-    auto mKernelBuffer = std::shared_ptr<GLSSBOBuffer>(new GLSSBOBuffer(sizeof(float) * totalWeightSize));
-    int fw                = mCommon->kernelX();
-    int fh                = mCommon->kernelY();
-    mIsConv1x1 = (fw == 1 && fh == 1) ? true : false;
-    int oc_4         = UP_DIV(mCommon->outputCount(), UNIT);
-    int ic_4      = UP_DIV(mInputDepth, UNIT);
-    float *dest           = (float *)mKernelBuffer->map(GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT);
-    if(NULL != dest){
-        ::memset(dest, 0, totalWeightSize * sizeof(float));
-        const float *source = convOp->main_as_Convolution2D()->weight()->data();
+ConvIm2ColExecution::ConvIm2ColExecution(const std::vector<Tensor *> &inputs, const MNN::Op *op, Backend *backend) 
+    : ConvCommonExecution(op->main_as_Convolution2D(), backend), mOpenCLBackend((OpenCLBackend *)backend) {
+    const auto *conv2dParams       = op->main_as_Convolution2D();
+
+    int kernelWidth   = mConv2dCommonParams->kernelX();
+    int kernelHeight  = mConv2dCommonParams->kernelY();
+    int outputChannel = mConv2dCommonParams->outputCount();
+
+    mIsConv1x1 = (kernelWidth == 1 && kernelHeight == 1) ? true : false;
+
+    mInputDepth = conv2dParams->weight()->size() * mConv2dCommonParams->group() /
+                  kernelWidth / kernelHeight / outputChannel;
+
+    auto totalWeightSize = ALIGN_UP4(outputChannel) * ALIGN_UP4(mInputDepth) * (kernelWidth * kernelHeight);
+
+    cl_int error;
+    std::shared_ptr<Tensor> filterBuffer(
+        Tensor::createDevice<float>({ALIGN_UP4(outputChannel), ALIGN_UP4(mInputDepth), kernelWidth, kernelHeight}));
+    mKernelBuffer.reset(new cl::Buffer(mOpenCLBackend->getOpenCLRuntime()->context(), CL_MEM_READ_WRITE | CL_MEM_ALLOC_HOST_PTR, filterBuffer->size()));
+    float* kernelBufferPtr = (float*)mOpenCLBackend->getOpenCLRuntime()->commandQueue().enqueueMapBuffer(*(mKernelBuffer.get()), true, CL_MAP_WRITE,
+                                                                                0, filterBuffer->size(), nullptr, nullptr, &error);
+
+    int outputChannel4         = UP_DIV(outputChannel, UNIT);
+    int inputChannel4      = UP_DIV(mInputDepth, UNIT);
+
+    if(kernelBufferPtr != nullptr && error == CL_SUCCESS) {
+        ::memset(kernelBufferPtr, 0, filterBuffer->size());
         int cur             = 0;
+        const float *filterDataPtr = conv2dParams->weight()->data();
 
         //weight : oc ic -> oc/4 ic/4 ic4 oc4
         //weight image : oc_4, ic_4 * ic4 oc4
-        int alignedWeightSize = ic_4 * fw * fh * UNIT2;
-        for (int b = 0; b < mCommon->outputCount(); ++b) {
+        int alignedWeightSize = inputChannel4 * kernelWidth * kernelHeight * UNIT2;
+        for (int b = 0; b < outputChannel; ++b) {
             int b_4      = b / UNIT;
-            float *dst_b = dest + b_4 * alignedWeightSize;
+            float *dst_b = kernelBufferPtr + b_4 * alignedWeightSize;
             int mx       = b % UNIT;
             for (int d = 0; d < mInputDepth; ++d) {
                 int my       = d % UNIT;
                 int d_4      = d / UNIT;
-                float *dst_d = dst_b + d_4 * fw * fh * UNIT2;
-                for (int y = 0; y < fh; ++y) {
-                    float *dst_y = dst_d + y * fw * UNIT2;
-                    for (int x = 0; x < fw; ++x) {
+                float *dst_d = dst_b + d_4 * kernelWidth * kernelHeight * UNIT2;
+                for (int y = 0; y < kernelHeight; ++y) {
+                    float *dst_y = dst_d + y * kernelWidth * UNIT2;
+                    for (int x = 0; x < kernelWidth; ++x) {
                         float *dst_x          = dst_y + x * UNIT2;
-                        dst_x[UNIT * my + mx] = source[cur++];
+                        dst_x[UNIT * my + mx] = filterDataPtr[cur++];
                     }
                 }
             }
         }
-    }else{
-        MNN_ASSERT(NULL != dest);
+    }
+    else {
+        MNN_ERROR("Map error ptrCL == nullptr \n");
     }
 
-    mKernelBuffer->unmap();
+    mOpenCLBackend->getOpenCLRuntime()->commandQueue().enqueueUnmapMemObject(*(mKernelBuffer.get()), kernelBufferPtr);
 
-    mKernelTexture = std::shared_ptr<GLTexture>(new GLTexture(ic_4 * UNIT*fw*fh, oc_4, 1, ((GLBackend *)backend())->getTextrueFormat(), GL_TEXTURE_2D, false));
-    auto transform = mGLBackend->getProgram("transform_kernel_image", glsl_kernel2image_glsl);
-    int imageWidth = ROUND_UP(mInputDepth, 4)*fw*fh;
-    int imageHeight = oc_4;
-    transform->useProgram();
-    glBindImageTexture(0, mKernelTexture->id(), 0, GL_TRUE, 0, GL_WRITE_ONLY, ((GLBackend *)backend())->getTextrueFormat());
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, mKernelBuffer->getId());
-    OPENGL_CHECK_ERROR;
-    glUniform1i(3, imageWidth);
-    OPENGL_CHECK_ERROR;
-    glUniform1i(4, imageHeight);
-    OPENGL_CHECK_ERROR;
-    ((GLBackend *)backend())->compute(UP_DIV(imageWidth, 4), UP_DIV(oc_4, 4), 1);
-    OPENGL_CHECK_ERROR;
+    std::vector<int> filterImageShape{inputChannel4 * UNIT * kernelWidth * kernelHeight, outputChannel4};
+    mFilter.reset(Tensor::createDevice<float>({1, filterImageShape[0], 1, filterImageShape[1]}));
+    mOpenCLBackend->onAcquireBuffer(mFilter.get(), Backend::STATIC);
+    MNN::OpenCL::ImageBufferConvertor imageBufferConvertor{mOpenCLBackend->getOpenCLRuntime()};
+    imageBufferConvertor.convertBufferToImage(filterBuffer.get(), MNN::OpenCL::IM2COL_CONV2D_FILTER, mFilter.get());
 
     //bias
+    mBiasBuffer.reset(new cl::Buffer(mOpenCLBackend->getOpenCLRuntime()->context(), CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR,
+                        ALIGN_UP4(mConv2dCommonParams->outputCount()) * sizeof(float)));
+    auto biasBufferPtr = mOpenCLBackend->getOpenCLRuntime()->commandQueue().enqueueMapBuffer(*(mKernelBuffer.get()), true, CL_MAP_WRITE,
+                                                                                    0, filterBuffer->size(), nullptr, nullptr, &error);
+
+    mBiasBuffer.reset(new cl::Buffer(mOpenCLBackend->getOpenCLRuntime()->context(), CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR,
+                        ALIGN_UP4(biasSize, 4) * sizeof(float)));
     mBiasBuffer.reset(new GLSSBOBuffer(sizeof(float) * ALIGN_UP4(mCommon->outputCount())));
     float* bias = (float*)(mBiasBuffer->map(GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT));
     if(bias != nullptr){
@@ -90,7 +91,7 @@ GLConvolutionIm2col::GLConvolutionIm2col(const std::vector<Tensor *> &inputs, co
     mBiasBuffer->unmap();
 }
 
-ErrorCode GLConvolutionIm2col::onResize(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) {
+ErrorCode ConvIm2ColExecution::onResize(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) {
     GPUConvolution::onResize(inputs, outputs);
     std::vector<std::string> im2colPrefix;
     std::vector<std::string> gemmPrefix;
@@ -158,7 +159,8 @@ ErrorCode GLConvolutionIm2col::onResize(const std::vector<Tensor *> &inputs, con
 
     return NO_ERROR;
 }
-ErrorCode GLConvolutionIm2col::onExecute(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) {
+
+ErrorCode ConvIm2ColExecution::onExecute(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) {
 
     auto input         = inputs[0];
     auto output        = outputs[0];
@@ -245,5 +247,5 @@ ErrorCode GLConvolutionIm2col::onExecute(const std::vector<Tensor *> &inputs, co
     return NO_ERROR;
 }
 
-} // namespace OpenGL
-} // namespace MNN
+}
+}
