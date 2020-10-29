@@ -1,5 +1,6 @@
 #include "backend/opencl/execution/ConvIm2col.hpp"
 
+#include "half.hpp"
 
 namespace MNN {
 namespace OpenCL {
@@ -35,7 +36,7 @@ ConvIm2ColExecution::ConvIm2ColExecution(const std::vector<Tensor *> &inputs, co
     int outputChannel4         = UP_DIV(outputChannel, UNIT);
     int inputChannel4      = UP_DIV(mInputDepth, UNIT);
 
-    if(kernelBufferPtr != nullptr && error == CL_SUCCESS) {
+   if(kernelBufferPtr != nullptr && error == CL_SUCCESS) {
         ::memset(kernelBufferPtr, 0, filterBuffer->size());
         int cur             = 0;
         const float *filterDataPtr = conv2dParams->weight()->data();
@@ -55,11 +56,16 @@ ConvIm2ColExecution::ConvIm2ColExecution(const std::vector<Tensor *> &inputs, co
                     float *dst_y = dst_d + y * kernelWidth * UNIT2;
                     for (int x = 0; x < kernelWidth; ++x) {
                         float *dst_x          = dst_y + x * UNIT2;
-                        dst_x[UNIT * my + mx] = filterDataPtr[cur++];
+                        if(mOpenCLBackend->getOpenCLRuntime()->isSupportedFP16()) {
+                            ((half_float::half*)dst_x)[UNIT * my + mx] = (half_float::half)(filterDataPtr[cur++]);
+                        } else {
+                            dst_x[UNIT * my + mx] = filterDataPtr[cur++];
+                        }
                     }
                 }
             }
         }
+        
     }
     else {
         MNN_ERROR("Map error ptrCL == nullptr \n");
@@ -79,30 +85,58 @@ ConvIm2ColExecution::ConvIm2ColExecution(const std::vector<Tensor *> &inputs, co
     auto biasBufferPtr = mOpenCLBackend->getOpenCLRuntime()->commandQueue().enqueueMapBuffer(*(mKernelBuffer.get()), true, CL_MAP_WRITE,
                                                                                     0, filterBuffer->size(), nullptr, nullptr, &error);
 
-    mBiasBuffer.reset(new cl::Buffer(mOpenCLBackend->getOpenCLRuntime()->context(), CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR,
-                        ALIGN_UP4(biasSize, 4) * sizeof(float)));
-    mBiasBuffer.reset(new GLSSBOBuffer(sizeof(float) * ALIGN_UP4(mCommon->outputCount())));
-    float* bias = (float*)(mBiasBuffer->map(GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT));
-    if(bias != nullptr){
-        ::memset(bias, 0, ALIGN_UP4(mCommon->outputCount()) * sizeof(float));
-        ::memcpy(bias, convOp->main_as_Convolution2D()->bias()->data(),
-                 convOp->main_as_Convolution2D()->bias()->size() * sizeof(float));
+    if(biasBufferPtr != nullptr){
+        ::memset(biasBufferPtr, 0, ALIGN_UP4(mConv2dCommonParams->outputCount()) * sizeof(float));
+        ::memcpy(biasBufferPtr, conv2dParams->bias()->data(),
+                 conv2dParams->bias()->size() * sizeof(float));
     }
-    mBiasBuffer->unmap();
+    mOpenCLBackend->getOpenCLRuntime()->commandQueue().enqueueUnmapMemObject(*(mBiasBuffer.get()), biasBufferPtr);
 }
 
 ErrorCode ConvIm2ColExecution::onResize(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) {
-    GPUConvolution::onResize(inputs, outputs);
+#ifdef LOG_VERBOSE
+    MNN_PRINT("Start ConvIm2ColExecution onResize !\n");
+#endif
+
+    auto input  = inputs[0];
+    auto output = outputs[0];
+
+    std::vector<int> inputShape  = tensorShapeFormat(input);
+    std::vector<int> outputShape = tensorShapeFormat(output);
+    const int height             = outputShape.at(1);
+    const int width              = outputShape.at(2);
+
+    const int inputHeight   = inputShape.at(1);
+    const int inputWidth    = inputShape.at(2);
+    const int inputChannels = inputShape.at(3);
+
+    const int inputChannelBlocks = UP_DIV(inputChannels, 4);
+    
+    if (mConv2dCommonParams->padMode() == PadMode_SAME) {
+        int kernelHeightSize = (mConv2dCommonParams->kernelY() - 1) * mConv2dCommonParams->dilateY() + 1;
+        int padNeededHeight = (outputShape.at(1) - 1) * mConv2dCommonParams->strideY() +
+                kernelHeightSize - inputShape.at(1);
+        int kernelWidthSize = (mConv2dCommonParams->kernelX() - 1) * mConv2dCommonParams->dilateX() + 1;
+        int padNeededWidth = (outputShape.at(2) - 1) * mConv2dCommonParams->strideX() + kernelWidthSize -
+                             inputShape.at(2);
+        mPaddings[0] = padNeededHeight;
+        mPaddings[1] = padNeededWidth;
+
+    }
+
+    mPaddings[0] = std::max(mPaddings[0], 0);
+    mPaddings[1] = std::max(mPaddings[1], 0);
+
     std::vector<std::string> im2colPrefix;
     std::vector<std::string> gemmPrefix;
     std::vector<std::string> col2imPrefix;
 
-    if (mCommon->relu()) {
+    if (mConv2dCommonParams->relu()) {
         im2colPrefix.push_back("#define RELU");
         gemmPrefix.push_back("#define RELU");
         col2imPrefix.push_back("#define RELU");
     }
-    if (mCommon->relu6()) {
+    if (mConv2dCommonParams->relu6()) {
         im2colPrefix.push_back("#define RELU6");
         gemmPrefix.push_back("#define RELU6");
         col2imPrefix.push_back("#define RELU6");
@@ -117,13 +151,18 @@ ErrorCode ConvIm2ColExecution::onResize(const std::vector<Tensor *> &inputs, con
 
     obxohxow_4  = UP_DIV(ob*oh*ow, 4);
 
-    int fw                = mCommon->kernelX();
-    int fh                = mCommon->kernelY();
+    int fw                = mConv2dCommonParams->kernelX();
+    int fh                = mConv2dCommonParams->kernelY();
+
+    auto imageChannelType = mOpenCLBackend->getOpenCLRuntime()->isSupportedFP16() ? CL_HALF_FLOAT : CL_FLOAT;
 
     //input : temp image : (ib*oh*ow)/ 4, ic/4*(ib*oh*ow)%4*ic4
     //output : temp image : oc/4 * (ob*oh*ow)%4, (ob*oh*ow)/4 * oc4
-    mSrcTexture = std::shared_ptr<GLTexture>(new GLTexture(UP_DIV(ic, 4)*UNIT*fw*fh, obxohxow_4, 1, ((GLBackend *)backend())->getTextrueFormat(), GL_TEXTURE_2D, false));
-    mDstTexture = std::shared_ptr<GLTexture>(new GLTexture(obxohxow_4, UP_DIV(oc, 4) * UNIT, 1, ((GLBackend *)backend())->getTextrueFormat(), GL_TEXTURE_2D, false));
+    mSrcTexture = std::shared_ptr<cl::Image2D>(new cl::Image2D(mOpenCLBackend->getOpenCLRuntime()->context(), CL_MEM_READ_WRITE, cl::ImageFormat(CL_RGBA, imageChannelType),
+                                                   UP_DIV(ic, 4) * UNIT * fw * fh, obxohxow_4));
+
+    mDstTexture = std::shared_ptr<cl::Image2D>(new cl::Image2D(mOpenCLBackend->getOpenCLRuntime()->context(), CL_MEM_READ_WRITE, cl::ImageFormat(CL_RGBA, imageChannelType),
+                                                   obxohxow_4, UP_DIV(oc, 4) * UNIT));
 
     auto transform = mGLBackend->getProgram("clear_texture", glsl_clear_texture_glsl);
     transform->useProgram();

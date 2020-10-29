@@ -401,8 +401,8 @@ bool ImageBufferConvertor::convertBufferToImage(const Tensor *buffer, const Open
         mBufferToImageKernel.setArg(idx++, static_cast<uint32_t>(channelHeightWidthSumSize));
         mBufferToImageKernel.setArg(idx++, static_cast<uint32_t>(heightWidthSumSize));
     } else if(type == IM2COL_CONV2D_FILTER) {
-        mBufferToImageKernel.setArg(idx++,)
-
+        mBufferToImageKernel.setArg(idx++, image->shape()[1]);
+        mBufferToImageKernel.setArg(idx++, image->shape()[3]);
     } 
     else {
         mBufferToImageKernel.setArg(idx++, static_cast<uint32_t>(formattedBufferShape[1]));
