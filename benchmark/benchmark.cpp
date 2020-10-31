@@ -137,8 +137,26 @@ static inline std::string forwardType(MNNForwardType type) {
     return "N/A";
 }
 
-std::vector<float> doBench(Model &model, int loop, int warmup = 10, std::vector<MNNForwardType> forwards, bool only_inference = true,
+template <typename T>
+bool checkVectorByRelativeError(const T* result, const T* rightData, int size, float rtol) {
+    MNN_ASSERT(result != nullptr);
+    MNN_ASSERT(rightData != nullptr);
+    MNN_ASSERT(size >= 0);
+    for(int i = 0; i < size; ++i){
+        if (fabs(rightData[i]) < 0.000001 && fabs(result[i]) < 0.000001) {
+            continue;
+        }
+        if (fabs(result[i] - rightData[i]) / rightData[i] > rtol) {
+            std::cout << "right: " << rightData[i] << ", compute: " << result[i] << std::endl;
+            return false;
+        }
+    }
+    return true;
+}
+
+std::vector<std::vector<float>> doBench(Model &model, int loop, int warmup, std::vector<MNNForwardType> forwards, bool only_inference = true,
                            int numberThread = 4, int precision = 2, int batch = 1) {
+
     auto revertor = std::unique_ptr<Revert>(new Revert(model.model_file.c_str()));
     revertor->initialize();
     auto modelBuffer = revertor->getBuffer();
@@ -153,7 +171,6 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, std::vector<
         MNN::ScheduleConfig config;
         config.numThread = numberThread;
         config.type = static_cast<MNNForwardType>(forward);
-        config.maxBatch = batch;
         MNN::BackendConfig backendConfig;
         backendConfig.precision = (MNN::BackendConfig::PrecisionMode)precision;
         backendConfig.power = MNN::BackendConfig::Power_High;
@@ -213,7 +230,7 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, std::vector<
     }
 
     for (int i = 0; i < forwards.size()  - 1; i++) {
-        if(expectTensors[i] != expectTensors[i + 1]) {
+        if (!checkVectorByRelativeError<float>(expectTensors[i]->host<float>(), expectTensors[i + 1]->host<float>(), expectTensors[i]->size(), 0.005)) {
             printf("Expected result of %s != %s\n", forwardType(forwards[i]).c_str(), forwardType(forwards[i + 1]).c_str());
         }
     }
@@ -420,13 +437,6 @@ int main(int argc, const char *argv[]) {
     if (argc >= 8) {
         batch = atoi(argv[7]);
     }
-<<<<<<< HEAD
-    std::cout << "Forward type: **" << forwardType(forward) << "** thread=" << numberThread << "** precision=" << precision << std::endl;
-=======
-    int shuffle = 0;
-    if (argc >= 9) {
-        shuffle = atoi(argv[8]);
-    }
 
     std::cout << "Forward type: ** "; 
     for(auto forward : forwards) {
@@ -434,7 +444,6 @@ int main(int argc, const char *argv[]) {
     }
 
     std::cout << "** thread=" << numberThread << "** precision=" << precision << std::endl;
->>>>>>> 343a937... wip
     std::vector<Model> models = findModelFiles(argv[1]);
 
     std::cout << "--------> Benchmarking... loop = " << argv[2] << ", warmup = " << warmup << std::endl;
@@ -443,15 +452,10 @@ int main(int argc, const char *argv[]) {
     // set_cpu_affinity();
 
     for (auto &m : models) {
-<<<<<<< HEAD
-        std::vector<float> costs = doBench(m, loop, warmup, forward, false, numberThread, precision, batch);
-        displayStats(m.name, costs);
-=======
-        std::vector<std::vector<float>> costs = doBench(m, loop, warmup, forwards, false, numberThread, precision, batch, shuffle > 0);
+        std::vector<std::vector<float>> costs = doBench(m, loop, warmup, forwards, false, numberThread, precision, batch);
 
         for (int i = 0; i < costs.size(); i++) {
             displayStats(m.name + " " + forwardType(forwards[i]), costs[i]);
         }
->>>>>>> 343a937... wip
     }
 }

@@ -190,9 +190,6 @@ ErrorCode ConvIm2ColExecution::onResize(const std::vector<Tensor *> &inputs, con
     return NO_ERROR;
 }
 
-ErrorCode ConvIm2ColExecution::onResize(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs, const std::vector<int>& batchIndexes) {
-}
-
 ErrorCode ConvIm2ColExecution::onExecute(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) {
 
     auto input         = inputs[0];

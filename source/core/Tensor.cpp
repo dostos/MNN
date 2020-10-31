@@ -429,6 +429,8 @@ void Tensor::printShape() const {
     const int dims = this->dimensions();
     
     MNN_PRINT("\t**Tensor %s shape**: ", mDescribe->name.c_str());
+    MNN_PRINT("\t*Dimension format %s*: ", EnumNameMNN_DATA_FORMAT(mDescribe->dimensionFormat));
+    
     if (dims == 0) {
         MNN_PRINT("\t*Scalar*");
     }
