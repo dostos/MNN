@@ -217,6 +217,7 @@ public:
     virtual Execution *onCreate(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs,
                                 const MNN::Op *op, Backend *backend) const override {
         auto common = op->main_as_Convolution2D()->common();
+        return new GLConvolutionIm2col(inputs, op, backend);
 
         //TODO: bugfix
         if(common->padX() == 1 || common->strideX() != 1){

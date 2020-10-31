@@ -338,9 +338,9 @@ VulkanBasicExecution* VulkanConvolutionImpl::create(VulkanBackend* backend, cons
                                                          const std::vector<Tensor*>& inputs, const Tensor* output,
                                                          const float* weightPtr, const float* biasPtr, int ci, int co) {
     AUTOTIME;
-    //if (inputs.size() > 1) {
-    //    return new VulkanConvolutionIm2Col(backend, convOption, weightPtr, biasPtr, ci, co);
-   // }
+    if (inputs.size() > 1) {
+        return new VulkanConvolutionIm2Col(backend, convOption, weightPtr, biasPtr, ci, co);
+    }
     auto imageLimit = backend->proty().limits.maxImageDimension1D;
     if (ALIGN_UP4(ci) * convOption->kernelX() * convOption->kernelY() > imageLimit) {
         return new VulkanConvolutionSlideWindow(backend, convOption, weightPtr, biasPtr, ci, co);
@@ -353,7 +353,7 @@ VulkanBasicExecution* VulkanConvolutionImpl::create(VulkanBackend* backend, cons
     if (UP_DIV(output->width() * output->height(), 4) > imageLimit) {
         return new VulkanConvolutionSlideWindow(backend, convOption, weightPtr, biasPtr, ci, co);
     }
-    return new VulkanConvolutionSlideWindow(backend, convOption, weightPtr, biasPtr, ci, co);
+    return new VulkanConvolutionIm2Col(backend, convOption, weightPtr, biasPtr, ci, co);
 }
 
 } // namespace MNN
