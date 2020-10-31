@@ -164,39 +164,33 @@ ErrorCode ConvIm2ColExecution::onResize(const std::vector<Tensor *> &inputs, con
     mDstTexture = std::shared_ptr<cl::Image2D>(new cl::Image2D(mOpenCLBackend->getOpenCLRuntime()->context(), CL_MEM_READ_WRITE, cl::ImageFormat(CL_RGBA, imageChannelType),
                                                    obxohxow_4, UP_DIV(oc, 4) * UNIT));
 
-    auto transform = mGLBackend->getProgram("clear_texture", glsl_clear_texture_glsl);
-    transform->useProgram();
-    glBindImageTexture(0, mSrcTexture->id(), 0, GL_TRUE, 0, GL_WRITE_ONLY, ((GLBackend *)backend())->getTextrueFormat());
-    OPENGL_CHECK_ERROR;
-    glUniform1i(1, UP_DIV(ic, 4)*UNIT*fw*fh);
-    OPENGL_CHECK_ERROR;
-    glUniform1i(2, obxohxow_4);
-    OPENGL_CHECK_ERROR;
-    ((GLBackend *)backend())->compute(UP_DIV(UP_DIV(ic, 4)*UNIT*fw*fh, 4), UP_DIV(obxohxow_4, 4), 1);
-    OPENGL_CHECK_ERROR;
+    // Clear texture?
 
-    if (true == mIsConv1x1) {
-        setLocalSize(im2colPrefix, mIm2colSize, 8, 8, 1);
-        mIm2ColProgram = mGLBackend->getProgram("image2col1x1", glsl_im2col1x1_glsl, im2colPrefix);
-    }else{
-        setLocalSize(im2colPrefix, mIm2colSize, 8, 8, 1);
-        mIm2ColProgram = mGLBackend->getProgram("image2col", glsl_im2col_glsl, im2colPrefix);
-    }
-
-    setLocalSize(gemmPrefix, mGemmSize, 8, 8, 1);
-    mGemm16x16Program = mGLBackend->getProgram("gemm16x16", glsl_gemm16x16_glsl, gemmPrefix);
-    setLocalSize(col2imPrefix, mCol2imSize, 8, 8, 1);
-    mCol2ImProgram = mGLBackend->getProgram("col2image", glsl_col2im_glsl, col2imPrefix);
-    if (!mIsConv1x1) {
-        mImage2ColUniform = [=]() {
-            glUniform2i(2, mPadX, mPadY);
-            glUniform2i(3, mCommon->kernelX(), mCommon->kernelY());
-            glUniform2i(4, mCommon->strideX(), mCommon->strideY());
-            glUniform2i(5, mCommon->dilateX(), mCommon->dilateY());
-        };
-    }
-
+    //if (true == mIsConv1x1) {
+    //    setLocalSize(im2colPrefix, mIm2colSize, 8, 8, 1);
+    //    mIm2ColProgram = mGLBackend->getProgram("image2col1x1", glsl_im2col1x1_glsl, im2colPrefix);
+    //}else{
+    //    setLocalSize(im2colPrefix, mIm2colSize, 8, 8, 1);
+    //    mIm2ColProgram = mGLBackend->getProgram("image2col", glsl_im2col_glsl, im2colPrefix);
+    //}
+//
+    //setLocalSize(gemmPrefix, mGemmSize, 8, 8, 1);
+    //mGemm16x16Program = mGLBackend->getProgram("gemm16x16", glsl_gemm16x16_glsl, gemmPrefix);
+    //setLocalSize(col2imPrefix, mCol2imSize, 8, 8, 1);
+    //mCol2ImProgram = mGLBackend->getProgram("col2image", glsl_col2im_glsl, col2imPrefix);
+    //if (!mIsConv1x1) {
+    //    mImage2ColUniform = [=]() {
+    //        glUniform2i(2, mPadX, mPadY);
+    //        glUniform2i(3, mCommon->kernelX(), mCommon->kernelY());
+    //        glUniform2i(4, mCommon->strideX(), mCommon->strideY());
+    //        glUniform2i(5, mCommon->dilateX(), mCommon->dilateY());
+    //    };
+    //}
+//
     return NO_ERROR;
+}
+
+ErrorCode ConvIm2ColExecution::onResize(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs, const std::vector<int>& batchIndexes) {
 }
 
 ErrorCode ConvIm2ColExecution::onExecute(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) {
@@ -220,69 +214,69 @@ ErrorCode ConvIm2ColExecution::onExecute(const std::vector<Tensor *> &inputs, co
     int oc_4 = UP_DIV(oc, 4);
 
     //        image2col
-    {
-        mIm2ColProgram->useProgram();
-        glBindImageTexture(0, mSrcTexture->id(), 0, GL_TRUE, 0, GL_WRITE_ONLY, ((GLBackend *)backend())->getTextrueFormat());
-        {
-            int texId = 0;
-            glActiveTexture(GL_TEXTURE0 + texId);
-            glUniform1i(1, texId);
-            glBindTexture(GL_TEXTURE_3D, inputTexture);
-            OPENGL_CHECK_ERROR;
-        }
-
-        if (mIsConv1x1) {
-            glUniform1i(5, ic_4);
-            glUniform1i(6, ow);
-            glUniform1i(7, oh);
-        }else{
-            mImage2ColUniform();
-            glUniform4i(6, iw, ih, ic_4, 1);
-            glUniform4i(7, ow, oh, oc_4, 1);
-        }
-        OPENGL_CHECK_ERROR;
-        ((GLBackend *)backend())->compute(UP_DIV(ow, mIm2colSize[0]), UP_DIV(oh, mIm2colSize[1]), UP_DIV(ic_4*ib, mIm2colSize[2]));
-        OPENGL_CHECK_ERROR;
-    }
-
-    //gemm
-    {
-        mGemm16x16Program->useProgram();
-        glBindImageTexture(0, mDstTexture->id(), 0, GL_TRUE, 0, GL_WRITE_ONLY, ((GLBackend *)backend())->getTextrueFormat());
-        OPENGL_CHECK_ERROR;
-        glBindImageTexture(1, mSrcTexture->id(), 0, GL_TRUE, 0, GL_READ_ONLY, ((GLBackend *)backend())->getTextrueFormat());
-        glBindImageTexture(2, mKernelTexture->id(), 0, GL_TRUE, 0, GL_READ_ONLY, ((GLBackend *)backend())->getTextrueFormat());
-        glUniform2i(3, obxohxow_4, oc_4);
-        if (mIsConv1x1) {
-            glUniform1i(4, ic_4);
-        }else{
-            glUniform1i(4, ic_4*mCommon->kernelX()*mCommon->kernelY());
-        }
-        OPENGL_CHECK_ERROR;
-        ((GLBackend *)backend())->compute(UP_DIV(obxohxow_4, mGemmSize[0]), UP_DIV(oc_4, mGemmSize[1]), 1);
-        OPENGL_CHECK_ERROR;
-    }
-
-    //col2image
-    {
-        mCol2ImProgram->useProgram();
-        OPENGL_CHECK_ERROR;
-        glBindImageTexture(0, outputTexture, 0, GL_TRUE, 0, GL_WRITE_ONLY, ((GLBackend *)backend())->getTextrueFormat());
-        {
-            int texId = 0;
-            glActiveTexture(GL_TEXTURE0 + texId);
-            glUniform1i(1, texId);
-            glBindTexture(GL_TEXTURE_2D, mDstTexture->id());
-            OPENGL_CHECK_ERROR;
-        }
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, mBiasBuffer->getId());
-        OPENGL_CHECK_ERROR;
-        glUniform3i(3, ow, oh, oc_4);
-        OPENGL_CHECK_ERROR;
-        ((GLBackend *)backend())->compute(UP_DIV(ow, mCol2imSize[0]), UP_DIV(oh, mCol2imSize[1]), UP_DIV(oc_4*ob, mCol2imSize[2]));
-        OPENGL_CHECK_ERROR;
-    }
-
+    //{
+    //    mIm2ColProgram->useProgram();
+    //    glBindImageTexture(0, mSrcTexture->id(), 0, GL_TRUE, 0, GL_WRITE_ONLY, ((GLBackend *)backend())->getTextrueFormat());
+    //    {
+    //        int texId = 0;
+    //        glActiveTexture(GL_TEXTURE0 + texId);
+    //        glUniform1i(1, texId);
+    //        glBindTexture(GL_TEXTURE_3D, inputTexture);
+    //        OPENGL_CHECK_ERROR;
+    //    }
+//
+    //    if (mIsConv1x1) {
+    //        glUniform1i(5, ic_4);
+    //        glUniform1i(6, ow);
+    //        glUniform1i(7, oh);
+    //    }else{
+    //        mImage2ColUniform();
+    //        glUniform4i(6, iw, ih, ic_4, 1);
+    //        glUniform4i(7, ow, oh, oc_4, 1);
+    //    }
+    //    OPENGL_CHECK_ERROR;
+    //    ((GLBackend *)backend())->compute(UP_DIV(ow, mIm2colSize[0]), UP_DIV(oh, mIm2colSize[1]), UP_DIV(ic_4*ib, mIm2colSize[2]));
+    //    OPENGL_CHECK_ERROR;
+    //}
+//
+    ////gemm
+    //{
+    //    mGemm16x16Program->useProgram();
+    //    glBindImageTexture(0, mDstTexture->id(), 0, GL_TRUE, 0, GL_WRITE_ONLY, ((GLBackend *)backend())->getTextrueFormat());
+    //    OPENGL_CHECK_ERROR;
+    //    glBindImageTexture(1, mSrcTexture->id(), 0, GL_TRUE, 0, GL_READ_ONLY, ((GLBackend *)backend())->getTextrueFormat());
+    //    glBindImageTexture(2, mKernelTexture->id(), 0, GL_TRUE, 0, GL_READ_ONLY, ((GLBackend *)backend())->getTextrueFormat());
+    //    glUniform2i(3, obxohxow_4, oc_4);
+    //    if (mIsConv1x1) {
+    //        glUniform1i(4, ic_4);
+    //    }else{
+    //        glUniform1i(4, ic_4*mCommon->kernelX()*mCommon->kernelY());
+    //    }
+    //    OPENGL_CHECK_ERROR;
+    //    ((GLBackend *)backend())->compute(UP_DIV(obxohxow_4, mGemmSize[0]), UP_DIV(oc_4, mGemmSize[1]), 1);
+    //    OPENGL_CHECK_ERROR;
+    //}
+//
+    ////col2image
+    //{
+    //    mCol2ImProgram->useProgram();
+    //    OPENGL_CHECK_ERROR;
+    //    glBindImageTexture(0, outputTexture, 0, GL_TRUE, 0, GL_WRITE_ONLY, ((GLBackend *)backend())->getTextrueFormat());
+    //    {
+    //        int texId = 0;
+    //        glActiveTexture(GL_TEXTURE0 + texId);
+    //        glUniform1i(1, texId);
+    //        glBindTexture(GL_TEXTURE_2D, mDstTexture->id());
+    //        OPENGL_CHECK_ERROR;
+    //    }
+    //    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, mBiasBuffer->getId());
+    //    OPENGL_CHECK_ERROR;
+    //    glUniform3i(3, ow, oh, oc_4);
+    //    OPENGL_CHECK_ERROR;
+    //    ((GLBackend *)backend())->compute(UP_DIV(ow, mCol2imSize[0]), UP_DIV(oh, mCol2imSize[1]), UP_DIV(oc_4*ob, mCol2imSize[2]));
+    //    OPENGL_CHECK_ERROR;
+    //}
+//
     return NO_ERROR;
 }
 

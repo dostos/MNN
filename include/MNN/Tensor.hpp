@@ -65,6 +65,21 @@ public:
     /** deinitializer */
     ~Tensor();
 
+    bool operator==(const Tensor &rhs) const {
+        if( shape() == rhs.shape() && getDimensionType() == rhs.getDimensionType() ) {
+            auto lhsHost = host<void>();
+            auto rhsHost = rhs.host<void>();
+
+            return memcmp(lhsHost, rhsHost, size()) == 0;
+        } else {
+            return false;
+        }
+    }
+
+    bool operator!=(const Tensor &rhs) const {
+        return !(*this == rhs);
+    }   
+
 private:
     // remove all assignment operator
     Tensor(const Tensor& tensor)  = delete;

@@ -168,6 +168,14 @@ public:
     }
 };
 
+class ConvolutionTestOnOpengl : public ConvolutionTest {
+public:
+    ~ConvolutionTestOnOpengl() = default;
+    virtual bool run() {
+        return ConvolutionTest::test(MNN_FORWARD_OPENGL, "OPENGL");
+    }
+};
+
 class DepthwiseConvolutionTest : public ConvolutionCommonTest {
 public:
     virtual ~DepthwiseConvolutionTest() = default;
@@ -219,6 +227,14 @@ public:
     ~DepthwiseConvolutionTestOnOpencl() = default;
     virtual bool run() {
         return DepthwiseConvolutionTest::test(MNN_FORWARD_OPENCL, "OPENCL");
+    }
+};
+
+class DepthwiseConvolutionTestOnOpengl : public DepthwiseConvolutionTest {
+public:
+    ~DepthwiseConvolutionTestOnOpengl() = default;
+    virtual bool run() {
+        return DepthwiseConvolutionTest::test(MNN_FORWARD_OPENGL, "OPENGL");
     }
 };
 
@@ -276,6 +292,22 @@ public:
     }
 };
 
+class GroupConvolutionTestOnOpengl : public GroupConvolutionTest {
+public:
+    virtual ~GroupConvolutionTestOnOpengl() = default;
+    virtual bool run() {
+        return GroupConvolutionTest::test(MNN_FORWARD_OPENGL, "OPENGL");
+    }
+};
+
 MNNTestSuiteRegister(ConvolutionTestOnCPU, "op/convolution/conv");
 MNNTestSuiteRegister(DepthwiseConvolutionTestOnCPU, "op/convolution/depthwise_conv");
 MNNTestSuiteRegister(GroupConvolutionTestOnCPU, "op/convolution/conv_group");
+
+MNNTestSuiteRegister(ConvolutionTestOnOpencl, "op/convolution/conv_cl");
+MNNTestSuiteRegister(DepthwiseConvolutionTestOnOpencl, "op/convolution/depthwise_conv_cl");
+MNNTestSuiteRegister(GroupConvolutionTestOnOpencl, "op/convolution/conv_group_cl");
+
+MNNTestSuiteRegister(ConvolutionTestOnOpengl, "op/convolution/conv_gl");
+MNNTestSuiteRegister(DepthwiseConvolutionTestOnOpengl, "op/convolution/depthwise_conv_gl");
+MNNTestSuiteRegister(GroupConvolutionTestOnOpengl, "op/convolution/conv_group_gl");

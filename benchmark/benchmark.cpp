@@ -11,6 +11,7 @@
 #include <float.h>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -120,6 +121,22 @@ static inline uint64_t getTimeInUs() {
     return time;
 }
 
+static inline std::string forwardType(MNNForwardType type) {
+    switch (type) {
+    case MNN_FORWARD_CPU:
+        return "CPU";
+    case MNN_FORWARD_VULKAN:
+        return "Vulkan";
+    case MNN_FORWARD_OPENCL:
+        return "OpenCL";
+    case MNN_FORWARD_METAL:
+        return "Metal";
+    default:
+        break;
+    }
+    return "N/A";
+}
+
 std::vector<int> createRandomBatch(int maxBatch, int numBatch = -1) {
     std::set<int> batchIndexes;
 
@@ -139,7 +156,7 @@ std::vector<int> createRandomBatch(int maxBatch, int numBatch = -1) {
     return std::vector<int>(batchIndexes.begin(), batchIndexes.end());
 }
 
-std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward = MNN_FORWARD_CPU, bool only_inference = true,
+std::vector<std::vector<float>> doBench(Model &model, int loop, int warmup, std::vector<MNNForwardType> forwards, bool only_inference = true,
                            int numberThread = 4, int precision = 2, int batch = 1, bool shuffle = false) {
     auto revertor = std::unique_ptr<Revert>(new Revert(model.model_file.c_str()));
     revertor->initialize();
@@ -147,70 +164,85 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
     const auto bufferSize = revertor->getBufferSize();
     auto net = std::shared_ptr<MNN::Interpreter>(MNN::Interpreter::createFromBuffer(modelBuffer, bufferSize));
 
-    revertor.reset();
-    MNN::ScheduleConfig config;
-    config.numThread = numberThread;
-    config.type = static_cast<MNNForwardType>(forward);
-    config.maxBatch = batch;
-    MNN::BackendConfig backendConfig;
-    backendConfig.precision = (MNN::BackendConfig::PrecisionMode)precision;
-    backendConfig.power = MNN::BackendConfig::Power_High;
-    config.backendConfig = &backendConfig;
+    std::vector<std::vector<float>> costs;
+    std::vector<std::shared_ptr<MNN::Tensor>> expectTensors;
 
-    std::vector<float> costs;
-    MNN::Session *session = net->createSession(config);
-    MNN::Tensor *input = net->getSessionInput(session, NULL);
-    auto inputShape = input->shape();
+    for(auto forward : forwards) {
+        revertor.reset();
+        MNN::ScheduleConfig config;
+        config.numThread = numberThread;
+        config.type = static_cast<MNNForwardType>(forward);
+        config.maxBatch = batch;
+        MNN::BackendConfig backendConfig;
+        backendConfig.precision = (MNN::BackendConfig::PrecisionMode)precision;
+        backendConfig.power = MNN::BackendConfig::Power_High;
+        config.backendConfig = &backendConfig;
 
-    std::cout << "Input shape : ";
-    input->printShape();
+        std::vector<float> forwardCosts;
+        MNN::Session *session = net->createSession(config);
+        MNN::Tensor *input = net->getSessionInput(session, NULL);
+        auto inputShape = input->shape();
 
-    if (inputShape[0] != batch) {
-        inputShape[0] = batch;
-        net->resizeTensor(input, inputShape);
-        net->resizeSession(session);
-        std::cout << "Resized to " << batch << std::endl;
+        std::cout << "Input shape : ";
+        input->printShape();
+
+        if (inputShape[0] != batch) {
+            inputShape[0] = batch;
+            net->resizeTensor(input, inputShape);
+            net->resizeSession(session);
+            std::cout << "Resized to " << batch << std::endl;
+        }
+
+        // if the model has not the input dimension, umcomment the below code to set the input dims
+        // std::vector<int> dims{1, 3, 224, 224};
+        // net->resizeTensor(input, dims);
+        // net->resizeSession(session);
+
+        const MNN::Backend *inBackend = net->getBackend(session, input);
+
+        std::shared_ptr<MNN::Tensor> givenTensor(MNN::Tensor::createHostTensorFromDevice(input, false));
+        
+        // TODO : Read real image?
+        for(int i = 0; i < givenTensor->elementSize(); i++) {
+            givenTensor->host<float>()[i] = 255.f * static_cast <float> (i) / static_cast <float> (givenTensor->elementSize());
+        }
+
+        auto outputTensor = net->getSessionOutput(session, NULL);
+        std::shared_ptr<MNN::Tensor> expectTensor(MNN::Tensor::createHostTensorFromDevice(outputTensor, false));
+        // Warming up...
+        for (int i = 0; i < warmup; ++i) {
+            input->copyFromHostTensor(givenTensor.get());
+            if(shuffle)
+                net->runSessionBatch(session, createRandomBatch(batch));
+            else 
+                net->runSession(session);
+            outputTensor->copyToHostTensor(expectTensor.get());
+        }
+
+        for (int round = 0; round < loop; round++) {
+            auto timeBegin = getTimeInUs();
+
+            input->copyFromHostTensor(givenTensor.get());
+            if(shuffle)
+                net->runSessionBatch(session, createRandomBatch(batch));
+            else 
+                net->runSession(session);
+            outputTensor->copyToHostTensor(expectTensor.get());
+
+            auto timeEnd = getTimeInUs();
+            forwardCosts.push_back((timeEnd - timeBegin) / 1000.0);
+        }
+
+        costs.push_back(forwardCosts);
+        expectTensors.push_back(expectTensor);
     }
 
-    // if the model has not the input dimension, umcomment the below code to set the input dims
-    // std::vector<int> dims{1, 3, 224, 224};
-    // net->resizeTensor(input, dims);
-    // net->resizeSession(session);
-
-    const MNN::Backend *inBackend = net->getBackend(session, input);
-
-    std::shared_ptr<MNN::Tensor> givenTensor(MNN::Tensor::createHostTensorFromDevice(input, false));
-    
-    // TODO : Read real image?
-    for(int i = 0; i < givenTensor->elementSize(); i++) {
-        givenTensor->host<float>()[i] = 255.f * static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+    for (int i = 0; i < forwards.size()  - 1; i++) {
+        if(expectTensors[i] != expectTensors[i + 1]) {
+            printf("Expected result of %s != %s\n", forwardType(forwards[i]).c_str(), forwardType(forwards[i + 1]).c_str());
+        }
     }
 
-    auto outputTensor = net->getSessionOutput(session, NULL);
-    std::shared_ptr<MNN::Tensor> expectTensor(MNN::Tensor::createHostTensorFromDevice(outputTensor, false));
-    // Warming up...
-    for (int i = 0; i < warmup; ++i) {
-        input->copyFromHostTensor(givenTensor.get());
-        if(shuffle)
-            net->runSessionBatch(session, createRandomBatch(batch));
-        else 
-            net->runSession(session);
-        outputTensor->copyToHostTensor(expectTensor.get());
-    }
-
-    for (int round = 0; round < loop; round++) {
-        auto timeBegin = getTimeInUs();
-
-        input->copyFromHostTensor(givenTensor.get());
-        if(shuffle)
-            net->runSessionBatch(session, createRandomBatch(batch));
-        else 
-            net->runSession(session);
-        outputTensor->copyToHostTensor(expectTensor.get());
-
-        auto timeEnd = getTimeInUs();
-        costs.push_back((timeEnd - timeBegin) / 1000.0);
-    }
     return costs;
 }
 
@@ -224,21 +256,6 @@ void displayStats(const std::string &name, const std::vector<float> &costs) {
     }
     avg = costs.size() > 0 ? sum / costs.size() : 0;
     printf("[ - ] %-24s    max = %8.3fms  min = %8.3fms  avg = %8.3fms\n", name.c_str(), max, avg == 0 ? 0 : min, avg);
-}
-static inline std::string forwardType(MNNForwardType type) {
-    switch (type) {
-    case MNN_FORWARD_CPU:
-        return "CPU";
-    case MNN_FORWARD_VULKAN:
-        return "Vulkan";
-    case MNN_FORWARD_OPENCL:
-        return "OpenCL";
-    case MNN_FORWARD_METAL:
-        return "Metal";
-    default:
-        break;
-    }
-    return "N/A";
 }
 
 #ifdef __ANDROID__
@@ -393,7 +410,9 @@ int main(int argc, const char *argv[]) {
     int loop = 10;
 
     int warmup = 10;
-    MNNForwardType forward = MNN_FORWARD_CPU;
+    std::vector<MNNForwardType> forwards = {MNN_FORWARD_CPU};
+    std::string forwardsString;
+
     int numberThread = 4;
     if (argc <= 2) {
         std::cout << "Usage: " << argv[0] << " models_folder [loop_count] [warmup] [forwardtype] [numberThread] [precision]" << std::endl;
@@ -406,7 +425,16 @@ int main(int argc, const char *argv[]) {
         warmup = atoi(argv[3]);
     }
     if (argc >= 5) {
-        forward = static_cast<MNNForwardType>(atoi(argv[4]));
+        forwards.clear();
+
+        forwardsString = argv[4];
+        std::replace(forwardsString.begin(), forwardsString.end(), ',', ' ');
+        std::stringstream ss(forwardsString);
+
+        int forwardType = 0;
+        while(ss >> forwardType) {
+            forwards.push_back(static_cast<MNNForwardType>(forwardType));
+        }
     }
     if (argc >= 6) {
         numberThread = atoi(argv[5]);
@@ -423,7 +451,13 @@ int main(int argc, const char *argv[]) {
     if (argc >= 9) {
         shuffle = atoi(argv[8]);
     }
-    std::cout << "Forward type: **" << forwardType(forward) << "** thread=" << numberThread << "** precision=" << precision << std::endl;
+
+    std::cout << "Forward type: ** "; 
+    for(auto forward : forwards) {
+        std::cout << forwardType(forward) << " , ";
+    }
+
+    std::cout << "** thread=" << numberThread << "** precision=" << precision << std::endl;
     std::vector<Model> models = findModelFiles(argv[1]);
 
     std::cout << "--------> Benchmarking... loop = " << argv[2] << ", warmup = " << warmup << std::endl;
@@ -432,7 +466,10 @@ int main(int argc, const char *argv[]) {
     // set_cpu_affinity();
 
     for (auto &m : models) {
-        std::vector<float> costs = doBench(m, loop, warmup, forward, false, numberThread, precision, batch, shuffle > 0);
-        displayStats(m.name, costs);
+        std::vector<std::vector<float>> costs = doBench(m, loop, warmup, forwards, false, numberThread, precision, batch, shuffle > 0);
+
+        for (int i = 0; i < costs.size(); i++) {
+            displayStats(m.name + " " + forwardType(forwards[i]), costs[i]);
+        }
     }
 }
