@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM nvidia/opengl:1.2-glvnd-devel
 
 ENV DEBIAN_FRONTEND noninteractive
 
