@@ -179,6 +179,16 @@ public:
                            , tempBuffer2->size(), mKernel.get(), cmdBuffer.get(), parameters);
             cmdBuffer->end();
             backend->getPool().submitAndWait(cmdBuffer->get());
+
+            float *reordered_weight = (float*)mKernel->map();
+            
+            MNN_PRINT("Vulkan conv weight: \n");
+            for (int i = 0; i < reorder.computeMiddleBufferSize(co, kh, kw, ci); i++) {
+                MNN_PRINT("%f ", reordered_weight[i]);
+            }
+            MNN_PRINT("\n");
+
+            mKernel->unmap();
         }
         mMultiCreator = [ci, kh, kw, co, backend, this]() {
             auto multi = std::make_shared<VulkanMatrixMultier4x4>(backend, nullptr, ALIGN_UP4(ci) * kh * kw, co, 1, mKernel);
@@ -203,9 +213,18 @@ public:
             // Static bias
             mBias         = std::make_shared<VulkanImage>(backend->getMemoryPool(), false, UP_DIV(co, 4), 1);
             auto tempBias = std::make_shared<VulkanBuffer>(backend->getMemoryPool(), false, sizeof(float) * ALIGN_UP4(co));
-            auto bias     = tempBias->map();
+            float* bias     = (float*)tempBias->map();
             ::memset(bias, 0, sizeof(float) * ALIGN_UP4(co));
             ::memcpy(bias, biasPtr, sizeof(float) * co);
+
+            MNN_PRINT("Vulkan bias: \n");
+            for (int i = 0; i < ALIGN_UP4(co); i++) {
+                MNN_PRINT("%f ", bias[i]);
+            }
+            MNN_PRINT("\n");
+
+            mKernel->unmap();
+
             tempBias->unmap();
             backend->copyBufferToImage(tempBias.get(), mBias.get());
         }
@@ -338,9 +357,9 @@ VulkanBasicExecution* VulkanConvolutionImpl::create(VulkanBackend* backend, cons
                                                          const std::vector<Tensor*>& inputs, const Tensor* output,
                                                          const float* weightPtr, const float* biasPtr, int ci, int co) {
     AUTOTIME;
-    if (inputs.size() > 1) {
-        return new VulkanConvolutionIm2Col(backend, convOption, weightPtr, biasPtr, ci, co);
-    }
+    //if (inputs.size() > 1) {
+    return new VulkanConvolutionIm2Col(backend, convOption, weightPtr, biasPtr, ci, co);
+    //}
     auto imageLimit = backend->proty().limits.maxImageDimension1D;
     if (ALIGN_UP4(ci) * convOption->kernelX() * convOption->kernelY() > imageLimit) {
         return new VulkanConvolutionSlideWindow(backend, convOption, weightPtr, biasPtr, ci, co);

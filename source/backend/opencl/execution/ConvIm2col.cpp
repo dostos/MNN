@@ -66,6 +66,11 @@ ConvIm2ColExecution::ConvIm2ColExecution(const std::vector<Tensor *> &inputs, co
             }
         }
         
+        MNN_PRINT("Opencl Conv weight");
+        for(int i = 0 ; i < filterBuffer->size(); i++) {
+            MNN_PRINT("%f ", filterDataPtr[i]);
+        }
+        MNN_PRINT("\n");
     }
     else {
         MNN_ERROR("Map error ptrCL == nullptr \n");
@@ -82,13 +87,19 @@ ConvIm2ColExecution::ConvIm2ColExecution(const std::vector<Tensor *> &inputs, co
     //bias
     mBiasBuffer.reset(new cl::Buffer(mOpenCLBackend->getOpenCLRuntime()->context(), CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR,
                         ALIGN_UP4(mConv2dCommonParams->outputCount()) * sizeof(float)));
-    auto biasBufferPtr = mOpenCLBackend->getOpenCLRuntime()->commandQueue().enqueueMapBuffer(*(mKernelBuffer.get()), true, CL_MAP_WRITE,
-                                                                                    0, filterBuffer->size(), nullptr, nullptr, &error);
+    float* biasBufferPtr = (float*)mOpenCLBackend->getOpenCLRuntime()->commandQueue().enqueueMapBuffer(*(mBiasBuffer.get()), true, CL_MAP_WRITE,
+                                                                                    0, ALIGN_UP4(mConv2dCommonParams->outputCount()) * sizeof(float), nullptr, nullptr, &error);
 
     if(biasBufferPtr != nullptr){
         ::memset(biasBufferPtr, 0, ALIGN_UP4(mConv2dCommonParams->outputCount()) * sizeof(float));
         ::memcpy(biasBufferPtr, conv2dParams->bias()->data(),
                  conv2dParams->bias()->size() * sizeof(float));
+                 
+        MNN_PRINT("Opencl Conv bias");
+        for(int i = 0 ; i < conv2dParams->bias()->size(); i++) {
+            MNN_PRINT("%f ", biasBufferPtr[i]);
+        }
+        MNN_PRINT("\n");
     }
     mOpenCLBackend->getOpenCLRuntime()->commandQueue().enqueueUnmapMemObject(*(mBiasBuffer.get()), biasBufferPtr);
 }

@@ -36,6 +36,9 @@ public:
     }
     virtual ~VulkanImage();
 
+    void* map(int start = 0, int size = -1) const;
+    void unmap() const;
+    
     inline int width() const {
         return mWidth;
     }

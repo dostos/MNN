@@ -1,11 +1,6 @@
 {
     "cmake.debugConfig": {
-        "args": [
-            "${workspaceRoot}/benchmark/models",
-            "3",
-            "3",
-            "3"
-        ]
+        "args": []
     },
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
     "files.associations": {

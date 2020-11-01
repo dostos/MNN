@@ -4,6 +4,7 @@
 #include <MNN/expr/Expr.hpp>
 #include <MNN/MNNDefine.h>
 
+#include "ConvExpr.hpp"
 #include "MobileNetExpr.hpp"
 #include "ResNetExpr.hpp"
 #include "GoogLeNetExpr.hpp"

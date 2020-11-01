@@ -97,4 +97,17 @@ VulkanImage::~VulkanImage() {
     }
 }
 
+void* VulkanImage::map(int start, int size) const {
+    if (size < 0) {
+        size = mMemory->size();
+    }
+    void* data = nullptr;
+    CALL_VK(mPool.device().mapMemory(mMemory->get(), start, size, 0, &data));
+    return data;
+}
+
+void VulkanImage::unmap() const {
+    mPool.device().unmapMemory(mMemory->get());
+}
+
 } // namespace MNN
