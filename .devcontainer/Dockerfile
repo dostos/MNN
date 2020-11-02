@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM nvidia/opencl:devel-ubuntu18.04
 
 ENV DEBIAN_FRONTEND noninteractive
 
