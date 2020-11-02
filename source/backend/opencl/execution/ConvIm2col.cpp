@@ -14,6 +14,7 @@ ConvIm2ColExecution::~ConvIm2ColExecution() {
 ConvIm2ColExecution::ConvIm2ColExecution(const std::vector<Tensor *> &inputs, const MNN::Op *op, Backend *backend) 
     : ConvCommonExecution(op->main_as_Convolution2D(), backend), mOpenCLBackend((OpenCLBackend *)backend) {
     const auto *conv2dParams       = op->main_as_Convolution2D();
+    mConv2dCommonParams            = conv2dParams->common();
 
     int kernelWidth   = mConv2dCommonParams->kernelX();
     int kernelHeight  = mConv2dCommonParams->kernelY();
@@ -67,8 +68,8 @@ ConvIm2ColExecution::ConvIm2ColExecution(const std::vector<Tensor *> &inputs, co
         }
         
         MNN_PRINT("Opencl Conv weight");
-        for(int i = 0 ; i < filterBuffer->size(); i++) {
-            MNN_PRINT("%f ", filterDataPtr[i]);
+        for(int i = 0 ; i < filterBuffer->size() / sizeof(float); i++) {
+            MNN_PRINT("%f ", kernelBufferPtr[i]);
         }
         MNN_PRINT("\n");
     }

@@ -9,6 +9,7 @@
 #include "ConvExecution.hpp"
 #include "MultiInputConvExecution.hpp"
 #include "ConvWinograd.hpp"
+#include "ConvIm2col.hpp"
 #include "core/ConvolutionCommon.hpp"
 #include "core/Macro.h"
 #include "core/TensorUtils.hpp"
@@ -675,6 +676,8 @@ public:
     virtual ~ConvolutionCreator() = default;
     virtual Execution *onCreate(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs,
                                 const MNN::Op *op, Backend *backend) const override {
+        return new ConvIm2ColExecution(inputs, op, backend);
+
         if (inputs.size() == 3) {
             return new MultiInputConvExecution(op, backend);
         }

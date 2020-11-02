@@ -140,10 +140,16 @@ int main(int argc, const char* argv[]) {
         }
     }
 
-    int loop = 1;
-    if (argc > 2) {
-        loop = atoi(argv[2]);
-    }
+    std::vector<int> args = {
+        1, // Loop
+        7, // Input size
+        3, // Input channel
+        1, // Output channel
+        3, // Kernel size
+        1, // Stride
+        1, // Dilate
+        0 // Pad
+    };
 
     std::cout << "Forward type: ** "; 
     for(auto forward : forwards) {
@@ -160,7 +166,7 @@ int main(int argc, const char* argv[]) {
         bnConfig.power = BackendConfig::Power_High;
         config.backendConfig = &bnConfig;
 
-        std::vector<float> costs = runNet(ConvExpr({1, 3, 7, 7}, 3, {3, 3}, {0, 0}, {1, 1}, {1, 1}), config, loop);
+        std::vector<float> costs = runNet(ConvExpr({1, args[2], args[1], args[1]}, args[3], {args[4], args[4]}, {args[5], args[5]}, {args[6], args[6]}, {args[7], args[7]}), config, args[0]);
         
         displayStats(forwardType(forward), costs);
     }
