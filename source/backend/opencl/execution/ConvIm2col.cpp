@@ -18,24 +18,22 @@ ConvIm2ColExecution::ConvIm2ColExecution(const std::vector<Tensor *> &inputs, co
 
     int kernelWidth   = mConv2dCommonParams->kernelX();
     int kernelHeight  = mConv2dCommonParams->kernelY();
+    int inputChannel = mConv2dCommonParams->inputCount();
     int outputChannel = mConv2dCommonParams->outputCount();
 
     mIsConv1x1 = (kernelWidth == 1 && kernelHeight == 1) ? true : false;
 
-    mInputDepth = conv2dParams->weight()->size() * mConv2dCommonParams->group() /
-                  kernelWidth / kernelHeight / outputChannel;
-
-    auto totalWeightSize = ALIGN_UP4(outputChannel) * ALIGN_UP4(mInputDepth) * (kernelWidth * kernelHeight);
+    auto totalWeightSize = ALIGN_UP4(outputChannel) * ALIGN_UP4(inputChannel) * (kernelWidth * kernelHeight);
 
     cl_int error;
     std::shared_ptr<Tensor> filterBuffer(
-        Tensor::createDevice<float>({ALIGN_UP4(outputChannel), ALIGN_UP4(mInputDepth), kernelWidth, kernelHeight}));
+        Tensor::createDevice<float>({ALIGN_UP4(outputChannel), ALIGN_UP4(inputChannel), kernelWidth, kernelHeight}));
     mKernelBuffer.reset(new cl::Buffer(mOpenCLBackend->getOpenCLRuntime()->context(), CL_MEM_READ_WRITE | CL_MEM_ALLOC_HOST_PTR, filterBuffer->size()));
     void* kernelBufferPtr = mOpenCLBackend->getOpenCLRuntime()->commandQueue().enqueueMapBuffer(*(mKernelBuffer.get()), true, CL_MAP_WRITE,
                                                                                 0, filterBuffer->size(), nullptr, nullptr, &error);
                                                                                 
     int outputChannel4         = UP_DIV(outputChannel, UNIT);
-    int inputChannel4      = UP_DIV(mInputDepth, UNIT);
+    int inputChannel4      = UP_DIV(inputChannel, UNIT);
 
     if(kernelBufferPtr != nullptr && error == CL_SUCCESS) {
         ::memset(kernelBufferPtr, 0, filterBuffer->size());
@@ -44,12 +42,12 @@ ConvIm2ColExecution::ConvIm2ColExecution(const std::vector<Tensor *> &inputs, co
 
         for (int oc = 0; oc < outputChannel; oc++) {
             // IC * kw * kh
-            const int oc_offset = ALIGN_UP4(mInputDepth) * kernelWidth * kernelHeight * oc;
+            const int oc_offset = ALIGN_UP4(inputChannel) * kernelWidth * kernelHeight * oc;
             for (int ic4 = 0; ic4 < inputChannel4; ic4++) {
                 const int ic4_offset = kernelWidth * kernelHeight * UNIT * ic4;
                 for (int y = 0; y < kernelHeight; ++y) {
                     for (int x = 0; x < kernelWidth; ++x) {
-                        int remainingChannel = mInputDepth - ic4 * UNIT;
+                        int remainingChannel = inputChannel - ic4 * UNIT;
                         for (int c = 0; c < remainingChannel; c++) {
                             int currentChannel = ic4 * UNIT + c;
                             if (mOpenCLBackend->getOpenCLRuntime()->isSupportedFP16())
@@ -79,8 +77,8 @@ ConvIm2ColExecution::ConvIm2ColExecution(const std::vector<Tensor *> &inputs, co
     }
 
     mKernel.reset(new cl::Image2D(mOpenCLBackend->getOpenCLRuntime()->context(), CL_MEM_READ_WRITE, cl::ImageFormat(CL_RGBA, imageChannelType),
-                                  ALIGN_UP4(mInputDepth) * kernelWidth * kernelHeight, ALIGN_UP4(outputChannel)));
-    copyBufferToImage(mOpenCLBackend->getOpenCLRuntime(), *mKernelBuffer, *mKernel, ALIGN_UP4(mInputDepth) * kernelWidth * kernelHeight, ALIGN_UP4(outputChannel));
+                                  ALIGN_UP4(inputChannel) * kernelWidth * kernelHeight, ALIGN_UP4(outputChannel)));
+    copyBufferToImage(mOpenCLBackend->getOpenCLRuntime(), *mKernelBuffer, *mKernel, ALIGN_UP4(inputChannel) * kernelWidth * kernelHeight, ALIGN_UP4(outputChannel));
 
     //float* hostPtr = (float*) mOpenCLBackend->readImage(mFilter.get());
     //MNN_PRINT("Opencl Conv weight\n");
@@ -162,7 +160,7 @@ ErrorCode ConvIm2ColExecution::onResize(const std::vector<Tensor *> &inputs, con
     } else if (mConv2dCommonParams->relu6()) {
         buildOptions.emplace("-DRELU6");
     }
-
+    
     {
         uint32_t idx = 0;
         mIm2colSize = {8, 8, 1};

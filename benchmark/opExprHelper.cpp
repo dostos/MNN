@@ -179,7 +179,7 @@ int main(int argc, const char* argv[]) {
     }
 
     std::vector<int> args = {
-        1, // Loop
+        1, // Batch
         7, // Input size
         3, // Input channel
         1, // Output channel
@@ -208,7 +208,7 @@ int main(int argc, const char* argv[]) {
         bnConfig.power = BackendConfig::Power_High;
         config.backendConfig = &bnConfig;
 
-        std::vector<float> costs = runNet(ConvExpr({1, args[2], args[1], args[1]}, args[3], {args[4], args[4]}, {args[5], args[5]}, {args[6], args[6]}, {args[7], args[7]}), config, args[0]);
+        std::vector<float> costs = runNet(ConvExpr({args[0], args[2], args[1], args[1]}, args[3], {args[4], args[4]}, {args[5], args[5]}, {args[6], args[6]}, {args[7], args[7]}), config, 1);
         
         displayStats(forwardType(forward), costs);
     }
