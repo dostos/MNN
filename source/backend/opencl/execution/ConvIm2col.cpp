@@ -125,23 +125,7 @@ ErrorCode ConvIm2ColExecution::onResize(const std::vector<Tensor *> &inputs, con
     const int inputWidth    = inputShape.at(2);
     const int inputChannel = inputShape.at(3);
 
-    std::vector<int> paddings{0, 0};
-
-    if (mConv2dCommonParams->padMode() == PadMode_SAME) {
-        int kernelHeightSize = (mConv2dCommonParams->kernelY() - 1) * mConv2dCommonParams->dilateY() + 1;
-        int padNeededHeight = (outputShape.at(1) - 1) * mConv2dCommonParams->strideY() +
-                kernelHeightSize - inputShape.at(1);
-        int kernelWidthSize = (mConv2dCommonParams->kernelX() - 1) * mConv2dCommonParams->dilateX() + 1;
-        int padNeededWidth = (outputShape.at(2) - 1) * mConv2dCommonParams->strideX() + kernelWidthSize -
-                             inputShape.at(2);
-        paddings[0] = padNeededWidth;
-        paddings[1] = padNeededHeight;
-
-    }
-
-    paddings[0] = std::max(paddings[0], 0);
-    paddings[1] = std::max(paddings[1], 0);
-
+    std::vector<int> paddings = {mConv2dCommonParams->padX(), mConv2dCommonParams->padY()};
     std::vector<int> kernels = {mConv2dCommonParams->kernelX(), mConv2dCommonParams->kernelY()};
     std::vector<int> strides = {mConv2dCommonParams->strideX(), mConv2dCommonParams->strideY()};
     std::vector<int> dilations  = {mConv2dCommonParams->dilateX(), mConv2dCommonParams->dilateY()};
@@ -178,7 +162,7 @@ ErrorCode ConvIm2ColExecution::onResize(const std::vector<Tensor *> &inputs, con
     } else if (mConv2dCommonParams->relu6()) {
         buildOptions.emplace("-DRELU6");
     }
-
+    
     {
         uint32_t idx = 0;
         mIm2colSize = {8, 8, 1};
@@ -186,6 +170,7 @@ ErrorCode ConvIm2ColExecution::onResize(const std::vector<Tensor *> &inputs, con
         mIm2ColKernel = mOpenCLBackend->getOpenCLRuntime()->buildKernel("image2col", mIsConv1x1 ? "image2col_1x1" : "image2col", buildOptions);
         mIm2ColKernel.setArg(idx++, mIm2colGlobalSize[0]); // gws 0 
         mIm2ColKernel.setArg(idx++, mIm2colGlobalSize[1]); // gws 1
+        mIm2ColKernel.setArg(idx++, mIm2colGlobalSize[2]); // gws 1
         mIm2ColKernel.setArg(idx++, openCLImage(input));
         mIm2ColKernel.setArg(idx++, mSrcTexture); 
         if (mIsConv1x1) {

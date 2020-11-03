@@ -24,7 +24,6 @@ public:
 private:
     const Convolution2DCommon *mConv2dCommonParams;
 
-    int mInputDepth;
     bool mIsConv1x1;
     int obxohxow_4;
 

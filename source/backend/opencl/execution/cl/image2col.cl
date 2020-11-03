@@ -49,35 +49,36 @@ __kernel void image2col(GLOBAL_SIZE_3_DIMS
                                 __private const int2 dilate,
                                 __private const int4 inputSize,
                                 __private const int4 outputSize) {
-int output_width_idx  = get_global_id(0);
-int output_height_idx = get_global_id(1);
-int output_channel_batch_idx = get_global_id(2);
+    // ow , oh, i_cb 
+    int3 index = int3(get_global_id(0), get_global_id(1), get_global_id(2));
 
-DEAL_NON_UNIFORM_DIM3(image_width_idx, image_height_idx);
+    DEAL_NON_UNIFORM_DIM3(image_width_idx, image_height_idx);
 
-int2 s0 = index.xy*stride-pad;
-int2 sfxy = max(ivec2(0), (UP_DIV(-s0, dilate)));
-int2 efxy = min(kernelSize, UP_DIV(inputSize.xy-s0, dilate));
+    int2 s0 = index.xy*stride-pad;
+    int2 sfxy = max(int2(0), (UP_DIV(-s0, dilate)));
+    int2 efxy = min(kernelSize, UP_DIV(inputSize.xy-s0, dilate));
 
-int ic_4 = index.z % inputSize.z; //input channel
-int ib = index.z / inputSize.z; // input batch
+    int ic_4 = index.z % inputSize.z; //input channel
+    int ib = index.z / inputSize.z; // input batch
 
-int destYOrigin = ib*outputSize.x*outputSize.y + index.y*outputSize.x + index.x;
-int destY = destYOrigin / 4;
-int destXOffset = destYOrigin % 4;
-for (int fy=0; fy<kernelSize.y; ++fy)
-{
-    int sy = fy*dilate.y + s0.y;
-    for (int fx=0; fx<kernelSize.x; ++fx)
+    int input_height_index = mul24()
+
+    int destYOrigin = ib*outputSize.x*outputSize.y + index.y*outputSize.x + index.x;
+    int destY = destYOrigin / 4;
+    int destXOffset = destYOrigin % 4;
+    for (int fy=0; fy<kernelSize.y; ++fy)
     {
-        int sx = fx*dilate.x + s0.x;
-        int destX = fx + fy*kernelSize.x + ic_4*kernelSize.x * kernelSize.y;
-        float4 color = texelFetch(uInput, ivec3(sx, sy, index.z), 0);
-        write_imagef(output, (int2)(4*destX+destXOffset, destY), color);
+        int sy = fy*dilate.y + s0.y;
+        for (int fx=0; fx<kernelSize.x; ++fx)
+        {
+            int sx = fx*dilate.x + s0.x;
+            int destX = fx + fy*kernelSize.x + ic_4*kernelSize.x * kernelSize.y;
+            float4 color = texelFetch(uInput, ivec3(sx, sy, index.z), 0);
+            write_imagef(output, (int2)(4*destX+destXOffset, destY), color);
+        }
     }
 }
 
-}
 
 //
 //layout(std430) buffer;
