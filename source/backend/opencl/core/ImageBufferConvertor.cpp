@@ -375,7 +375,7 @@ bool ImageBufferConvertor::convertBufferToImage(const Tensor *buffer, const Open
 
     mBufferToImageKernel.setArg(idx++, openCLBuffer(buffer));
 
-    if (type == CONV2D_FILTER) {
+                                if (type == CONV2D_FILTER) {
         const int channelHeightWidthSumSize =
             buffer->buffer().dim[1].extent * buffer->buffer().dim[2].extent * buffer->buffer().dim[3].extent;
         const int heightWidthSumSize = buffer->buffer().dim[2].extent * buffer->buffer().dim[3].extent;
@@ -401,8 +401,8 @@ bool ImageBufferConvertor::convertBufferToImage(const Tensor *buffer, const Open
         mBufferToImageKernel.setArg(idx++, static_cast<uint32_t>(channelHeightWidthSumSize));
         mBufferToImageKernel.setArg(idx++, static_cast<uint32_t>(heightWidthSumSize));
     } else if(type == IM2COL_CONV2D_FILTER) {
-        mBufferToImageKernel.setArg(idx++, image->shape()[1]);
-        mBufferToImageKernel.setArg(idx++, image->shape()[3]);
+        mBufferToImageKernel.setArg(idx++,  static_cast<uint32_t>(image->shape()[1]));
+        mBufferToImageKernel.setArg(idx++,  static_cast<uint32_t>(image->shape()[0]));
     } 
     else {
         mBufferToImageKernel.setArg(idx++, static_cast<uint32_t>(formattedBufferShape[1]));

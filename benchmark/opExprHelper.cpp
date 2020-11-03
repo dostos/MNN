@@ -22,6 +22,7 @@
 #include <MNN/MNNForwardType.h>
 #include <MNN/Interpreter.hpp>
 #include <MNN/expr/Expr.hpp>
+#include <source/core/Macro.h>
 #include "ExprModels.hpp"
 
 using namespace MNN;
@@ -83,6 +84,36 @@ static void displayStats(const std::string& name, const std::vector<float>& cost
     printf("[ - ] %-24s    max = %8.3fms  min = %8.3fms  avg = %8.3fms\n", name.c_str(), max, avg == 0 ? 0 : min, avg);
 }
 
+static void fillTensorNC4HW4(Tensor* t) {
+    const int batch = t->batch();
+    const int channel = t->channel();
+    const int channel4 = UP_DIV(channel, 4);
+    const int height = t->height();
+    const int width = t->width();
+
+    int count = 0;
+
+    for (int n = 0; n < batch; n++) {
+        int n_offset = n * channel4 * height * width;
+        for (int c4 = 0; c4 < channel4; c4++) {
+            int c4_offset = c4 * height * width;
+            for (int y = 0; y < height; y++) {
+                int y_offset = y * width;
+                for (int x = 0; x < width; x++) {
+                    int remainingChannel = channel - c4 * 4;
+                    for (int c = 0; c < remainingChannel; c++) {
+                        t->host<float>()[
+                            (n_offset + c4_offset + y_offset + x) * 4 + c
+                        ] = count++;
+                    }
+                }
+            }
+        }
+    }
+
+    MNN_ASSERT(count == batch * channel * height * width);
+}
+
 static std::vector<float> runNet(VARP netOutput, const ScheduleConfig& config, int loop) {
     std::unique_ptr<NetT> netTable(new NetT);
     Variable::save({netOutput}, netTable.get());
@@ -97,9 +128,11 @@ static std::vector<float> runNet(VARP netOutput, const ScheduleConfig& config, i
     auto inputTensor = net->getSessionInput(session, NULL);
     std::shared_ptr<Tensor> inputTensorHost(Tensor::createHostTensorFromDevice(inputTensor, false));
     int eleSize = inputTensorHost->elementSize();
-    for (int i = 0; i < eleSize; ++i) {
-        inputTensorHost->host<float>()[i] = i;
-    }
+
+    memset(inputTensorHost->host<float>(), 0, eleSize);
+
+    fillTensorNC4HW4(inputTensorHost.get());
+
     auto outputTensor = net->getSessionOutput(session, NULL);
     std::shared_ptr<Tensor> outputTensorHost(Tensor::createHostTensorFromDevice(outputTensor, false));
 
@@ -119,6 +152,9 @@ static std::vector<float> runNet(VARP netOutput, const ScheduleConfig& config, i
         auto timeEnd = getTimeInUs();
         costs.push_back((timeEnd - timeBegin) / 1000.0);
     }
+
+    outputTensorHost->print();
+
     return costs;
 }
 
@@ -152,6 +188,10 @@ int main(int argc, const char* argv[]) {
         1, // Dilate
         0 // Pad
     };
+
+    for (int i = 2; i < argc; i++) {
+        args[i - 2] = atoi(argv[i]);
+    }
 
     std::cout << "Forward type: ** "; 
     for(auto forward : forwards) {

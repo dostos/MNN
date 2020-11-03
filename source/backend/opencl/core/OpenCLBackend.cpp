@@ -7,6 +7,7 @@
 //
 
 #include "backend/opencl/core/OpenCLBackend.hpp"
+#include "backend/opencl/core/runtime/OpenCLRuntime.hpp"
 #include "MNN_generated.h"
 
 #include "core/TensorUtils.hpp"
@@ -390,6 +391,39 @@ bool OpenCLBackend::addCreator(OpType t, Creator* c) {
     }
     map->insert(std::make_pair(t, c));
     return true;
+}
+
+float * OpenCLBackend::readImage(const Tensor *srcTensor) {
+    auto tensorShape = OpenCL::tensorShapeFormat(srcTensor);
+
+    int N = tensorShape.at(0);
+    int H = tensorShape.at(1);
+    int W = tensorShape.at(2);
+    int C = tensorShape.at(3);
+
+    size_t imageWidth  = (size_t)UP_DIV(C, 4) * W;
+    size_t imageHeight = (size_t)N * H;
+
+    cl::detail::size_t_array origin{0, 0, 0};
+    cl::detail::size_t_array region{imageWidth, imageHeight, 1};
+
+    mOpenCLRuntime->commandQueue().flush();
+    float *hostPtr;
+    mOpenCLRuntime->commandQueue().enqueueReadImage(openCLImage(srcTensor), true, origin, region, 0, 0, hostPtr);
+    return hostPtr;
+}
+
+float *OpenCLBackend::readBuffer(const Tensor *srcTensor) {
+    auto tensorShape = OpenCL::tensorShapeFormat(srcTensor);
+
+    int N = tensorShape.at(0);
+    int H = tensorShape.at(1);
+    int W = tensorShape.at(2);
+    int C = tensorShape.at(3);
+
+    float *hostPtr;
+    mOpenCLRuntime->commandQueue().enqueueReadBuffer(openCLBuffer(srcTensor), true, 0, N * H * W * C * sizeof(float), hostPtr);
+    return hostPtr;
 }
 
 class CLBackendCreator : public BackendCreator {

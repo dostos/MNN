@@ -27,28 +27,33 @@ private:
     int mInputDepth;
     bool mIsConv1x1;
     int obxohxow_4;
-    std::vector<int> mIm2colSize;
-    std::vector<int> mGemmSize;
-    std::vector<int> mCol2imSize;
+
+    std::vector<uint32_t> mIm2colSize;
+    std::vector<uint32_t> mGemmSize;
+    std::vector<uint32_t> mCol2imSize;
+
+    std::vector<uint32_t> mIm2colGlobalSize;
+    std::vector<uint32_t> mGemmGlobalSize;
+    std::vector<uint32_t> mCol2imGlobalSize;
 
     std::shared_ptr<cl::Image2D> mSrcTexture;
     std::shared_ptr<cl::Image2D> mDstTexture;
-    
 
-    std::vector<int> mStrides{1, 1};
-    std::vector<int> mPaddings{0, 0};
-    std::vector<int> mDilations{1, 1};
+    cl::Kernel mIm2ColKernel;
+    cl::Kernel mGemmKernel;
+    cl::Kernel mCol2ImKernel;
+    
     std::vector<uint32_t> mGlobalWorkSize{1, 1, 1};
     std::vector<uint32_t> mLocalWorkSize{1, 1, 1, 1};
 
-    std::shared_ptr<Tensor> mFilter;
-    cl::Kernel mKernel;
     uint32_t mMaxWorkGroupSize;
     bool mIsTurn = false;
     OpenCLBackend *mOpenCLBackend;
     bool mConv1x1Opt{false};
     bool mUseLocalMem{false};
+
     std::shared_ptr<cl::Buffer> mKernelBuffer;
+    std::shared_ptr<cl::Image2D> mKernel;
     std::shared_ptr<cl::Buffer> mBiasBuffer;
 };
 

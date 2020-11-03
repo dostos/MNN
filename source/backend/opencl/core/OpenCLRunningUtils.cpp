@@ -87,8 +87,8 @@ void getImageShape(const std::vector<int> &shape, const OpenCLBufferFormat type,
         (*imageShape).push_back(UP_DIV(shape[1], 4));
         (*imageShape).push_back(shape[2] * shape[3] * shape[0]);
     } else if(type == IM2COL_CONV2D_FILTER) {
-        (*imageShape).push_back(shape[1]);
-        (*imageShape).push_back(shape[3]);
+        (*imageShape).push_back(shape[1] * shape[2] * shape[3]);
+        (*imageShape).push_back(shape[0]);
     } else {
         MNN_PRINT("type not supported !!! \n");
     }

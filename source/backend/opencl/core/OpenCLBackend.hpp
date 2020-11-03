@@ -104,6 +104,9 @@ public:
 
     bool isCreateError() const;
 
+    float *readImage(const Tensor *srcTensor);
+    float *readBuffer(const Tensor *srcTensor);
+
 private:
     void copyFromDevice(const Tensor* srcTensor, const Tensor* dstTensor) const;
     void copyToDevice(const Tensor* srcTensor, const Tensor* dstTensor) const;

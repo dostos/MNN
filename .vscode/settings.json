@@ -1,6 +1,6 @@
 {
     "cmake.debugConfig": {
-        "args": ["3,7"]
+        "args": ["3"]
     },
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
     "files.associations": {

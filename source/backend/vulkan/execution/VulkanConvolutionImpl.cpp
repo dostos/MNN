@@ -168,15 +168,6 @@ public:
             writeParameters(parameters, co, ci, kh, kw);
             mKernel = VulkanMatrixMultier4x4::createKernel(backend, nullptr, ALIGN_UP4(ci) * kh * kw, co, 1);
             auto weightSize = ci * co * kh * kw;
-            
-            
-            MNN_PRINT("Vulkan conv length : %d weight: \n ", weightSize);
-            for (int i = 0; i < weightSize; i++) {
-                MNN_PRINT("%f ", weightPtr[i]);
-            }
-            MNN_PRINT("\n");
-
-
             std::shared_ptr<VulkanBuffer> tempBuffer(new VulkanBuffer(backend->getMemoryPool(), false, weightSize*sizeof(float), nullptr, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT));
             auto tempWeightBuffer = tempBuffer->map();
             ::memcpy(tempWeightBuffer, weightPtr, weightSize * sizeof(float));
@@ -188,21 +179,6 @@ public:
                            , tempBuffer2->size(), mKernel.get(), cmdBuffer.get(), parameters);
             cmdBuffer->end();
             backend->getPool().submitAndWait(cmdBuffer->get());
-
-            auto bufLength = mKernel->width() * mKernel->height() * mKernel->depth();
-
-            std::shared_ptr<VulkanBuffer> weightBuffer(new VulkanBuffer(backend->getMemoryPool(), false, bufLength));
-            backend->copyImageToBuffer(mKernel.get(), weightBuffer.get());
-
-            float *reordered_weight = (float*)weightBuffer->map();
-            
-            MNN_PRINT("Vulkan conv length : %d weight: \n ", bufLength);
-            for (int i = 0; i < bufLength; i++) {
-                MNN_PRINT("%f ", reordered_weight[i]);
-            }
-            MNN_PRINT("\n");
-
-            weightBuffer->unmap();
         }
         mMultiCreator = [ci, kh, kw, co, backend, this]() {
             auto multi = std::make_shared<VulkanMatrixMultier4x4>(backend, nullptr, ALIGN_UP4(ci) * kh * kw, co, 1, mKernel);
@@ -227,10 +203,9 @@ public:
             // Static bias
             mBias         = std::make_shared<VulkanImage>(backend->getMemoryPool(), false, UP_DIV(co, 4), 1);
             auto tempBias = std::make_shared<VulkanBuffer>(backend->getMemoryPool(), false, sizeof(float) * ALIGN_UP4(co));
-            float* bias     = (float*)tempBias->map();
+            auto bias     = tempBias->map();
             ::memset(bias, 0, sizeof(float) * ALIGN_UP4(co));
             ::memcpy(bias, biasPtr, sizeof(float) * co);
-
             tempBias->unmap();
             backend->copyBufferToImage(tempBias.get(), mBias.get());
         }
@@ -363,9 +338,9 @@ VulkanBasicExecution* VulkanConvolutionImpl::create(VulkanBackend* backend, cons
                                                          const std::vector<Tensor*>& inputs, const Tensor* output,
                                                          const float* weightPtr, const float* biasPtr, int ci, int co) {
     AUTOTIME;
-    //if (inputs.size() > 1) {
-    return new VulkanConvolutionIm2Col(backend, convOption, weightPtr, biasPtr, ci, co);
-    //}
+    if (inputs.size() > 1) {
+        return new VulkanConvolutionIm2Col(backend, convOption, weightPtr, biasPtr, ci, co);
+    }
     auto imageLimit = backend->proty().limits.maxImageDimension1D;
     if (ALIGN_UP4(ci) * convOption->kernelX() * convOption->kernelY() > imageLimit) {
         return new VulkanConvolutionSlideWindow(backend, convOption, weightPtr, biasPtr, ci, co);

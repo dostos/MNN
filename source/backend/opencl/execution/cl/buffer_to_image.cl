@@ -146,7 +146,7 @@ __kernel void conv2d_filter_buffer_to_image(GLOBAL_SIZE_2_DIMS __global const fl
 }
 
 // convert kernel : from buffer(oihw) to image(ic w h, oc 4)
-__kernel void im2col_conv2d_filter_buffer_to_image(GLOBAL_SIZE_2_DIMS __global const float4 *input_ptr,
+__kernel void im2col_conv2d_filter_buffer_to_image(GLOBAL_SIZE_2_DIMS __global const float *input_ptr,
                                             __private const int width,
                                             __private const int height, 
                                             __write_only image2d_t output) {
@@ -155,7 +155,14 @@ __kernel void im2col_conv2d_filter_buffer_to_image(GLOBAL_SIZE_2_DIMS __global c
 
     DEAL_NON_UNIFORM_DIM2(image_width_idx, image_height_idx);
 
-    float4 output_values = input_ptr[image_width_idx + image_height_idx * width];
+    const int buffer_offset = (image_height_idx * width + image_width_idx) * 4;
+
+    float4 output_values = 0;
+    output_values.x = *(input_ptr + buffer_offset);
+    output_values.y = *(input_ptr + buffer_offset + 1);
+    output_values.z = *(input_ptr + buffer_offset + 2);
+    output_values.w = *(input_ptr + buffer_offset + 3);
+    
     write_imagef(output, (int2)(image_width_idx, image_height_idx), output_values);
 }
 

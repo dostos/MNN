@@ -160,6 +160,8 @@ ErrorCode GLConvolutionIm2col::onResize(const std::vector<Tensor *> &inputs, con
 }
 ErrorCode GLConvolutionIm2col::onExecute(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) {
 
+    MNN_PRINT("GLConvolutionIm2col Execute\n");
+
     auto input         = inputs[0];
     auto output        = outputs[0];
     auto inputTexture  = input->deviceId();
