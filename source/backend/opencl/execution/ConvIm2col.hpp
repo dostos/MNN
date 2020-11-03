@@ -42,9 +42,6 @@ private:
     cl::Kernel mIm2ColKernel;
     cl::Kernel mGemmKernel;
     cl::Kernel mCol2ImKernel;
-    
-    std::vector<uint32_t> mGlobalWorkSize{1, 1, 1};
-    std::vector<uint32_t> mLocalWorkSize{1, 1, 1, 1};
 
     uint32_t mMaxWorkGroupSize;
     bool mIsTurn = false;

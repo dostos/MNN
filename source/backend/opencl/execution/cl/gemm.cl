@@ -60,3 +60,58 @@ __kernel void gemm(__read_only image2d_t uInput, __read_only image2d_t uKernel, 
         WI_F(uOutput, (int2)(srcY, out_y_idx + 3), o3);
     }
 }
+
+
+__kernel void gemm_16x16(__read_only image2d_t uInput, __read_only image2d_t uKernel, __write_only image2d_t uOutput,
+                __private const int2 outputSize, 
+                __private const int ic_4) {
+    int3 pos = (int3)(get_global_id(0), get_global_id(1), get_global_id(2)); 
+    int oc_4 = pos.y;
+    int obxohxow_4 = pos.x;
+    if (obxohxow_4 < outputSize.x && oc_4 < outputSize.y)
+    {
+        float4 o0 = (FLOAT4)(0);
+        float4 o1 = (FLOAT4)(0);
+        float4 o2 = (FLOAT4)(0);
+        float4 o3 = (FLOAT4)(0);
+        for (int k=0; k<ic_4; ++k)
+        {
+            int k4 = k << 2;
+            FLOAT4 k0 = RI_F(uKernel, SAMPLER, (int2)(k4, oc_4));
+            FLOAT4 s0 = RI_F(uInput, SAMPLER, (int2)(k4++, obxohxow_4));
+            FLOAT4 k1 = RI_F(uKernel, SAMPLER, (int2)(k4, oc_4));
+            FLOAT4 s1 = RI_F(uInput, SAMPLER, (int2)(k4++, obxohxow_4));
+            FLOAT4 k2 = RI_F(uKernel, SAMPLER, (int2)(k4, oc_4));
+            FLOAT4 s2 = RI_F(uInput, SAMPLER, (int2)(k4++, obxohxow_4));
+            FLOAT4 k3 = RI_F(uKernel, SAMPLER, (int2)(k4, oc_4));
+            FLOAT4 s3 = RI_F(uInput, SAMPLER, (int2)(k4, obxohxow_4));
+
+            o0 = mad(s0.x, k0, o0);
+            o0 = mad(s0.y, k1, o0);
+            o0 = mad(s0.z, k2, o0);
+            o0 = mad(s0.w, k3, o0);
+
+            o1 = mad(s1.x, k0, o1);
+            o1 = mad(s1.y, k1, o1);
+            o1 = mad(s1.z, k2, o1);
+            o1 = mad(s1.w, k3, o1);
+
+            o2 = mad(s2.x, k0, o2);
+            o2 = mad(s2.y, k1, o2);
+            o2 = mad(s2.z, k2, o2);
+            o2 = mad(s2.w, k3, o2);
+
+            o3 = mad(s3.x, k0, o3);
+            o3 = mad(s3.y, k1, o3);
+            o3 = mad(s3.z, k2, o3);
+            o3 = mad(s3.w, k3, o3);
+        }
+
+        int oc_44 = oc_4 << 2;
+        WI_F(uOutput, (int2)(obxohxow_4, oc_44++), o0);
+        WI_F(uOutput, (int2)(obxohxow_4, oc_44++), o1);
+        WI_F(uOutput, (int2)(obxohxow_4, oc_44++), o2);
+        WI_F(uOutput, (int2)(obxohxow_4, oc_44++), o3);
+    }
+}
+

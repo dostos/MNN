@@ -17,13 +17,13 @@ __constant sampler_t SAMPLER = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP |
 __kernel void image2col_1x1(GLOBAL_SIZE_3_DIMS
                                 __read_only image2d_t input, 
                                 __write_only image2d_t output,
-                                __private const int in_c_4,
+                                __private const int ic_4,
                                 __private const int inputWidth,
                                 __private const int inputHeight,
                                 __private const int outputWidth,
                                 __private const int outputHeight) {
     // w, h, ic4_b 
-    int3 index = int3(get_global_id(0), get_global_id(1), get_global_id(2));
+    int3 index = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
 
     DEAL_NON_UNIFORM_DIM3(index.x, index.y, index.z);
 
@@ -33,7 +33,7 @@ __kernel void image2col_1x1(GLOBAL_SIZE_3_DIMS
     int destY = destYOrigin / 4;
     int destXOffset = destYOrigin % 4;
     float4 color = read_imagef(input, SAMPLER, (int2)(index.x + ic_4_i * inputWidth, index.y + ib_i * inputHeight));
-    write_imagef(output, int2(ic_4_i*4+destXOffset, destY), color);
+    write_imagef(output, (int2)(ic_4_i*4+destXOffset, destY), color);
 }
 
 __kernel void image2col(GLOBAL_SIZE_3_DIMS
@@ -43,15 +43,15 @@ __kernel void image2col(GLOBAL_SIZE_3_DIMS
                                 __private const int2 kernelSize,
                                 __private const int2 stride,
                                 __private const int2 dilate,
-                                __private const int4 inputSize,
-                                __private const int4 outputSize) {
+                                __private const int3 inputSize,
+                                __private const int3 outputSize) {
     // w, h, ic4_b 
-    int3 index = int3(get_global_id(0), get_global_id(1), get_global_id(2));
+    int3 index = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
 
     DEAL_NON_UNIFORM_DIM3(index.x, index.y, index.z);
 
     int2 s0 = index.xy*stride-pad;
-    int2 sfxy = max(ivec2(0), (UP_DIV(-s0, dilate)));
+    int2 sfxy = max((int2)(0), (UP_DIV(-s0, dilate)));
     int2 efxy = min(kernelSize, UP_DIV(inputSize.xy-s0, dilate));
 
     int ic_4 = index.z % inputSize.z; //input channel
@@ -67,8 +67,37 @@ __kernel void image2col(GLOBAL_SIZE_3_DIMS
         {
             int sx = fx*dilate.x + s0.x;
             int destX = fx + fy*kernelSize.x + ic_4*kernelSize.x * kernelSize.y;
-            float4 color = read_imagef(input, SAMPLER, (int2)(sx + ic_4_i * inputSize.x, sy + ib_i * inputSize.y, index.z));
+            float4 color = read_imagef(input, SAMPLER, (int2)(sx + ic_4 * inputSize.x, sy + ib * inputSize.y));
             write_imagef(output, (int2)(4*destX+destXOffset, destY), color);
         }
     }
 }
+
+
+__kernel void col2image(GLOBAL_SIZE_3_DIMS
+                                __read_only image2d_t input, 
+                                __write_only image2d_t output,
+                                __global const float4 *bias,
+                                __private const int3 outputSize) {
+    // ow, oc, oc4_ob
+    int3 index = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
+
+    int ob = index.z / outputSize.z;
+    int oc_4 = index.z % outputSize.z;
+    
+    if (index.x < outputSize.x && index.y < outputSize.y) {
+        int sourceXIndex = ob*outputSize.x*outputSize.y + index.y*outputSize.x + index.x;
+        int sourceX = sourceXIndex / 4;
+        int sourceY = oc_4 * 4 + sourceXIndex % 4;
+        float4 color = bias[oc_4];
+        color += read_imagef(input, SAMPLER, (int2)(sourceX, sourceY));
+#ifdef RELU
+        color = max(color, float4(0));
+#endif
+#ifdef RELU6
+        color = clamp(color, float4(0), float4(6));
+#endif
+        write_imagef(output, (int2)(index.x + oc_4 * outputSize.x, index.y + ob * outputSize.y), color);
+    }
+}
+

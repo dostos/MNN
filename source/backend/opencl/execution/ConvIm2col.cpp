@@ -125,26 +125,10 @@ ErrorCode ConvIm2ColExecution::onResize(const std::vector<Tensor *> &inputs, con
     const int inputWidth    = inputShape.at(2);
     const int inputChannel = inputShape.at(3);
 
-    std::vector<int> paddings{0, 0};
-
-    if (mConv2dCommonParams->padMode() == PadMode_SAME) {
-        int kernelHeightSize = (mConv2dCommonParams->kernelY() - 1) * mConv2dCommonParams->dilateY() + 1;
-        int padNeededHeight = (outputShape.at(1) - 1) * mConv2dCommonParams->strideY() +
-                kernelHeightSize - inputShape.at(1);
-        int kernelWidthSize = (mConv2dCommonParams->kernelX() - 1) * mConv2dCommonParams->dilateX() + 1;
-        int padNeededWidth = (outputShape.at(2) - 1) * mConv2dCommonParams->strideX() + kernelWidthSize -
-                             inputShape.at(2);
-        paddings[0] = padNeededWidth;
-        paddings[1] = padNeededHeight;
-
-    }
-
-    paddings[0] = std::max(paddings[0], 0);
-    paddings[1] = std::max(paddings[1], 0);
-
-    std::vector<int> kernels = {mConv2dCommonParams->kernelX(), mConv2dCommonParams->kernelY()};
-    std::vector<int> strides = {mConv2dCommonParams->strideX(), mConv2dCommonParams->strideY()};
-    std::vector<int> dilations  = {mConv2dCommonParams->dilateX(), mConv2dCommonParams->dilateY()};
+    int paddings[2] = {mConv2dCommonParams->padX(), mConv2dCommonParams->padY()};
+    int kernels[2] = {mConv2dCommonParams->kernelX(), mConv2dCommonParams->kernelY()};
+    int strides[2] = {mConv2dCommonParams->strideX(), mConv2dCommonParams->strideY()};
+    int dilations[2]  = {mConv2dCommonParams->dilateX(), mConv2dCommonParams->dilateY()};
 
     const int outputBatch = outputs[0]->batch();
     const int outputChannel = outputs[0]->channel();
@@ -186,8 +170,9 @@ ErrorCode ConvIm2ColExecution::onResize(const std::vector<Tensor *> &inputs, con
         mIm2ColKernel = mOpenCLBackend->getOpenCLRuntime()->buildKernel("image2col", mIsConv1x1 ? "image2col_1x1" : "image2col", buildOptions);
         mIm2ColKernel.setArg(idx++, mIm2colGlobalSize[0]); // gws 0 
         mIm2ColKernel.setArg(idx++, mIm2colGlobalSize[1]); // gws 1
+        mIm2ColKernel.setArg(idx++, mIm2colGlobalSize[2]); // gws 1
         mIm2ColKernel.setArg(idx++, openCLImage(input));
-        mIm2ColKernel.setArg(idx++, mSrcTexture); 
+        mIm2ColKernel.setArg(idx++, *mSrcTexture); 
         if (mIsConv1x1) {
             mIm2ColKernel.setArg(idx++, inputChannel4);
             mIm2ColKernel.setArg(idx++, inputWidth);
@@ -195,12 +180,14 @@ ErrorCode ConvIm2ColExecution::onResize(const std::vector<Tensor *> &inputs, con
             mIm2ColKernel.setArg(idx++, outputWidth);
             mIm2ColKernel.setArg(idx++, outputHeight);
         }else{
-            mIm2ColKernel.setArg(idx++, paddings);
-            mIm2ColKernel.setArg(idx++, kernels);
-            mIm2ColKernel.setArg(idx++, strides);
-            mIm2ColKernel.setArg(idx++, dilations);
-            mIm2ColKernel.setArg(idx++, std::vector<int>{inputWidth, inputHeight, inputChannel4, 1});
-            mIm2ColKernel.setArg(idx++, std::vector<int>{outputWidth, outputHeight, outputChannel4, 1});
+            mIm2ColKernel.setArg(idx++, sizeof(paddings), paddings);
+            mIm2ColKernel.setArg(idx++, sizeof(kernels), kernels);
+            mIm2ColKernel.setArg(idx++, sizeof(strides), strides);
+            mIm2ColKernel.setArg(idx++, sizeof(dilations), dilations);
+            int inputSize[3] = {inputWidth, inputHeight, inputChannel4};
+            int outputSize[3] = {outputWidth, outputHeight, outputChannel4};
+            mIm2ColKernel.setArg(idx++, sizeof(inputSize), inputSize);
+            mIm2ColKernel.setArg(idx++, sizeof(outputSize), outputSize);
         }
     }
 
@@ -209,12 +196,11 @@ ErrorCode ConvIm2ColExecution::onResize(const std::vector<Tensor *> &inputs, con
         mGemmSize = {8, 8};
         mGemmGlobalSize = {UP_DIV(obxohxow_4, mGemmSize[0]), UP_DIV(outputChannel4, mGemmSize[1])};
         mGemmKernel = mOpenCLBackend->getOpenCLRuntime()->buildKernel("gemm", "gemm_16x16", buildOptions);
-        mGemmKernel.setArg(idx++, mGemmGlobalSize[0]);
-        mGemmKernel.setArg(idx++, mGemmGlobalSize[1]);
-        mGemmKernel.setArg(idx++, mDstTexture);
-        mGemmKernel.setArg(idx++, mSrcTexture);
-        mGemmKernel.setArg(idx++, mKernel);
-        mGemmKernel.setArg(idx++, std::vector<int>{obxohxow_4, outputChannel4});
+        mGemmKernel.setArg(idx++, *mSrcTexture);
+        mGemmKernel.setArg(idx++, *mKernel);
+        mGemmKernel.setArg(idx++, *mDstTexture);
+        int inputSize[2] = {obxohxow_4, outputChannel4};
+        mGemmKernel.setArg(idx++, sizeof(inputSize), inputSize);
         if (mIsConv1x1) {
             mGemmKernel.setArg(idx++, inputChannel4);
         }else{
@@ -226,14 +212,15 @@ ErrorCode ConvIm2ColExecution::onResize(const std::vector<Tensor *> &inputs, con
         uint32_t idx = 0;
         mCol2imSize = {8, 8, 1};
         mCol2imGlobalSize = {UP_DIV(outputWidth, mCol2imSize[0]), UP_DIV(outputHeight, mCol2imSize[1]), UP_DIV(outputChannel4 * outputBatch, mCol2imSize[2])};
-        mCol2ImKernel = mOpenCLBackend->getOpenCLRuntime()->buildKernel("col2image", mIsConv1x1 ? "col2image_1x1" : "col2image", buildOptions);
+        mCol2ImKernel = mOpenCLBackend->getOpenCLRuntime()->buildKernel("image2col", "col2image", buildOptions);
         mCol2ImKernel.setArg(idx++, mCol2imGlobalSize[0]);
         mCol2ImKernel.setArg(idx++, mCol2imGlobalSize[1]);
         mCol2ImKernel.setArg(idx++, mCol2imGlobalSize[2]);
+        mCol2ImKernel.setArg(idx++, *mDstTexture);
         mCol2ImKernel.setArg(idx++, openCLImage(output));
-        mCol2ImKernel.setArg(idx++, mDstTexture);
-        mCol2ImKernel.setArg(idx++, mBiasBuffer);
-        mCol2ImKernel.setArg(idx++, std::vector<int>{outputWidth, outputHeight, outputChannel4});
+        mCol2ImKernel.setArg(idx++, *mBiasBuffer);
+        int outputSize[3] = {outputWidth, outputHeight, outputChannel4};
+        mCol2ImKernel.setArg(idx++, sizeof(outputSize), outputSize);
     }
 
     return NO_ERROR;
