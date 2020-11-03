@@ -190,6 +190,8 @@ ErrorCode ConvIm2ColExecution::onResize(const std::vector<Tensor *> &inputs, con
         mIm2ColKernel.setArg(idx++, mSrcTexture); 
         if (mIsConv1x1) {
             mIm2ColKernel.setArg(idx++, inputChannel4);
+            mIm2ColKernel.setArg(idx++, inputWidth);
+            mIm2ColKernel.setArg(idx++, inputHeight);
             mIm2ColKernel.setArg(idx++, outputWidth);
             mIm2ColKernel.setArg(idx++, outputHeight);
         }else{
