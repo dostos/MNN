@@ -441,6 +441,29 @@ void VulkanBackend::copyBufferToImage(const VulkanBuffer* buffer, const VulkanIm
     mCmdPool->submitAndWait(cmdbuffer->get());
 }
 
+void VulkanBackend::copyImageToBuffer(const VulkanImage* image, const VulkanBuffer* buffer) const {
+    auto cmdBuffer = mCmdPool->allocBuffer();
+    cmdBuffer->begin(0);
+
+     VkBufferImageCopy copyRegions;
+    ::memset(&copyRegions, 0, sizeof(copyRegions));
+    copyRegions.imageOffset.x                   = 0;
+    copyRegions.imageOffset.y                   = 0;
+    copyRegions.imageOffset.z                   = 0;
+    copyRegions.imageExtent.depth               = image->depth();
+    copyRegions.imageExtent.height              = image->height();
+    copyRegions.imageExtent.width               = image->width();
+    copyRegions.imageSubresource.layerCount     = 1;
+    copyRegions.imageSubresource.mipLevel       = 0;
+    copyRegions.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+    copyRegions.imageSubresource.baseArrayLayer = 0;
+
+    vkCmdCopyImageToBuffer(cmdBuffer->get(), image->get(), VK_IMAGE_LAYOUT_GENERAL, buffer->buffer(), 1, &copyRegions);
+
+    cmdBuffer->end();
+    mCmdPool->submitAndWait(cmdBuffer->get());
+}
+
 static bool _testVulkan() {
     // std::make_unique need c++14
     std::unique_ptr<VulkanInstance> instance(new VulkanInstance());

@@ -168,6 +168,15 @@ public:
             writeParameters(parameters, co, ci, kh, kw);
             mKernel = VulkanMatrixMultier4x4::createKernel(backend, nullptr, ALIGN_UP4(ci) * kh * kw, co, 1);
             auto weightSize = ci * co * kh * kw;
+            
+            
+            MNN_PRINT("Vulkan conv length : %d weight: \n ", weightSize);
+            for (int i = 0; i < weightSize; i++) {
+                MNN_PRINT("%f ", weightPtr[i]);
+            }
+            MNN_PRINT("\n");
+
+
             std::shared_ptr<VulkanBuffer> tempBuffer(new VulkanBuffer(backend->getMemoryPool(), false, weightSize*sizeof(float), nullptr, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT));
             auto tempWeightBuffer = tempBuffer->map();
             ::memcpy(tempWeightBuffer, weightPtr, weightSize * sizeof(float));
@@ -180,15 +189,20 @@ public:
             cmdBuffer->end();
             backend->getPool().submitAndWait(cmdBuffer->get());
 
-            float *reordered_weight = (float*)mKernel->map();
+            auto bufLength = mKernel->width() * mKernel->height() * mKernel->depth();
+
+            std::shared_ptr<VulkanBuffer> weightBuffer(new VulkanBuffer(backend->getMemoryPool(), false, bufLength));
+            backend->copyImageToBuffer(mKernel.get(), weightBuffer.get());
+
+            float *reordered_weight = (float*)weightBuffer->map();
             
-            MNN_PRINT("Vulkan conv weight: \n");
-            for (int i = 0; i < reorder.computeMiddleBufferSize(co, kh, kw, ci); i++) {
+            MNN_PRINT("Vulkan conv length : %d weight: \n ", bufLength);
+            for (int i = 0; i < bufLength; i++) {
                 MNN_PRINT("%f ", reordered_weight[i]);
             }
             MNN_PRINT("\n");
 
-            mKernel->unmap();
+            weightBuffer->unmap();
         }
         mMultiCreator = [ci, kh, kw, co, backend, this]() {
             auto multi = std::make_shared<VulkanMatrixMultier4x4>(backend, nullptr, ALIGN_UP4(ci) * kh * kw, co, 1, mKernel);
@@ -216,14 +230,6 @@ public:
             float* bias     = (float*)tempBias->map();
             ::memset(bias, 0, sizeof(float) * ALIGN_UP4(co));
             ::memcpy(bias, biasPtr, sizeof(float) * co);
-
-            MNN_PRINT("Vulkan bias: \n");
-            for (int i = 0; i < ALIGN_UP4(co); i++) {
-                MNN_PRINT("%f ", bias[i]);
-            }
-            MNN_PRINT("\n");
-
-            mKernel->unmap();
 
             tempBias->unmap();
             backend->copyBufferToImage(tempBias.get(), mBias.get());

@@ -1,7 +1,7 @@
 #!/bin/bash
 cmake ../../../ \
 -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
--DCMAKE_BUILD_TYPE=Debug \
+-DCMAKE_BUILD_TYPE=Release \
 -DANDROID_ABI="arm64-v8a" \
 -DANDROID_STL=c++_static \
 -DANDROID_NATIVE_API_LEVEL=android-21  \
@@ -10,9 +10,8 @@ cmake ../../../ \
 -DMNN_BUILD_TEST=ON \
 -DMNN_OPENGL=OFF \
 -DMNN_OPENCL=ON \
--DMNN_DEBUG_TENSOR_SIZE=ON \
 -DMNN_VULKAN=ON \
 -DMNN_BUILD_FOR_ANDROID_COMMAND=true \
 -DNATIVE_LIBRARY_OUTPUT=. -DNATIVE_INCLUDE_OUTPUT=. $1 $2 $3
 
-make -j3
+make -j

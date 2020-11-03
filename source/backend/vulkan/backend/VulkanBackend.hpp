@@ -82,6 +82,8 @@ public:
     }
 
     void copyBufferToImage(const VulkanBuffer* buffer, const VulkanImage* image) const;
+    void copyImageToBuffer(const VulkanImage* image, const VulkanBuffer* buffer) const;
+
     const VulkanSampler* getCommonSampler() const {
         return mSampler.get();
     }

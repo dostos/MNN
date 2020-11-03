@@ -1,9 +1,6 @@
-FROM ubuntu:20.04
-
-ENV DEBIAN_FRONTEND noninteractive
+FROM nvidia/opencl:devel-ubuntu18.04
 
 RUN DEBIAN_FRONTEND=noninteractive \ 
-    TZ=Asia/Seoul \
     apt-get update && apt-get install -y -q \
     build-essential \
     gcc-8 g++-8 gpgconf \

@@ -7,6 +7,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <sstream>
+#include <dlfcn.h>
 #if defined(_MSC_VER)
 #include <Windows.h>
 #undef min
@@ -122,9 +123,10 @@ static std::vector<float> runNet(VARP netOutput, const ScheduleConfig& config, i
 }
 
 int main(int argc, const char* argv[]) {
+    auto handle = dlopen("libMNN_CL.so", RTLD_NOW);
     std::cout << "MNN Expr Models benchmark" << std::endl;
 
-    std::vector<MNNForwardType> forwards = {MNN_FORWARD_CPU, MNN_FORWARD_OPENCL};
+    std::vector<MNNForwardType> forwards = {MNN_FORWARD_CPU, MNN_FORWARD_OPENCL, MNN_FORWARD_VULKAN};
     std::string forwardsString;
 
     if (argc > 1) {

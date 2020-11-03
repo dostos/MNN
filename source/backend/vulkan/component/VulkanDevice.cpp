@@ -230,6 +230,7 @@ const VkResult VulkanDevice::createFence(VkFence& fence, const VkAllocationCallb
         /* .pNext = */ nullptr,
         /* .flags = */ 0,
     };
+
     return vkCreateFence(mDevice, &fci, allocator, &fence);
 }
 

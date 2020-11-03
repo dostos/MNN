@@ -4,33 +4,33 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-        {
-            "type": "gdb",
-            "request": "attach",
-            "name": "Attach to gdbserver - benchmark",
-            "executable": "${workspaceRoot}/project/android/build/benchmark.out",
-            "target": "host.docker.internal:5555",
-            "autorun": [
-                "set solib-search-path ${workspaceRoot}/project/android/build/"
-            ],
-            "remote": true,
-            "cwd": "${workspaceRoot}",
-            "gdbpath": "/opt/android-ndk/prebuilt/linux-x86_64/bin/gdb",
-            "valuesFormatting": "parseText"
-        },
-        {
-            "type": "gdb",
-            "request": "attach",
-            "name": "Attach to gdbserver - op",
-            "executable": "${workspaceRoot}/project/android/build/opExprHelper.out",
-            "target": "host.docker.internal:5555",
-            "autorun": [
-                "set solib-search-path ${workspaceRoot}/project/android/build/"
-            ],
-            "remote": true,
-            "cwd": "${workspaceRoot}",
-            "gdbpath": "/opt/android-ndk/prebuilt/linux-x86_64/bin/gdb",
-            "valuesFormatting": "parseText"
-        }
+       {
+           "type": "gdb",
+           "request": "attach",
+           "name": "Attach to gdbserver - benchmark",
+           "executable": "${workspaceRoot}/project/android/build/benchmark.out",
+           "target": "host.docker.internal:5555",
+           "autorun": [
+               "set solib-search-path ${workspaceRoot}/project/android/build/"
+           ],
+           "remote": true,
+           "cwd": "${workspaceRoot}",
+           "gdbpath": "/opt/android-ndk/prebuilt/linux-x86_64/bin/gdb",
+           "valuesFormatting": "parseText"
+       },
+       {
+           "type": "gdb",
+           "request": "attach",
+           "name": "Attach to gdbserver - op",
+           "executable": "${workspaceRoot}/project/android/build/opExprHelper.out",
+           "target": "host.docker.internal:5555",
+           "autorun": [
+               "set solib-search-path ${workspaceRoot}/project/android/build/"
+           ],
+           "remote": true,
+           "cwd": "${workspaceRoot}",
+           "gdbpath": "/opt/android-ndk/prebuilt/linux-x86_64/bin/gdb",
+           "valuesFormatting": "parseText"
+       }
     ]
 }

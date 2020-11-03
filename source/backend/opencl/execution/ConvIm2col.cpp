@@ -26,6 +26,11 @@ ConvIm2ColExecution::ConvIm2ColExecution(const std::vector<Tensor *> &inputs, co
                   kernelWidth / kernelHeight / outputChannel;
 
     auto totalWeightSize = ALIGN_UP4(outputChannel) * ALIGN_UP4(mInputDepth) * (kernelWidth * kernelHeight);
+    MNN_PRINT("Opencl Conv weight");
+    for(int i = 0 ; i < conv2dParams->weight()->size(); i++) {
+        MNN_PRINT("%f ", conv2dParams->weight()->data()[i]);
+    }
+    MNN_PRINT("\n");
 
     cl_int error;
     std::shared_ptr<Tensor> filterBuffer(
