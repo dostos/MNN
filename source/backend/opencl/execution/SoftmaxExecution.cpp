@@ -70,7 +70,7 @@ std::vector<uint32_t> SoftmaxExecution::softmaxLocalWS(const std::vector<uint32_
     }
     
     if (tunedLws.find(info) == tunedLws.end()) {
-        //printf("softmaxLocalWS %d Insert! gws:%d %d, lws:%d %d\n", (int)tunedLws.size(), gws[0], gws[1], lws_prefer[0], lws_prefer[1]);
+        printf("softmaxLocalWS %d Insert! gws:%d %d, lws:%d %d\n", (int)tunedLws.size(), gws[0], gws[1], lws_prefer[0], lws_prefer[1]);
         tunedLws.insert(std::make_pair(info, lws_prefer));
     }
     

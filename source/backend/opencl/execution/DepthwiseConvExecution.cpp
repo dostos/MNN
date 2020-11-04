@@ -186,7 +186,7 @@ std::vector<uint32_t> DepthwiseConvExecution::depthwiseConvLocalWS(const std::ve
     }
 
     if (tunedLws.find(info) == tunedLws.end()) {
-        //printf("depthwiseConvLocalWS %d Insert! gws:%d %d, lws:%d %d\n", (int)tunedLws.size(), gws[0], gws[1], lws_prefer[0], lws_prefer[1]);
+        printf("depthwiseConvLocalWS %d Insert! gws:%d %d, lws:%d %d\n", (int)tunedLws.size(), gws[0], gws[1], lws_prefer[0], lws_prefer[1]);
         tunedLws.insert(std::make_pair(info, lws_prefer));
     }
     

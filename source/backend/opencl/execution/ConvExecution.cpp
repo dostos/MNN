@@ -67,7 +67,7 @@ std::vector<uint32_t> ConvExecution::conv2d1x1LocalWSOpt(std::vector<uint32_t> &
     }
     
     if (tunedLws.find(info) == tunedLws.end()) {
-        //printf("conv2d1x1LocalWSOpt %d Insert! gws:%d %d, lws:%d %d\n", (int)tunedLws.size(), gws[0], gws[1], lws_prefer[0], lws_prefer[1]);
+        printf("conv2d1x1LocalWSOpt %d Insert! gws:%d %d, lws:%d %d\n", (int)tunedLws.size(), gws[0], gws[1], lws_prefer[0], lws_prefer[1]);
         tunedLws.insert(std::make_pair(info, lws_prefer));
     }
 
@@ -159,7 +159,7 @@ std::vector<uint32_t> ConvExecution::conv2d1x1LocalWS(std::vector<uint32_t> &gws
     }
     
     if (tunedLws.find(info) == tunedLws.end()) {
-        //printf("conv2d1x1LocalWS %d Insert! gws:%d %d, lws:%d %d\n", (int)tunedLws.size(), gws[0], gws[1], lws_prefer[0], lws_prefer[1]);
+        printf("conv2d1x1LocalWS %d Insert! gws:%d %d, lws:%d %d\n", (int)tunedLws.size(), gws[0], gws[1], lws_prefer[0], lws_prefer[1]);
         tunedLws.insert(std::make_pair(info, lws_prefer));
     }
     
@@ -228,7 +228,7 @@ std::vector<uint32_t> ConvExecution::conv2dGeneralLocalWS(const std::vector<uint
     }
 
     if (tunedLws.find(info) == tunedLws.end()) {
-        //printf("conv2dGeneralLocalWS %d Insert! gws:%d %d, lws:%d %d\n", (int)tunedLws.size(), gws[0], gws[1], lws_prefer[0], lws_prefer[1]);
+        printf("conv2dGeneralLocalWS %d Insert! gws:%d %d, lws:%d %d\n", (int)tunedLws.size(), gws[0], gws[1], lws_prefer[0], lws_prefer[1]);
         tunedLws.insert(std::make_pair(info, lws_prefer));
     }
     

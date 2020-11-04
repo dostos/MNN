@@ -360,7 +360,7 @@ std::vector<uint32_t> ConvWinograd::getLocalWS(std::string kernelName, int index
     }
     
     if (tunedLws.find(info) == tunedLws.end()) {
-        //printf("ConvWinograd %d Insert! gws:%d %d, lws:%d %d\n", (int)tunedLws.size(), gws[0], gws[1], lws_prefer[0], lws_prefer[1]);
+        printf("ConvWinograd %d Insert! gws:%d %d, lws:%d %d\n", (int)tunedLws.size(), gws[0], gws[1], lws_prefer[0], lws_prefer[1]);
         tunedLws.insert(std::make_pair(info, lws_prefer));
     }
     
