@@ -23,6 +23,7 @@ public:
     std::vector<uint32_t> depthwiseConvLocalWS(const std::vector<uint32_t> &gws, const uint32_t maxWorkGroupSize);
 
 private:
+    std::string mName;
     const Convolution2DCommon *mConv2dCommonParams;
     const Convolution2D *mCon2dParams;
     std::vector<int> mStrides{1, 1};

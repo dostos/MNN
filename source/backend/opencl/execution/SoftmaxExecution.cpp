@@ -13,9 +13,10 @@
 namespace MNN {
 namespace OpenCL {
 
-SoftmaxExecution::SoftmaxExecution(const std::vector<Tensor *> &inputs, int axis, Backend *backend)
+SoftmaxExecution::SoftmaxExecution(const std::vector<Tensor *> &inputs, const MNN::Op *op, int axis, Backend *backend)
     : Execution(backend) {
-    mAxis          = axis;
+    mName = op->name()->c_str();
+    mAxis = axis;
     mOpenCLBackend = static_cast<OpenCLBackend *>(backend);
     buildSoftmaxKernel();
 }
@@ -26,7 +27,7 @@ std::vector<uint32_t> SoftmaxExecution::softmaxLocalWS(const std::vector<uint32_
     MNN_ASSERT(gws.size() == 3);
 
     auto& tunedLws = mOpenCLBackend->getOpenCLRuntime()->tunedLwsMap();
-    std::pair<std::string, std::vector<uint32_t>> info = std::make_pair("softmaxLocalWS", gws);
+    std::pair<std::string, std::vector<uint32_t>> info = std::make_pair(mName + "softmaxLocalWS", gws);
     if (tunedLws.find(info) != tunedLws.end()) {
         //printf("softmaxLocalWS Found! gws:%d %d lws:%d %d\n", gws[0], gws[1], tunedLws[info][0], tunedLws[info][1]);
         return tunedLws[info];
@@ -241,7 +242,7 @@ public:
             axis = index[axis];
             //1 : channel //2 : height
             if (1 == axis || 2 == axis) {
-                return new SoftmaxExecution(inputs, axis, backend);
+                return new SoftmaxExecution(inputs, op, axis, backend);
             }
             return nullptr;
         } else {
@@ -251,7 +252,7 @@ public:
             }
 
             if (1 == axis || 2 == axis) {
-                return new SoftmaxExecution(inputs, axis, backend);
+                return new SoftmaxExecution(inputs, op, axis, backend);
             }
             return nullptr;
         }

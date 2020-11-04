@@ -28,7 +28,7 @@ std::vector<uint32_t> ConvExecution::conv2d1x1LocalWSOpt(std::vector<uint32_t> &
     MNN_ASSERT(gws.size() == 2);
     
     auto& tunedLws = mOpenCLBackend->getOpenCLRuntime()->tunedLwsMap();
-    std::pair<std::string, std::vector<uint32_t>> info = std::make_pair("conv2d1x1LocalWSOpt", gws);
+    std::pair<std::string, std::vector<uint32_t>> info = std::make_pair(mName + "conv2d1x1LocalWSOpt", gws);
     if (tunedLws.find(info) != tunedLws.end()) {
         //printf("conv2d1x1LocalWSOpt Found! gws:%d %d lws:%d %d\n", gws[0], gws[1], tunedLws[info][0], tunedLws[info][1]);
         return tunedLws[info];
@@ -121,7 +121,7 @@ std::vector<uint32_t> ConvExecution::conv2d1x1LocalWS(std::vector<uint32_t> &gws
     MNN_ASSERT(gws.size() == 2);
     
     auto& tunedLws = mOpenCLBackend->getOpenCLRuntime()->tunedLwsMap();
-    std::pair<std::string, std::vector<uint32_t>> info = std::make_pair("conv2d1x1LocalWS", gws);
+    std::pair<std::string, std::vector<uint32_t>> info = std::make_pair(mName + "conv2d1x1LocalWS", gws);
     if (tunedLws.find(info) != tunedLws.end()) {
         //printf("conv2d1x1LocalWS Found! gws:%d %d lws:%d %d\n", gws[0], gws[1], tunedLws[info][0], tunedLws[info][1]);
         return tunedLws[info];
@@ -190,7 +190,7 @@ std::vector<uint32_t> ConvExecution::conv2dGeneralLocalWS(const std::vector<uint
     MNN_ASSERT(gws.size() == 2);
     
     auto& tunedLws = mOpenCLBackend->getOpenCLRuntime()->tunedLwsMap();
-    std::pair<std::string, std::vector<uint32_t>> info = std::make_pair("conv2dGeneralLocalWS", gws);
+    std::pair<std::string, std::vector<uint32_t>> info = std::make_pair(mName + "conv2dGeneralLocalWS", gws);
     if (tunedLws.find(info) != tunedLws.end()) {
         //printf("conv2dGeneralLocalWS Found! gws:%d %d lws:%d %d\n", gws[0], gws[1], tunedLws[info][0], tunedLws[info][1]);
         return tunedLws[info];
@@ -301,8 +301,9 @@ std::vector<uint32_t> ConvExecution::conv2dGeneralLocalWS(const std::vector<uint
 #endif
 }
 
-ConvCommonExecution::ConvCommonExecution(const Convolution2D *conv2dParams, Backend *backend) : Execution(backend) {
-    auto openclBackend       = (OpenCLBackend *)backend;
+ConvCommonExecution::ConvCommonExecution(const Convolution2D *conv2dParams, const MNN::Op *op,  Backend *backend) : Execution(backend) {
+    mName = op->name()->c_str();
+    auto openclBackend = (OpenCLBackend *)backend;
     int biasSize             = conv2dParams->bias()->size();
     const float *biasDataPtr = conv2dParams->bias()->data();
     cl::Buffer biasBuffer(openclBackend->getOpenCLRuntime()->context(), CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR,
@@ -327,7 +328,7 @@ ConvCommonExecution::~ConvCommonExecution() {
 }
 
 ConvExecution::ConvExecution(const std::vector<Tensor *> &inputs, const MNN::Op *op, Backend *backend)
-    : ConvCommonExecution(op->main_as_Convolution2D(), backend) {
+    : ConvCommonExecution(op->main_as_Convolution2D(), op, backend) {
 #ifdef LOG_VERBOSE
     MNN_PRINT("Start ConvExecution init !\n");
 #endif
@@ -381,7 +382,7 @@ ConvExecution::ConvExecution(const std::vector<Tensor *> &inputs, const MNN::Op 
     auto gpuType = mOpenCLBackend->getOpenCLRuntime()->getGpuType();
 
     //select opt conv method
-    std::string kernelName = "conv_2d";
+    mKernelName = "conv_2d";
     if (kernelHeight == kernelWidth && kernelHeight == 1 && mConv2dCommonParams->padX() == 0 &&
         mConv2dCommonParams->padY() == 0) {
         mConv1x1Opt = (mStrides[0] == 1 && mStrides[1] == 1 && !(gpuType == GpuType::ADRENO));
@@ -391,7 +392,7 @@ ConvExecution::ConvExecution(const std::vector<Tensor *> &inputs, const MNN::Op 
             if(useLocalSize >= mOpenCLBackend->getOpenCLRuntime()->getMaxLocalMem()){
                 mUseLocalMem = false;
             }else{
-                kernelName = "conv_2d_1x1_local";
+                mKernelName = "conv_2d_1x1_local";
                 mUseLocalMem=true;
             }
         }
@@ -399,9 +400,9 @@ ConvExecution::ConvExecution(const std::vector<Tensor *> &inputs, const MNN::Op 
         
         if(!mUseLocalMem){
             if(mConv1x1Opt){
-                kernelName = "conv_2d_1x1_mali";
+                mKernelName = "conv_2d_1x1_mali";
             }else{
-                kernelName = "conv_2d_1x1";
+                mKernelName = "conv_2d_1x1";
             }
         }
     }
@@ -485,7 +486,7 @@ ConvExecution::ConvExecution(const std::vector<Tensor *> &inputs, const MNN::Op 
         buildOptions.emplace("-DRELU6");
     }
 
-    mKernel           = mOpenCLBackend->getOpenCLRuntime()->buildKernel("conv_2d", kernelName, buildOptions);
+    mKernel           = mOpenCLBackend->getOpenCLRuntime()->buildKernel("conv_2d", mKernelName, buildOptions);
     mMaxWorkGroupSize = static_cast<uint32_t>(mOpenCLBackend->getOpenCLRuntime()->getMaxWorkGroupSize(mKernel));
 
 #ifdef LOG_VERBOSE
@@ -676,16 +677,13 @@ public:
     virtual ~ConvolutionCreator() = default;
     virtual Execution *onCreate(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs,
                                 const MNN::Op *op, Backend *backend) const override {
-
-        return new ConvIm2ColExecution(inputs, op, backend);
-
         if (inputs.size() == 3) {
             return new MultiInputConvExecution(op, backend);
         }
 
         auto conv2D = op->main_as_Convolution2D();
         if (ConvWinograd::valid(conv2D->common(), inputs[0])) {
-            return new ConvWinograd(conv2D, backend);
+            return new ConvWinograd(conv2D, op, backend);
         }
 
         return new ConvExecution(inputs, op, backend);

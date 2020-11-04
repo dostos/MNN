@@ -12,7 +12,7 @@ ConvIm2ColExecution::~ConvIm2ColExecution() {
 #define UNIT 4
 #define UNIT2 16
 ConvIm2ColExecution::ConvIm2ColExecution(const std::vector<Tensor *> &inputs, const MNN::Op *op, Backend *backend) 
-    : ConvCommonExecution(op->main_as_Convolution2D(), backend), mOpenCLBackend((OpenCLBackend *)backend) {
+    : ConvCommonExecution(op->main_as_Convolution2D(), op, backend), mOpenCLBackend((OpenCLBackend *)backend) {
     const auto *conv2dParams       = op->main_as_Convolution2D();
     mConv2dCommonParams            = conv2dParams->common();
 

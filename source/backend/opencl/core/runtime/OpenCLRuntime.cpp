@@ -184,6 +184,17 @@ OpenCLRuntime::~OpenCLRuntime() {
     mCommandQueuePtr.reset();
     mContext.reset();
     mFirstGPUDevicePtr.reset();
+
+
+    std::ofstream ofs("cache.txt", std::fstream::in | std::fstream::out | std::fstream::trunc);
+    if(ofs.is_open()) {
+        MNN_PRINT("opened cache txt \n");
+        for(auto lws : mTunedLws) {
+            ofs << lws.first.first;
+        }
+    }
+    ofs.close();
+
 #ifdef LOG_VERBOSE
     MNN_PRINT("end ~OpenCLRuntime !\n");
 #endif

@@ -18,7 +18,7 @@ namespace OpenCL {
 
 class SoftmaxExecution : public Execution {
 public:
-    SoftmaxExecution(const std::vector<Tensor *> &inputs, int axis, Backend *backend);
+    SoftmaxExecution(const std::vector<Tensor *> &inputs, const MNN::Op *op, int axis, Backend *backend);
 
     virtual ~SoftmaxExecution() = default;
     virtual ErrorCode onResize(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) override;
@@ -28,6 +28,7 @@ public:
     std::vector<uint32_t> softmaxLocalWS(const std::vector<uint32_t> &gws, const uint32_t maxWorkGroupSize);
 
 private:
+    std::string mName;
     cl::Kernel mKernel;
     uint32_t mMaxWorkGroupSize;
     OpenCLBackend *mOpenCLBackend;

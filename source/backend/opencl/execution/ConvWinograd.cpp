@@ -27,9 +27,10 @@ bool ConvWinograd::valid(const Convolution2DCommon* common, const Tensor* input,
     return (common->kernelX() == 3 && common->kernelY() == 3) || (common->kernelX() == 5 && common->kernelY() == 5);
 }
 
-ConvWinograd::ConvWinograd(const MNN::Convolution2D* op, Backend* backend) : Execution(backend) {
-    mOpenCLBackend = static_cast<OpenCLBackend*>(backend);
-    mCommon        = op->common();
+ConvWinograd::ConvWinograd(const MNN::Convolution2D* conv_op, const MNN::Op *op,  Backend* backend) : Execution(backend) {
+    mName = op->name()->c_str();
+    mOpenCLBackend = static_cast<OpenCLBackend *>(backend);
+    mCommon        = conv_op->common();
     MNN_ASSERT((3 == mCommon->kernelY() && 3 == mCommon->kernelX()) ||
                (5 == mCommon->kernelX() && 5 == mCommon->kernelY()));
     MNN_ASSERT(1 == mCommon->strideX() && 1 == mCommon->strideY());
@@ -42,8 +43,8 @@ ConvWinograd::ConvWinograd(const MNN::Convolution2D* op, Backend* backend) : Exe
     const float* filterDataPtr = nullptr;
 
     std::shared_ptr<MNN::ConvolutionCommon::Int8Common> quanCommon;
-    if (nullptr != op->quanParameter()) {
-        quanCommon = ConvolutionCommon::load(op->quanParameter(), true);
+    if (nullptr != conv_op->quanParameter()) {
+        quanCommon = ConvolutionCommon::load(conv_op->quanParameter(), true);
         if (nullptr == quanCommon) {
             MNN_ERROR("Memory not Enough, can't extract IDST Convolution \n");
         }
@@ -56,8 +57,8 @@ ConvWinograd::ConvWinograd(const MNN::Convolution2D* op, Backend* backend) : Exe
     }
 
     if (nullptr == filterDataPtr) {
-        weightSize    = op->weight()->size();
-        filterDataPtr = op->weight()->data();
+        weightSize    = conv_op->weight()->size();
+        filterDataPtr = conv_op->weight()->data();
     }
 
     int co     = mCommon->outputCount();
@@ -82,7 +83,7 @@ ConvWinograd::ConvWinograd(const MNN::Convolution2D* op, Backend* backend) : Exe
         auto biasC = queue.enqueueMapBuffer(*biasBuffer, CL_TRUE, CL_MAP_WRITE, 0, biasSize, nullptr, nullptr, &error);
         if(biasC != nullptr && error == CL_SUCCESS){
             ::memset(biasC, 0, biasSize);
-            ::memcpy(biasC, op->bias()->data(), co * sizeof(float));
+            ::memcpy(biasC, conv_op->bias()->data(), co * sizeof(float));
         }else{
             MNN_ERROR("Map error biasC == nullptr \n");
         }
@@ -322,7 +323,7 @@ std::vector<uint32_t> ConvWinograd::getLocalWS(std::string kernelName, int index
     MNN_ASSERT(gws.size() == 2);
 
     auto& tunedLws = mOpenCLBackend->getOpenCLRuntime()->tunedLwsMap();
-    std::pair<std::string, std::vector<uint32_t>> info = std::make_pair(kernelName, gws);
+    std::pair<std::string, std::vector<uint32_t>> info = std::make_pair(mName + kernelName, gws);
     if (tunedLws.find(info) != tunedLws.end()) {
         //printf("ConvWinograd Found! gws:%d %d lws:%d %d\n", gws[0], gws[1], tunedLws[info][0], tunedLws[info][1]);
         return tunedLws[info];

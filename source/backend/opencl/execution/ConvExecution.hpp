@@ -22,10 +22,11 @@ namespace OpenCL {
 
 class ConvCommonExecution : public Execution {
 public:
-    ConvCommonExecution(const Convolution2D *op, Backend *backend);
+    ConvCommonExecution(const Convolution2D *conv_op, const MNN::Op *op, Backend *backend);
     virtual ~ConvCommonExecution();
 
 protected:
+    std::string mName;
     std::shared_ptr<Tensor> mBias;
 };
 
@@ -54,6 +55,7 @@ private:
     std::vector<uint32_t> mLocalWorkSize{1, 1, 1, 1};
     std::shared_ptr<Tensor> mFilter;
     cl::Kernel mKernel;
+    std::string mKernelName;
     uint32_t mMaxWorkGroupSize;
     bool mIsTurn = false;
     OpenCLBackend *mOpenCLBackend;
