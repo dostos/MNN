@@ -26,7 +26,7 @@
 
 #define MNN_CHECK_CL_SUCCESS(error)                  \
     if (error != CL_SUCCESS) {                       \
-        MNN_PRINT("ERROR CODE : %d \n", (int)error); \
+        MNN_PRINT("ERROR CODE : %d %s,%s:%d \n", (int)error, __FILE__, __func__, __LINE__ ); \
     }
 #ifdef MNN_USE_LIB_WRAPPER
 

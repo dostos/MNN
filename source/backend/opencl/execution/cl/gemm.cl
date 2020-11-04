@@ -70,10 +70,10 @@ __kernel void gemm_16x16(__read_only image2d_t uInput, __read_only image2d_t uKe
     int obxohxow_4 = pos.x;
     if (obxohxow_4 < outputSize.x && oc_4 < outputSize.y)
     {
-        float4 o0 = (FLOAT4)(0);
-        float4 o1 = (FLOAT4)(0);
-        float4 o2 = (FLOAT4)(0);
-        float4 o3 = (FLOAT4)(0);
+        FLOAT4 o0 = (FLOAT4)(0);
+        FLOAT4 o1 = (FLOAT4)(0);
+        FLOAT4 o2 = (FLOAT4)(0);
+        FLOAT4 o3 = (FLOAT4)(0);
         for (int k=0; k<ic_4; ++k)
         {
             int k4 = k << 2;

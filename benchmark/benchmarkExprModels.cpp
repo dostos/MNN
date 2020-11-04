@@ -96,7 +96,7 @@ static std::vector<float> runNet(VARP netOutput, const ScheduleConfig& config, i
     std::shared_ptr<Tensor> inputTensorHost(Tensor::createHostTensorFromDevice(inputTensor, false));
     int eleSize = inputTensorHost->elementSize();
     for (int i = 0; i < eleSize; ++i) {
-        inputTensorHost->host<float>()[i] = 0.0f;
+        inputTensorHost->host<float>()[i] = i;
     }
     auto outputTensor = net->getSessionOutput(session, NULL);
     std::shared_ptr<Tensor> outputTensorHost(Tensor::createHostTensorFromDevice(outputTensor, false));
@@ -121,6 +121,9 @@ static std::vector<float> runNet(VARP netOutput, const ScheduleConfig& config, i
         auto timeEnd = getTimeInUs();
         costs.push_back((timeEnd - timeBegin) / 1000.0);
     }
+
+    outputTensor->print();
+
     return costs;
 }
 
