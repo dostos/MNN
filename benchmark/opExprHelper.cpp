@@ -189,7 +189,7 @@ int main(int argc, const char* argv[]) {
         0 // Pad
     };
 
-    for (int i = 2; i < argc; i++) {
+    for (int i = 2; i < argc && i - 2 < args.size(); i++) {
         args[i - 2] = atoi(argv[i]);
     }
 

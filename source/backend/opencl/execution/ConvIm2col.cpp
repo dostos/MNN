@@ -182,8 +182,8 @@ ErrorCode ConvIm2ColExecution::onResize(const std::vector<Tensor *> &inputs, con
             mIm2ColKernel.setArg(idx++, sizeof(kernels), kernels);
             mIm2ColKernel.setArg(idx++, sizeof(strides), strides);
             mIm2ColKernel.setArg(idx++, sizeof(dilations), dilations);
-            int inputSize[3] = {inputWidth, inputHeight, inputChannel4};
-            int outputSize[3] = {outputWidth, outputHeight, outputChannel4};
+            int inputSize[4] = {inputWidth, inputHeight, inputChannel4, 1};
+            int outputSize[4] = {outputWidth, outputHeight, outputChannel4, 1};
             mIm2ColKernel.setArg(idx++, sizeof(inputSize), inputSize);
             mIm2ColKernel.setArg(idx++, sizeof(outputSize), outputSize);
         }
@@ -217,7 +217,7 @@ ErrorCode ConvIm2ColExecution::onResize(const std::vector<Tensor *> &inputs, con
         mCol2ImKernel.setArg(idx++, *mDstTexture);
         mCol2ImKernel.setArg(idx++, openCLImage(output));
         mCol2ImKernel.setArg(idx++, *mBiasBuffer);
-        int outputSize[3] = {outputWidth, outputHeight, outputChannel4};
+        int outputSize[4] = {outputWidth, outputHeight, outputChannel4, 1};
         mCol2ImKernel.setArg(idx++, sizeof(outputSize), outputSize);
     }
 

@@ -43,8 +43,8 @@ __kernel void image2col(GLOBAL_SIZE_3_DIMS
                                 __private const int2 kernelSize,
                                 __private const int2 stride,
                                 __private const int2 dilate,
-                                __private const int3 inputSize,
-                                __private const int3 outputSize) {
+                                __private const int4 inputSize,
+                                __private const int4 outputSize) {
     // w, h, ic4_b 
     int3 index = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
 
@@ -78,7 +78,7 @@ __kernel void col2image(GLOBAL_SIZE_3_DIMS
                                 __read_only image2d_t input, 
                                 __write_only image2d_t output,
                                 __global const float4 *bias,
-                                __private const int3 outputSize) {
+                                __private const int4 outputSize) {
     // ow, oc, oc4_ob
     int3 index = (int3)(get_global_id(0), get_global_id(1), get_global_id(2));
 
