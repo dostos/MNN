@@ -135,6 +135,8 @@ private:
     Backend* _getDefaultBackend();
 
 private:
+    friend class MultiSession;
+
     std::map<MNNForwardType, std::shared_ptr<Backend>> mBackends;
     std::vector<std::shared_ptr<Pipeline>> mPipelines;
     std::vector<std::pair<int, std::shared_ptr<Tensor>>> mTensors;
