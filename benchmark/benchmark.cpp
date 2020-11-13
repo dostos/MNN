@@ -129,12 +129,14 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
     auto net = std::shared_ptr<MNN::Interpreter>(MNN::Interpreter::createFromBuffer(modelBuffer, bufferSize));
 
     revertor.reset();
-    MNN::ScheduleConfig config;
-    config.numThread = numberThread;
-    config.type = static_cast<MNNForwardType>(forward);
+    
     MNN::BackendConfig backendConfig;
     backendConfig.precision = (MNN::BackendConfig::PrecisionMode)precision;
     backendConfig.power = MNN::BackendConfig::Power_High;
+
+    MNN::ScheduleConfig config;
+    config.numThread = numberThread;
+    config.type = static_cast<MNNForwardType>(forward);
     config.backendConfig = &backendConfig;
 
     std::vector<float> costs;
@@ -186,6 +188,7 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
     for (int i = 0; i < warmup; ++i) {
         input->copyFromHostTensor(givenTensor.get());
         net->runSession(session);
+        net->runSession(session2);
         outputTensor->copyToHostTensor(expectTensor.get());
     }
 
@@ -194,6 +197,7 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
 
         input->copyFromHostTensor(givenTensor.get());
         net->runSession(session);
+        net->runSession(session2);
         outputTensor->copyToHostTensor(expectTensor.get());
 
         auto timeEnd = getTimeInUs();
