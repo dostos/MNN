@@ -1,12 +1,24 @@
-add_custom_command(OUTPUT 
-        "${CMAKE_CURRENT_LIST_DIR}/execution/cl/__opencl_program.cc" # Hack to always rebuild
+if (MNN_OPENCL_DEV)
+    add_custom_command(OUTPUT 
+            "${CMAKE_CURRENT_LIST_DIR}/execution/cl/__opencl_program.cc" # Hack to always rebuild
+            "${CMAKE_CURRENT_LIST_DIR}/execution/cl/opencl_program.cc"
+        COMMAND ${PYTHON_EXECUTABLE}
+        "${CMAKE_CURRENT_LIST_DIR}/execution/cl/opencl_codegen.py"
+        "${CMAKE_CURRENT_LIST_DIR}/execution/cl/"
         "${CMAKE_CURRENT_LIST_DIR}/execution/cl/opencl_program.cc"
-    COMMAND ${PYTHON_EXECUTABLE}
-    "${CMAKE_CURRENT_LIST_DIR}/execution/cl/opencl_codegen.py"
-    "${CMAKE_CURRENT_LIST_DIR}/execution/cl/"
-    "${CMAKE_CURRENT_LIST_DIR}/execution/cl/opencl_program.cc"
-    COMMENT "OpenCL Code Generation"
-)
+        COMMENT "OpenCL Code Generation"
+    )
+else()
+    add_custom_command(OUTPUT 
+            "${CMAKE_CURRENT_LIST_DIR}/execution/cl/opencl_program.cc"
+        COMMAND ${PYTHON_EXECUTABLE}
+        "${CMAKE_CURRENT_LIST_DIR}/execution/cl/opencl_codegen.py"
+        "${CMAKE_CURRENT_LIST_DIR}/execution/cl/"
+        "${CMAKE_CURRENT_LIST_DIR}/execution/cl/opencl_program.cc"
+        COMMENT "OpenCL Code Generation"
+    )
+endif()
+
 add_custom_target (MNN_CLCodeGen DEPENDS "${CMAKE_CURRENT_LIST_DIR}/execution/cl/opencl_program.cc")
 file(GLOB_RECURSE MNN_OpenCL_SRC ${CMAKE_CURRENT_LIST_DIR}/*)
 
