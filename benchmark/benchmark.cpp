@@ -31,6 +31,7 @@
 
 #include "core/Backend.hpp"
 #include "core/Session.hpp"
+#include "core/MultiSession.hpp"
 #include "core/TensorUtils.hpp"
 #include "revertMNNModel.hpp"
 #include <MNN/Interpreter.hpp>
@@ -128,6 +129,8 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
     const auto bufferSize = revertor->getBufferSize();
     auto net = std::shared_ptr<MNN::Interpreter>(MNN::Interpreter::createFromBuffer(modelBuffer, bufferSize));
 
+    MNN::MultiSession multiSession;
+
     revertor.reset();
     MNN::ScheduleConfig config;
     config.numThread = numberThread;
@@ -141,6 +144,9 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
     MNN::Session *session = net->createSession(config);
     MNN::Session *session2 = net->createSession(config);
     MNN::Tensor *input = net->getSessionInput(session, NULL);
+
+    multiSession.addSession(session);
+    multiSession.addSession(session2);
 
     for(auto i : session->getTensors()) {
         std::cout << i.first << std::endl;
