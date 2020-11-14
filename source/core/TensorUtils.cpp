@@ -252,4 +252,28 @@ bool TensorUtils::compareTensors(const Tensor* compare, const Tensor* expect, fl
     }
     return result;
 }
+
+int TensorUtils::getTensorStorageType(const Tensor* tensor) {
+    auto des = getDescribe(tensor);
+    auto usage = des->usage;
+    if (TensorUsage::CONST == usage || TensorUsage::INPUT == usage || TensorUsage::TRAINABLE == usage) {
+        return Backend::DYNAMIC_SEPERATE;
+    }
+    if (des->handleType != Tensor::HANDLE_NONE) {
+        return Backend::DYNAMIC_SEPERATE;
+    }
+    return Backend::DYNAMIC;
+}
+
+int TensorUtils::getTensorReleaseStorageType(const Tensor* tensor) {
+    auto des = getDescribe(tensor);
+    auto usage = des->usage;
+    if (des->handleType != Tensor::HANDLE_NONE) {
+        return Backend::DYNAMIC_SEPERATE;
+    }
+    if (TensorUsage::CONST == usage || TensorUsage::TRAINABLE == usage) {
+        return Backend::DYNAMIC_SEPERATE;
+    }
+    return Backend::DYNAMIC;
+}
 } // namespace MNN

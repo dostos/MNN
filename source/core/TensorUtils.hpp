@@ -96,6 +96,10 @@ public:
      */
     static bool compareTensors(const Tensor* compareTensor, const Tensor* toTensor, float tolerance = 0,
                                bool overall = false, bool printsError = true, bool printsTensors = false);
+
+
+    static int getTensorStorageType(const Tensor* tensor);
+    static int getTensorReleaseStorageType(const Tensor* tensor);
 };
 } // namespace MNN
 

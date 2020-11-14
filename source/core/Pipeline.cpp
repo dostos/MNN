@@ -36,30 +36,6 @@ float OperatorInfo::flops() const {
     return mContent->flops;
 }
 
-static Backend::StorageType _getTensorStorageType(const Tensor* tensor) {
-    auto des = TensorUtils::getDescribe(tensor);
-    auto usage = des->usage;
-    if (TensorUsage::CONST == usage || TensorUsage::INPUT == usage || TensorUsage::TRAINABLE == usage) {
-        return Backend::DYNAMIC_SEPERATE;
-    }
-    if (des->handleType != Tensor::HANDLE_NONE) {
-        return Backend::DYNAMIC_SEPERATE;
-    }
-    return Backend::DYNAMIC;
-}
-
-static Backend::StorageType _getTensorReleaseStorageType(const Tensor* tensor) {
-    auto des = TensorUtils::getDescribe(tensor);
-    auto usage = des->usage;
-    if (des->handleType != Tensor::HANDLE_NONE) {
-        return Backend::DYNAMIC_SEPERATE;
-    }
-    if (TensorUsage::CONST == usage || TensorUsage::TRAINABLE == usage) {
-        return Backend::DYNAMIC_SEPERATE;
-    }
-    return Backend::DYNAMIC;
-}
-
 bool Pipeline::Unit::_allocTensors(Backend* bn, const std::vector<Tensor*>& tensors) {
     for (auto t : tensors) {
         auto des = TensorUtils::getDescribe(t);
@@ -68,7 +44,8 @@ bool Pipeline::Unit::_allocTensors(Backend* bn, const std::vector<Tensor*>& tens
         }
         des->backend = bn;
         TensorUtils::setLinearLayout(t);
-        auto success = bn->onAcquireBuffer(t, _getTensorStorageType(t));
+        auto success = bn->onAcquireBuffer(t, 
+            static_cast<Backend::StorageType>(TensorUtils::getTensorStorageType(t)));
         if (!success) {
             return false;
         }
@@ -278,7 +255,8 @@ ErrorCode Pipeline::Unit::prepare(Backend* bn, Backend* cpuBn) {
         mExecution.reset();
         for (auto t : mOutputs) {
             auto des = TensorUtils::getDescribe(t);
-            des->backend->onReleaseBuffer(t, _getTensorReleaseStorageType(t));
+            des->backend->onReleaseBuffer(t, 
+                static_cast<Backend::StorageType>(TensorUtils::getTensorReleaseStorageType(t)));
             des->backend = nullptr;
         }
         auto sucess = _createExecution(cpuBn, cpuBn);
@@ -301,7 +279,8 @@ ErrorCode Pipeline::Unit::prepare(Backend* bn, Backend* cpuBn) {
         auto des = TensorUtils::getDescribe(t);
         des->useCount -= 1;
         if (0 == des->useCount) {
-            des->backend->onReleaseBuffer(t, _getTensorReleaseStorageType(t));
+            des->backend->onReleaseBuffer(t, 
+                static_cast<Backend::StorageType>(TensorUtils::getTensorReleaseStorageType(t)));
         }
     }
 #ifdef MNN_DEBUG_TENSOR_SIZE

@@ -92,9 +92,8 @@ Session::Session(const Schedule::ScheduleInfo& info) {
 }
 
 Session::~Session() {
-    for (auto& t : mTensors) {
-        TensorUtils::clearHandleData(t.second.get());
-    }
+    _clearCache();
+
     mPipelines.clear();
     mBackends.clear();
     mTensors.clear();
@@ -140,19 +139,17 @@ void Session::_clearCache() {
     for (auto& t : mTensors) {
         auto describe = TensorUtils::getDescribe(t.second.get());
         TensorUtils::clearHandleData(t.second.get());
+        if (describe->backend) {
+            describe->backend->onReleaseBuffer(t.second.get(), 
+                static_cast<Backend::StorageType>(TensorUtils::getTensorReleaseStorageType(t.second.get())));    
+            describe->backend  = nullptr;
+        }
         describe->useCount = t.first;
-        describe->backend  = nullptr;
     }
 }
 
 ErrorCode Session::resize() {
     _clearCache();
-    for (auto& b : mBackends) {
-        // avoid library not loaded
-        if(b.second){
-            b.second->onClearBuffer();
-        }
-    }
 
     for (auto& iter : mPipelines) {
         auto error = iter->prepare();
