@@ -11,6 +11,18 @@ SessionId MultiSession::addSession(Session* session) {
     return currentId;
 }
 
+ErrorCode MultiSession::prepare() {
+    for (auto session : mSessions) {
+        if (session.second->getNeedResize()) {
+            auto code = session.second->resize();
+            if (NO_ERROR != code) {
+                return code;
+            }
+        }
+    }
+    return NO_ERROR;
+}
+
 ErrorCode MultiSession::runSequence(const std::set<SessionId> &requests, bool sync) {
     for (const SessionId& sessionId : requests) {
         if (mSessions.find(sessionId) != mSessions.end()) {

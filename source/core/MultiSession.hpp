@@ -23,6 +23,7 @@ public:
     SessionId addSession(Session *session);
 
     // Prepare : alloc tensors per session
+    ErrorCode prepare();
 
     ErrorCode runSequence(const std::set<SessionId> &requests, bool sync = false);
     ErrorCode runParallel(const std::set<SessionId> &requests, bool sync = false);
@@ -40,7 +41,8 @@ private:
         ErrorCode run();
 
     private:
-        std::vector<Session *> mSessions;
+        // sessions that should run parallel 
+        const std::vector<Session *> mSessions;
         std::vector<std::shared_ptr<MultiPipeline>> mMultiPipelines;
     };
 

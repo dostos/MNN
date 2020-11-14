@@ -36,7 +36,7 @@ float OperatorInfo::flops() const {
     return mContent->flops;
 }
 
-bool Pipeline::Unit::_allocTensors(Backend* bn, const std::vector<Tensor*>& tensors) {
+bool Unit::_allocTensors(Backend* bn, const std::vector<Tensor*>& tensors) {
     for (auto t : tensors) {
         auto des = TensorUtils::getDescribe(t);
         if (nullptr != des->backend) {
@@ -53,7 +53,7 @@ bool Pipeline::Unit::_allocTensors(Backend* bn, const std::vector<Tensor*>& tens
     return true;
 }
 
-Pipeline::Unit::Unit(const Op* op, const std::vector<Tensor*>& inputs, const std::vector<Tensor*>& outputs) {
+Unit::Unit(const Op* op, const std::vector<Tensor*>& inputs, const std::vector<Tensor*>& outputs) {
     MNN_ASSERT(nullptr != op);
     mOriginOp = op;
     mType     = op->type();
@@ -70,7 +70,7 @@ Pipeline::Unit::Unit(const Op* op, const std::vector<Tensor*>& inputs, const std
 
 
 
-bool Pipeline::Unit::_createExecution(Backend* bn, Backend* cpuBn) {
+bool Unit::_createExecution(Backend* bn, Backend* cpuBn) {
     mExecution.reset(bn->onCreate(mInputs, mOutputs, mOriginOp));
     if (nullptr == mExecution) {
         mExecution.reset(cpuBn->onCreate(mInputs, mOutputs, mOriginOp));
@@ -96,7 +96,7 @@ bool Pipeline::Unit::_createExecution(Backend* bn, Backend* cpuBn) {
     return mExecution->valid();
 }
 
-ErrorCode Pipeline::Unit::execute() {
+ErrorCode Unit::execute() {
     if (nullptr == mExecution) {
         return NO_EXECUTION;
     }
@@ -126,7 +126,7 @@ ErrorCode Pipeline::Unit::execute() {
     }
     return code;
 }
-ErrorCode Pipeline::Unit::executeCallBack(const TensorCallBackWithInfo& before, const TensorCallBackWithInfo& after) {
+ErrorCode Unit::executeCallBack(const TensorCallBackWithInfo& before, const TensorCallBackWithInfo& after) {
     if (nullptr == mExecution) {
         return NO_EXECUTION;
     }
@@ -148,7 +148,7 @@ ErrorCode Pipeline::Unit::executeCallBack(const TensorCallBackWithInfo& before, 
     return NO_ERROR;
 }
 
-ErrorCode Pipeline::Unit::prepare(Backend* bn, Backend* cpuBn) {
+ErrorCode Unit::prepare(Backend* bn, Backend* cpuBn) {
 #ifdef MNN_DEBUG_TENSOR_SIZE
     MNN_PRINT("\n===> prepare op: %s, [%s]\n", mOriginOp->name()->c_str(), MNN::EnumNameOpType(mOriginOp->type()));
 #endif

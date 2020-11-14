@@ -143,10 +143,12 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
     std::vector<float> costs;
     MNN::Session *session = net->createSession(config);
     MNN::Session *session2 = net->createSession(config);
-    MNN::Tensor *input = net->getSessionInput(session, NULL);
 
-    multiSession.addSession(session);
-    multiSession.addSession(session2);
+    MNN::Tensor *input = net->getSessionInput(session, NULL);
+    MNN::Tensor *input2 = net->getSessionInput(session2, NULL);
+
+    MNN::SessionId id = multiSession.addSession(session);
+    MNN::SessionId id2 =multiSession.addSession(session2);
 
     for(auto i : session->getTensors()) {
         std::cout << i.first << std::endl;
@@ -160,51 +162,44 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
     if (inputShape[0] != batch) {
         inputShape[0] = batch;
         net->resizeTensor(input, inputShape);
-        net->resizeSession(session);
-        net->resizeSession(session2);
         std::cout << "Resized to " << batch << std::endl;
     }
-    
-    for(auto i : session->getTensors()) {
-        std::cout << i.first << std::endl;
-        std::cout << i.second->getName() << std::endl;
-        i.second->printShape();
-    }
-    
-    for(auto i : session2->getTensors()) {
-        std::cout << i.first << std::endl;
-        std::cout << i.second->getName() << std::endl;
-        i.second->printShape();
-    }
 
-    // if the model has not the input dimension, umcomment the below code to set the input dims
-    // std::vector<int> dims{1, 3, 224, 224};
-    // net->resizeTensor(input, dims);
-    // net->resizeSession(session);
+    multiSession.prepare();
 
     const MNN::Backend *inBackend = net->getBackend(session, input);
 
     std::shared_ptr<MNN::Tensor> givenTensor(MNN::Tensor::createHostTensorFromDevice(input, false));
 
     auto outputTensor = net->getSessionOutput(session, NULL);
+    auto outputTensor2 = net->getSessionOutput(session, NULL);
     std::shared_ptr<MNN::Tensor> expectTensor(MNN::Tensor::createHostTensorFromDevice(outputTensor, false));
+    std::shared_ptr<MNN::Tensor> expectTensor2(MNN::Tensor::createHostTensorFromDevice(outputTensor2, false));
     // Warming up...
     for (int i = 0; i < warmup; ++i) {
         input->copyFromHostTensor(givenTensor.get());
-        net->runSession(session);
+        input2->copyFromHostTensor(givenTensor.get());
+        multiSession.runParallel({id, id2});
         outputTensor->copyToHostTensor(expectTensor.get());
+        outputTensor2->copyToHostTensor(expectTensor2.get());
     }
 
     for (int round = 0; round < loop; round++) {
         auto timeBegin = getTimeInUs();
 
         input->copyFromHostTensor(givenTensor.get());
-        net->runSession(session);
+        input2->copyFromHostTensor(givenTensor.get());
+        multiSession.runParallel({id, id2});
         outputTensor->copyToHostTensor(expectTensor.get());
+        outputTensor2->copyToHostTensor(expectTensor2.get());
 
         auto timeEnd = getTimeInUs();
         costs.push_back((timeEnd - timeBegin) / 1000.0);
     }
+
+    outputTensor->print();
+    outputTensor2->print();
+
     return costs;
 }
 
