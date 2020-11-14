@@ -235,11 +235,15 @@ Execution* OpenCLBackend::onCreate(const std::vector<Tensor*>& inputs, const std
 }
 
 void OpenCLBackend::onResizeBegin() {
+#ifdef ENABLE_OPENCL_TIME_PROFILER
     mOpenCLRuntime->setCommandQueueProfileEnable();
+#endif
 }
 
 void OpenCLBackend::onResizeEnd() {
+#ifdef ENABLE_OPENCL_TIME_PROFILER
     mOpenCLRuntime->setCommandQueueProfileDisable();
+#endif
 }
 
 void OpenCLBackend::onExecuteBegin() const {
