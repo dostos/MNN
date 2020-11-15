@@ -46,6 +46,7 @@ private:
         std::vector<std::shared_ptr<MultiPipeline>> mMultiPipelines;
     };
 
+    std::map<std::set<SessionId>, std::shared_ptr<MultiSessionCache>> mMultiSessionCaches;
 };
 } // namespace MNN
 

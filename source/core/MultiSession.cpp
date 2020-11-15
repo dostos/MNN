@@ -12,7 +12,9 @@ SessionId MultiSession::addSession(Session* session) {
 }
 
 ErrorCode MultiSession::prepare() {
+    std::vector<SessionId> ids;
     for (auto session : mSessions) {
+        ids.push_back(session.first);
         if (session.second->getNeedResize()) {
             auto code = session.second->resize();
             if (NO_ERROR != code) {
@@ -20,6 +22,37 @@ ErrorCode MultiSession::prepare() {
             }
         }
     }
+
+    mMultiSessionCaches.clear();
+    for (int numSessions = 2; numSessions <= ids.size(); numSessions++) {
+        std::vector<int> validIndexes(ids.size(), 0);
+        for(int i = 0 ; i < numSessions; i++) {
+            validIndexes[i] = 1;
+        }
+
+        std::sort(validIndexes.begin(), validIndexes.end());
+
+        do {
+            std::set<SessionId> idSet;
+            std::vector<Session*> sessions;
+
+            for(int i = 0 ; i < ids.size(); i++) {
+                if (validIndexes[i]) {
+                    idSet.insert(ids[i]);
+                    sessions.push_back(mSessions[ids[i]]);
+                }
+            }
+
+            mMultiSessionCaches[idSet] = std::make_shared<MultiSessionCache>(sessions);
+
+        } while(std::next_permutation(validIndexes.begin(), validIndexes.end()));
+    }
+
+    for (auto multiSessionCache : mMultiSessionCaches) {
+        multiSessionCache.second->prepare();
+    }
+
+
     return NO_ERROR;
 }
 
@@ -49,6 +82,13 @@ ErrorCode MultiSession::runSequence(const std::set<SessionId> &requests, bool sy
 }
 
 ErrorCode MultiSession::runParallel(const std::set<SessionId> &requests, bool sync) {
+
+    if (mMultiSessionCaches.find(requests) != mMultiSessionCaches.end()) {
+        auto multiSessionCache = mMultiSessionCaches[requests];
+
+        return multiSessionCache->run();
+    }
+
     return NO_ERROR;
 }
 

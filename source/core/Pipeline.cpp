@@ -103,23 +103,8 @@ ErrorCode Unit::execute() {
     if (mConst) {
         return NO_ERROR;
     }
-    // MNN_PRINT("\t==> execute op: %s, [%s]\n", mContent->name.c_str(), mContent->type.c_str());
+    MNN_PRINT("\t==> execute op: %s, [%s]\n", mContent->name.c_str(), mContent->type.c_str());
     auto code = mExecution->onExecute(mInputs, mOutputs);
-    
-    for (int i = 0; i < mInputs.size(); i++) {
-        MNN_PRINT("  input%d ", i);
-        for (int j = 0; j < mInputs[i]->shape().size(); j++) {
-            MNN_PRINT("%d, ", mInputs[i]->shape()[j]);
-        }
-        MNN_PRINT("\n");
-    } 
-    for (int i = 0; i < mOutputs.size(); i++) {
-        MNN_PRINT("  output%d ", i);
-        for (int j = 0; j < mOutputs[i]->shape().size(); j++) {
-            MNN_PRINT("%d, ", mOutputs[i]->shape()[j]);
-        }
-        MNN_PRINT("\n");
-    } 
 
     if (NO_ERROR != code) {
         MNN_ERROR("Execute Error for [%s], %s, code=%d\n", MNN::EnumNameOpType(mOriginOp->type()), mContent->name.c_str(), code);
