@@ -6,16 +6,17 @@
 namespace MNN {
 namespace OpenCL {
 MultiExecution::MultiExecution(std::vector<std::vector<Execution *>> executions, Backend* backend)
-    :MNN::MultiExecution(executions, backend), mBackend(static_cast<OpenCLBackend*>(backend)) {
+    :MNN::MultiExecution(executions, backend), mBackend(dynamic_cast<OpenCLBackend*>(backend)) {
     // TODO : merge ops & prepare kernel
 }
 
 ErrorCode MultiExecution::onPrepare(const MultiExecutionTensors &inputs, const MultiExecutionTensors &outputs) {
     for (int subPipelineIdx = 0; subPipelineIdx < mExecutions.size(); subPipelineIdx++) {
         for (int executionIdx = 0; executionIdx < mExecutions[subPipelineIdx].size(); executionIdx++) {
-            auto fusionableExecution = static_cast<FusionableExecution *>(mExecutions[subPipelineIdx][executionIdx]);
+            auto fusionableExecution = dynamic_cast<FusionableExecution *>(mExecutions[subPipelineIdx][executionIdx]);
             std::string kernelName = fusionableExecution->getKernelName();
             std::string programName = fusionableExecution->getProgramName();
+            MNN_PRINT("%s %s\n", programName.c_str(), kernelName.c_str());
             std::string kernelString = mBackend->getOpenCLRuntime()->getKernelSource(programName, kernelName);
 
             MNN_PRINT("%s", kernelString.c_str());
