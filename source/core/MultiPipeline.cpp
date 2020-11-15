@@ -17,31 +17,44 @@ ErrorCode MultiPipeline::prepare() {
         }
     }
 
-    // TODO(dostos)
-    // Use unit's flops to rebuild units
-    mMultiUnits.clear();
+    // Fuse sub-pipeline into multi unit
+    {
+        // TODO(dostos)
+        // Use unit's flops to rebuild units
+        mMultiUnits.clear();
 
-    int unitIndex = 0;
-    std::vector<std::vector<Unit *>> multiUnits;
-    do {
-        multiUnits.clear();
-        
-        for(int pipelineIndex = 0 ; pipelineIndex < mPipelines.size(); pipelineIndex++) {
-            std::vector<Unit*> units;
-            if (unitIndex < mPipelines[pipelineIndex]->mUnits.size()) {
-                units.push_back(mPipelines[pipelineIndex]->mUnits[unitIndex].get());
-            }
+        int unitIndex = 0;
+        std::vector<std::vector<Unit *>> multiUnits;
+        do {
+            multiUnits.clear();
             
-            if (!units.empty())
-                multiUnits.push_back(units);
-        }
+            for(int pipelineIndex = 0 ; pipelineIndex < mPipelines.size(); pipelineIndex++) {
+                std::vector<Unit*> units;
+                if (unitIndex < mPipelines[pipelineIndex]->mUnits.size()) {
+                    units.push_back(mPipelines[pipelineIndex]->mUnits[unitIndex].get());
+                }
+                
+                if (!units.empty())
+                    multiUnits.push_back(units);
+            }
 
-        if (!multiUnits.empty()) {
-            mMultiUnits.push_back(std::make_shared<MultiUnit>(multiUnits, mBackend));
-        }
-        unitIndex++;
-    } while(!multiUnits.empty());
+            if (!multiUnits.empty()) {
+                mMultiUnits.push_back(std::make_shared<MultiUnit>(multiUnits, mBackend));
+            }
+            unitIndex++;
+        } while(!multiUnits.empty());
+    }
 
+    // Prepare multi unit
+    {
+        for (auto multiUnit : mMultiUnits) {
+            auto code = multiUnit->prepare();
+            MNN_ASSERT(code == NO_ERROR);
+            if (code != NO_ERROR) {
+                return code;
+            }
+        }
+    }
 
     return NO_ERROR;
 }
@@ -73,7 +86,7 @@ MultiUnit::MultiUnit(std::vector<std::vector<Unit*>> units, Backend* backend)
             subPipelineInput.push_back(unit->mInputs);
             subPipelineOutput.push_back(unit->mOutputs);
             executions.push_back(unit->mExecution.get());
-            supportMultiExecution &= unit->mExecution->mergeable();
+            supportMultiExecution &= unit->mExecution->fusionable();
         }
 
         mInput.push_back(subPipelineInput);
@@ -85,7 +98,7 @@ MultiUnit::MultiUnit(std::vector<std::vector<Unit*>> units, Backend* backend)
         auto creator = MultiExecution::getMultiExecutionCreator(backend->type());
         if (creator) {
             // merge ops & prepare kernel
-            mMultiExecution = std::shared_ptr<MultiExecution>(creator->onCreate(multiExecutions));
+            mMultiExecution = std::shared_ptr<MultiExecution>(creator->onCreate(multiExecutions, backend));
         }
     }
 }
@@ -93,7 +106,7 @@ MultiUnit::MultiUnit(std::vector<std::vector<Unit*>> units, Backend* backend)
 ErrorCode MultiUnit::prepare() {
     // set kernel arguments
     if (mMultiExecution) {
-        auto code = mMultiExecution->onResize(mInput, mOutput);
+        auto code = mMultiExecution->onPrepare(mInput, mOutput);
         MNN_ASSERT(code == NO_ERROR);
         if (code != NO_ERROR) {
             return code;

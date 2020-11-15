@@ -104,7 +104,7 @@ public:
     MNN_PUBLIC static bool removeExtraCreator(const std::string &key, MNNForwardType type);
 
 public:
-    virtual bool mergeable() const {
+    virtual bool fusionable() const {
         return false;
     }
     /**

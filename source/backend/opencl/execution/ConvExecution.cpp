@@ -300,7 +300,7 @@ std::vector<uint32_t> ConvExecution::conv2dGeneralLocalWS(const std::vector<uint
 #endif
 }
 
-ConvCommonExecution::ConvCommonExecution(const Convolution2D *conv2dParams, Backend *backend) : Execution(backend) {
+ConvCommonExecution::ConvCommonExecution(const Convolution2D *conv2dParams, Backend *backend) : FusionableExecution(backend) {
     auto openclBackend       = (OpenCLBackend *)backend;
     int biasSize             = conv2dParams->bias()->size();
     const float *biasDataPtr = conv2dParams->bias()->data();
@@ -380,7 +380,7 @@ ConvExecution::ConvExecution(const std::vector<Tensor *> &inputs, const MNN::Op 
     auto gpuType = mOpenCLBackend->getOpenCLRuntime()->getGpuType();
 
     //select opt conv method
-    std::string kernelName = "conv_2d";
+    mKernelName = "conv_2d";
     if (kernelHeight == kernelWidth && kernelHeight == 1 && mConv2dCommonParams->padX() == 0 &&
         mConv2dCommonParams->padY() == 0) {
         mConv1x1Opt = (mStrides[0] == 1 && mStrides[1] == 1 && !(gpuType == GpuType::ADRENO));
@@ -390,7 +390,7 @@ ConvExecution::ConvExecution(const std::vector<Tensor *> &inputs, const MNN::Op 
             if(useLocalSize >= mOpenCLBackend->getOpenCLRuntime()->getMaxLocalMem()){
                 mUseLocalMem = false;
             }else{
-                kernelName = "conv_2d_1x1_local";
+                mKernelName = "conv_2d_1x1_local";
                 mUseLocalMem=true;
             }
         }
@@ -398,9 +398,9 @@ ConvExecution::ConvExecution(const std::vector<Tensor *> &inputs, const MNN::Op 
         
         if(!mUseLocalMem){
             if(mConv1x1Opt){
-                kernelName = "conv_2d_1x1_mali";
+                mKernelName = "conv_2d_1x1_mali";
             }else{
-                kernelName = "conv_2d_1x1";
+                mKernelName = "conv_2d_1x1";
             }
         }
     }
@@ -484,7 +484,8 @@ ConvExecution::ConvExecution(const std::vector<Tensor *> &inputs, const MNN::Op 
         buildOptions.emplace("-DRELU6");
     }
 
-    mKernel           = mOpenCLBackend->getOpenCLRuntime()->buildKernel("conv_2d", kernelName, buildOptions);
+    mProgramName = "conv_2d";
+    mKernel = mOpenCLBackend->getOpenCLRuntime()->buildKernel(mProgramName, mKernelName, buildOptions);
     mMaxWorkGroupSize = static_cast<uint32_t>(mOpenCLBackend->getOpenCLRuntime()->getMaxWorkGroupSize(mKernel));
 
 #ifdef LOG_VERBOSE
@@ -668,10 +669,6 @@ ErrorCode ConvExecution::onExecute(const std::vector<Tensor *> &inputs, const st
     MNN_PRINT("end ConvExecution onExecute !\n");
 #endif
     return NO_ERROR;
-}
-
-bool ConvExecution::mergeable() const {
-    return true;
 }
 
 class ConvolutionCreator : public OpenCLBackend::Creator {

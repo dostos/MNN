@@ -14,6 +14,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <regex>
 #include "core/Macro.h"
 //#define MNN_OPEN_TIME_TRACE
 #include <MNN/AutoTime.hpp>
@@ -300,6 +301,28 @@ cl::Kernel OpenCLRuntime::buildKernel(const std::string &programName, const std:
     cl::Kernel kernel = cl::Kernel(program, kernelName.c_str(), &err);
     MNN_CHECK_CL_SUCCESS(err);
     return kernel;
+}
+
+std::string OpenCLRuntime::getKernelSource(const std::string &programName, const std::string &kernelName) const {
+    auto it_source = OpenCLProgramMap.find(programName);
+    if (it_source != OpenCLProgramMap.end()) {
+        std::string programSource{it_source->second.begin(), it_source->second.end()};
+
+        std::regex kernelNameRegex(R"(\s)" + kernelName + R"(\s*[()");
+        std::smatch regexMatch;
+        std::regex_match(programSource, regexMatch, kernelNameRegex);
+
+        MNN_ASSERT(regexMatch.size() == 1);
+
+        std::string::size_type kernelStart = programSource.substr(0, regexMatch.position()).find_last_of("__kernel");
+
+        return programSource.substr(kernelStart);
+    }
+    else
+    {
+        MNN_PRINT("Can't find kernel source !\n");
+        return "";
+    }
 }
 
 uint64_t OpenCLRuntime::getMaxWorkGroupSize(const cl::Kernel &kernel) {

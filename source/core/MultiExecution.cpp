@@ -6,8 +6,8 @@
 
 namespace MNN {
 
-MultiExecution::MultiExecution(std::vector<std::vector<Execution *>> executions)
-    :mExecutions(executions) {}
+MultiExecution::MultiExecution(std::vector<std::vector<Execution *>> executions, Backend* backend)
+    :mExecutions(executions), mBackend(backend) {}
     
 static std::map<MNNForwardType, MultiExecution::Creator*>& getMultiExecutionCreators() {
     static std::once_flag flag;

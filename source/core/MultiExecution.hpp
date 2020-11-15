@@ -18,22 +18,23 @@ typedef std::vector< // Per pipeline
 
 class MultiExecution : public NonCopyable {
 public:
-    MultiExecution(std::vector<std::vector<Execution *>> executions);
+    MultiExecution(std::vector<std::vector<Execution *>> executions, Backend* backend);
     virtual ~MultiExecution() = default;
 
-    virtual ErrorCode onResize(const MultiExecutionTensors &inputs, const MultiExecutionTensors &outputs) = 0;
+    virtual ErrorCode onPrepare(const MultiExecutionTensors &inputs, const MultiExecutionTensors &outputs) = 0;
     virtual ErrorCode onExecute(const MultiExecutionTensors &inputs, const MultiExecutionTensors &outputs) = 0;
 
     class Creator : public NonCopyable {
     public:
         virtual ~Creator() = default;
-        virtual MultiExecution *onCreate(std::vector<std::vector<Execution *>> executions) const = 0;
+        virtual MultiExecution *onCreate(std::vector<std::vector<Execution *>> executions, Backend* backend) const = 0;
     };
 
     static bool insertMultiExecutionCreator(MultiExecution::Creator* creator, MNNForwardType type);
     static const Creator *getMultiExecutionCreator(MNNForwardType type);
 protected:
     std::vector<std::vector<Execution *>> mExecutions;
+    Backend *mBackend;
 };
 };
 

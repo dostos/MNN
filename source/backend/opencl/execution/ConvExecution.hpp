@@ -17,10 +17,11 @@
 #include <vector>
 #include "backend/opencl/core/OpenCLBackend.hpp"
 #include "backend/opencl/core/OpenCLRunningUtils.hpp"
+#include "backend/opencl/execution/FusionableExecution.hpp"
 namespace MNN {
 namespace OpenCL {
 
-class ConvCommonExecution : public Execution {
+class ConvCommonExecution : public FusionableExecution {
 public:
     ConvCommonExecution(const Convolution2D *op, Backend *backend);
     virtual ~ConvCommonExecution();
@@ -36,7 +37,6 @@ public:
 
     virtual ErrorCode onResize(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) override;
     virtual ErrorCode onExecute(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) override;
-    virtual bool mergeable() const override;
 
     static std::shared_ptr<Tensor> getBias(OpenCLBackend *backend, const Convolution2D *conv);
 
