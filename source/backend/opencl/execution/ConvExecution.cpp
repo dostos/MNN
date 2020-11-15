@@ -670,6 +670,10 @@ ErrorCode ConvExecution::onExecute(const std::vector<Tensor *> &inputs, const st
     return NO_ERROR;
 }
 
+bool ConvExecution::mergeable() const {
+    return true;
+}
+
 class ConvolutionCreator : public OpenCLBackend::Creator {
 public:
     virtual ~ConvolutionCreator() = default;
