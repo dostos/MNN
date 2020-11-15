@@ -8,10 +8,13 @@ SessionId MultiSession::sNextSessionId = 0;
 SessionId MultiSession::addSession(Session* session) {
     SessionId currentId = sNextSessionId++;
     mSessions[currentId] = session;
+
     return currentId;
 }
 
 ErrorCode MultiSession::prepare() {
+    // TODO : only consider sessions that has
+    // samer backend type
     std::vector<SessionId> ids;
     for (auto session : mSessions) {
         ids.push_back(session.first);
@@ -106,7 +109,7 @@ MultiSession::MultiSessionCache::MultiSessionCache(std::vector<Session *> sessio
                 pipelines.push_back(session->mPipelines[pipelineIndex].get());
         }
 
-        mMultiPipelines.push_back(std::make_shared<MultiPipeline>(pipelines));
+        mMultiPipelines.push_back(std::make_shared<MultiPipeline>(pipelines, sessions[0].mBackends[MNN_FORWARD_OPENCL]));
         pipelineIndex++;
     } while (!pipelines.empty());
 }

@@ -115,6 +115,7 @@ private:
     bool _allocTensors(Backend* bn, const std::vector<Tensor*>& tensors);
 
 private:
+    friend class MultiPipeline;
     bool mConst                   = false;
 };
 } // namespace MNN

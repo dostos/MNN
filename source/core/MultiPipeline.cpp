@@ -1,10 +1,12 @@
+#include "Backend.hpp"
 #include "MultiPipeline.hpp"
+#include "MultiExecution.hpp"
 #include "Pipeline.hpp"
 #include <memory>
 
 namespace MNN {
-MultiPipeline::MultiPipeline(std::vector<Pipeline *> pipelines)
-    :mPipelines(pipelines) {}
+MultiPipeline::MultiPipeline(std::vector<Pipeline *> pipelines, Backend* backend)
+    :mPipelines(pipelines), mBackend(backend) {}
 
 ErrorCode MultiPipeline::prepare() {
     for (auto pipeline : mPipelines) {
@@ -58,15 +60,25 @@ ErrorCode MultiPipeline::run() {
 }
 
 
-MultiPipeline::MultiUnit::MultiUnit(std::vector<std::vector<Unit*>> units)
-    :mUnits(units) {
+MultiUnit::MultiUnit(std::vector<std::vector<Unit*>> units, Backend* backend)
+    :mUnits(units), mBackend(backend) {
+    bool supportMultiExecution = true;
+
+    std::vector<std::vector<Tensor *>> inputs;
+    std::vector<std::vector<Tensor *>> outputs;
+
+    for (auto units : mUnits) {
+        for (auto unit) {
+            unit.
+        }
+    }
 }
 
-ErrorCode MultiPipeline::MultiUnit::prepare() {
+ErrorCode MultiUnit::prepare() {
     // TODO : merge ops & prepare kernel
 }
 
-ErrorCode MultiPipeline::MultiUnit::execute() {
+ErrorCode MultiUnit::execute() {
     for (auto units : mUnits) {
         for (auto unit : units) {
             auto code = unit->execute();

@@ -12,13 +12,14 @@
 #include "SizeComputer.hpp"
 #include <MNN/Tensor.hpp>
 
-
 namespace MNN {
+class Backend;
 class Session;
 class MultiPipeline;
 typedef int64_t SessionId;
 
-class MNN_PUBLIC MultiSession {
+class MNN_PUBLIC MultiSession
+{
 public:
     SessionId addSession(Session *session);
 
@@ -30,10 +31,12 @@ public:
 
 private:
     static SessionId sNextSessionId;
+    Backend *mBackend = nullptr;
     std::map<SessionId, Session *> mSessions;
 
     // Cache for multi-session execution
-    class MultiSessionCache {
+    class MultiSessionCache
+    {
     public:
         MultiSessionCache(std::vector<Session *> sessions);
 
@@ -41,7 +44,7 @@ private:
         ErrorCode run();
 
     private:
-        // sessions that should run parallel 
+        // sessions that should run parallel
         const std::vector<Session *> mSessions;
         std::vector<std::shared_ptr<MultiPipeline>> mMultiPipelines;
     };
