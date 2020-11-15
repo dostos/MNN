@@ -5,12 +5,13 @@
 #include <memory>
 #include <MNN/ErrorCode.hpp>
 
+#include "MultiExecution.hpp"
+
 namespace MNN {
 class Backend;
 class Pipeline;
 class Unit;
 class MultiUnit;
-class MultiExecution;
 
 class MultiPipeline
 {
@@ -38,6 +39,7 @@ private:
     // units that should run parallel 
     std::vector<std::vector<Unit*>> mUnits;
     std::shared_ptr<MultiExecution> mMultiExecution;
+    MultiExecutionTensors mInput, mOutput;
 };
 } // namespace MNN
 

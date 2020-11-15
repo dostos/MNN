@@ -6,8 +6,8 @@ public:
     OpenCLMultiExecution(std::vector<std::vector<Execution *>> executions);
     virtual ~OpenCLMultiExecution() = default;
 
-    virtual ErrorCode onResize(const std::vector<std::vector<Tensor *>> &inputs, const std::vector<std::vector<Tensor *>> &outputs) override;
-    virtual ErrorCode onExecute(const std::vector<std::vector<Tensor *>> &inputs, const std::vector<std::vector<Tensor *>> &outputs) override;
+    virtual ErrorCode onResize(const MultiExecutionTensors &inputs, const MultiExecutionTensors &outputs) override;
+    virtual ErrorCode onExecute(const MultiExecutionTensors &inputs, const MultiExecutionTensors &outputs) override;
 
 
 };

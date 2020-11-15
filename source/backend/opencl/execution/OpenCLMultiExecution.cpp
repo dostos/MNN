@@ -1,15 +1,25 @@
 #include "OpenCLMultiExecution.hpp"
+#include "core/Execution.hpp"
 
 namespace MNN {
 
 OpenCLMultiExecution::OpenCLMultiExecution(std::vector<std::vector<Execution *>> executions)
-    :MultiExecution(executions) {}
+    :MultiExecution(executions) {
+    // TODO : merge ops & prepare kernel
+}
 
-ErrorCode OpenCLMultiExecution::onResize(const std::vector<std::vector<Tensor *>> &inputs, const std::vector<std::vector<Tensor *>> &outputs) {
+ErrorCode OpenCLMultiExecution::onResize(const MultiExecutionTensors &inputs, const MultiExecutionTensors &outputs) {
+
     return NO_ERROR;
 }
 
-ErrorCode OpenCLMultiExecution::onExecute(const std::vector<std::vector<Tensor *>> &inputs, const std::vector<std::vector<Tensor *>> &outputs) {
+ErrorCode OpenCLMultiExecution::onExecute(const MultiExecutionTensors &inputs, const MultiExecutionTensors &outputs) {
+
+    for (int subPipelineIdx = 0; subPipelineIdx < mExecutions.size(); subPipelineIdx++) {
+        for (int executionIdx = 0; executionIdx < mExecutions[subPipelineIdx].size(); executionIdx++) {
+            mExecutions[subPipelineIdx][executionIdx]->onExecute(inputs[subPipelineIdx][executionIdx], inputs[subPipelineIdx][executionIdx]);
+        }
+    }
     return NO_ERROR;
 }
 

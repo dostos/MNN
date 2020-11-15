@@ -109,7 +109,7 @@ MultiSession::MultiSessionCache::MultiSessionCache(std::vector<Session *> sessio
                 pipelines.push_back(session->mPipelines[pipelineIndex].get());
         }
 
-        mMultiPipelines.push_back(std::make_shared<MultiPipeline>(pipelines, sessions[0].mBackends[MNN_FORWARD_OPENCL]));
+        mMultiPipelines.push_back(std::make_shared<MultiPipeline>(pipelines, sessions[0]->mBackends[MNN_FORWARD_OPENCL].get()));
         pipelineIndex++;
     } while (!pipelines.empty());
 }

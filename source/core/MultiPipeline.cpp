@@ -37,7 +37,7 @@ ErrorCode MultiPipeline::prepare() {
         }
 
         if (!multiUnits.empty()) {
-            mMultiUnits.push_back(std::make_shared<MultiUnit>(multiUnits));
+            mMultiUnits.push_back(std::make_shared<MultiUnit>(multiUnits, mBackend));
         }
         unitIndex++;
     } while(!multiUnits.empty());
@@ -64,27 +64,55 @@ MultiUnit::MultiUnit(std::vector<std::vector<Unit*>> units, Backend* backend)
     :mUnits(units), mBackend(backend) {
     bool supportMultiExecution = true;
 
-    std::vector<std::vector<Tensor *>> inputs;
-    std::vector<std::vector<Tensor *>> outputs;
+    std::vector<std::vector<Execution *>> multiExecutions;
 
     for (auto units : mUnits) {
-        for (auto unit) {
-            unit.
+        std::vector<std::vector<Tensor *>> subPipelineInput, subPipelineOutput;
+        std::vector<Execution *> executions;
+        for (auto unit : units) {
+            subPipelineInput.push_back(unit->mInputs);
+            subPipelineOutput.push_back(unit->mOutputs);
+            executions.push_back(unit->mExecution.get());
+            supportMultiExecution &= unit->mExecution->mergeable();
+        }
+
+        mInput.push_back(subPipelineInput);
+        mOutput.push_back(subPipelineOutput);
+        multiExecutions.push_back(executions);
+    }
+
+    if (supportMultiExecution) {
+        auto creator = MultiExecution::getMultiExecutionCreator(backend->type());
+        if (creator) {
+            // merge ops & prepare kernel
+            mMultiExecution = std::shared_ptr<MultiExecution>(creator->onCreate(multiExecutions));
         }
     }
 }
 
 ErrorCode MultiUnit::prepare() {
-    // TODO : merge ops & prepare kernel
+    // set kernel arguments
+    if (mMultiExecution) {
+        auto code = mMultiExecution->onResize(mInput, mOutput);
+        MNN_ASSERT(code == NO_ERROR);
+        if (code != NO_ERROR) {
+            return code;
+        }
+    }
+    return NO_ERROR;
 }
 
 ErrorCode MultiUnit::execute() {
-    for (auto units : mUnits) {
-        for (auto unit : units) {
-            auto code = unit->execute();
-            MNN_ASSERT(code == NO_ERROR);
-            if (code != NO_ERROR) {
-                return code;
+    if (mMultiExecution) {
+        mMultiExecution->onExecute(mInput, mOutput);
+    } else {
+        for (auto units : mUnits) {
+            for (auto unit : units) {
+                auto code = unit->execute();
+                MNN_ASSERT(code == NO_ERROR);
+                if (code != NO_ERROR) {
+                    return code;
+                }
             }
         }
     }

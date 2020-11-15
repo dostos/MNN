@@ -11,13 +11,18 @@ namespace MNN {
 class Execution;
 class Backend;
 
+typedef std::vector< // Per pipeline
+        std::vector< // Per sub-pipeline
+        std::vector< // Per unit
+            Tensor *>>> MultiExecutionTensors;
+
 class MultiExecution : public NonCopyable {
 public:
     MultiExecution(std::vector<std::vector<Execution *>> executions);
     virtual ~MultiExecution() = default;
 
-    virtual ErrorCode onResize(const std::vector<std::vector<Tensor *>> &inputs, const std::vector<std::vector<Tensor *>> &outputs) = 0;
-    virtual ErrorCode onExecute(const std::vector<std::vector<Tensor *>> &inputs, const std::vector<std::vector<Tensor *>> &outputs) = 0;
+    virtual ErrorCode onResize(const MultiExecutionTensors &inputs, const MultiExecutionTensors &outputs) = 0;
+    virtual ErrorCode onExecute(const MultiExecutionTensors &inputs, const MultiExecutionTensors &outputs) = 0;
 
     class Creator : public NonCopyable {
     public:
@@ -26,7 +31,7 @@ public:
     };
 
     static bool insertMultiExecutionCreator(MultiExecution::Creator* creator, MNNForwardType type);
-    const Creator *getMultiExecutionCreator(MNNForwardType type);
+    static const Creator *getMultiExecutionCreator(MNNForwardType type);
 protected:
     std::vector<std::vector<Execution *>> mExecutions;
 };
