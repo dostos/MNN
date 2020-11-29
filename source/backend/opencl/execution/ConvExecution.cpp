@@ -300,7 +300,8 @@ std::vector<uint32_t> ConvExecution::conv2dGeneralLocalWS(const std::vector<uint
 #endif
 }
 
-ConvCommonExecution::ConvCommonExecution(const Convolution2D *conv2dParams, Backend *backend) : FusionableExecution(backend) {
+ConvCommonExecution::ConvCommonExecution(const Convolution2D *conv2dParams, Backend *backend, std::string programName, std::string kernelName) 
+    : FusionableExecution(backend, programName, kernelName) {
     auto openclBackend       = (OpenCLBackend *)backend;
     int biasSize             = conv2dParams->bias()->size();
     const float *biasDataPtr = conv2dParams->bias()->data();
@@ -326,7 +327,7 @@ ConvCommonExecution::~ConvCommonExecution() {
 }
 
 ConvExecution::ConvExecution(const std::vector<Tensor *> &inputs, const MNN::Op *op, Backend *backend)
-    : ConvCommonExecution(op->main_as_Convolution2D(), backend) {
+    : ConvCommonExecution(op->main_as_Convolution2D(), backend, "conv_2d") {
 #ifdef LOG_VERBOSE
     MNN_PRINT("Start ConvExecution init !\n");
 #endif
@@ -486,7 +487,6 @@ ConvExecution::ConvExecution(const std::vector<Tensor *> &inputs, const MNN::Op 
         buildOptions.emplace("-DRELU6");
     }
 
-    mProgramName = "conv_2d";
     mKernel = mOpenCLBackend->getOpenCLRuntime()->buildKernel(mProgramName, mKernelName, buildOptions);
     mMaxWorkGroupSize = static_cast<uint32_t>(mOpenCLBackend->getOpenCLRuntime()->getMaxWorkGroupSize(mKernel));
 

@@ -17,7 +17,7 @@ namespace MNN {
 namespace OpenCL {
 
 DeconvExecution::DeconvExecution(const std::vector<Tensor *> &inputs, const MNN::Op *op, Backend *backend)
-    : ConvCommonExecution(op->main_as_Convolution2D(), backend) {
+    : ConvCommonExecution(op->main_as_Convolution2D(), backend, "deconv_2d", "deconv_2d") {
     mOpenCLBackend                 = static_cast<OpenCLBackend *>(backend);
     const auto *conv2dParams       = op->main_as_Convolution2D();
     const auto *conv2dCommonParams = conv2dParams->common();
@@ -70,14 +70,13 @@ DeconvExecution::DeconvExecution(const std::vector<Tensor *> &inputs, const MNN:
     auto runtime = mOpenCLBackend->getOpenCLRuntime();
 
     std::set<std::string> buildOptions;
-    mKernelName = "deconv_2d";
     if (conv2dCommonParams->relu() == true) {
         buildOptions.emplace("-DRELU");
     } else if (conv2dCommonParams->relu6() == true) {
         buildOptions.emplace("-DRELU6");
     }
-    mProgramName = "deconv_2d";
-    mKernel = runtime->buildKernel("deconv_2d", mKernelName, buildOptions);
+    
+    mKernel = runtime->buildKernel(mProgramName, mKernelName, buildOptions);
 }
 
 DeconvExecution::~DeconvExecution() {

@@ -9,7 +9,7 @@ namespace OpenCL {
 
 class FusionableExecution : public Execution {
 public:
-    FusionableExecution(Backend *backend);
+    FusionableExecution(Backend *backend, std::string programName = "", std::string kernelName = "");
     virtual ~FusionableExecution() = default;         
     virtual bool fusionable() const override;
 

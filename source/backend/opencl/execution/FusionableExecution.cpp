@@ -2,7 +2,8 @@
 
 namespace MNN {
 namespace OpenCL {
-    FusionableExecution::FusionableExecution(Backend* backend) : Execution(backend) {}
+    FusionableExecution::FusionableExecution(Backend* backend, std::string programName, std::string kernelName) 
+        : Execution(backend), mProgramName(programName), mKernelName(kernelName) {}
 
     bool FusionableExecution::fusionable() const {
         return false;

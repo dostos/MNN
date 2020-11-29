@@ -15,7 +15,7 @@ namespace OpenCL {
 
 DepthwiseDeconvExecution::DepthwiseDeconvExecution(const std::vector<Tensor *> &inputs, const MNN::Op *op,
                                                    Backend *backend)
-    : ConvCommonExecution(op->main_as_Convolution2D(), backend) {
+    : ConvCommonExecution(op->main_as_Convolution2D(), backend, "depthwise_deconv2d", "depthwise_deconv2d") {
     mOpenCLBackend      = static_cast<OpenCLBackend *>(backend);
     mCon2dParams        = op->main_as_Convolution2D();
     mConv2dCommonParams = mCon2dParams->common();
@@ -57,7 +57,6 @@ DepthwiseDeconvExecution::DepthwiseDeconvExecution(const std::vector<Tensor *> &
     MNN::OpenCL::ImageBufferConvertor imageBufferConvertor{mOpenCLBackend->getOpenCLRuntime()};
     imageBufferConvertor.convertBufferToImage(filterBuffer.get(), MNN::OpenCL::DW_CONV2D_FILTER, mFilter.get());
     std::set<std::string> buildOptions;
-    std::string kernelName = "depthwise_deconv2d";
     if (mConv2dCommonParams->relu() == true) {
         buildOptions.emplace("-DRELU");
     } else if (mConv2dCommonParams->relu6() == true) {
@@ -65,7 +64,7 @@ DepthwiseDeconvExecution::DepthwiseDeconvExecution(const std::vector<Tensor *> &
     }
     auto runtime = mOpenCLBackend->getOpenCLRuntime();
 
-    mKernel           = runtime->buildKernel("depthwise_deconv2d", kernelName, buildOptions);
+    mKernel           = runtime->buildKernel(mProgramName, mKernelName, buildOptions);
     mMaxWorkGroupSize = static_cast<uint32_t>(runtime->getMaxWorkGroupSize(mKernel));
 }
 DepthwiseDeconvExecution::~DepthwiseDeconvExecution() {
