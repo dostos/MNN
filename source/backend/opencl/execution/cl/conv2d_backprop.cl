@@ -1,9 +1,3 @@
-#ifdef MNN_SUPPORT_FP16
-#pragma OPENCL EXTENSION cl_khr_fp16 : enable
-#endif
-
-__constant sampler_t SAMPLER = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP | CLK_FILTER_NEAREST;
-
 __kernel void conv2d_backprop_filter(__read_only image2d_t input, __read_only image2d_t grad, __global float* output_ptr, int batch, int outputChannel, int inputChannel, int2 inputShape, int2 shape, int2 kernelShape, int2 strides, int2 pads, int2 dilates) {
     const int oc_block = get_global_id(0), ic_block = get_global_id(1);
     if (oc_block * 4 >= outputChannel || ic_block * 4 >= inputChannel) {

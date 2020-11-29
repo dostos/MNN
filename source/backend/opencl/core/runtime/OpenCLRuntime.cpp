@@ -238,10 +238,12 @@ uint64_t OpenCLRuntime::maxAllocSize() const {
 
 bool OpenCLRuntime::loadProgram(const std::string &programName, cl::Program *program) {
     auto it_source = OpenCLProgramMap.find(programName);
-    if (it_source != OpenCLProgramMap.end()) {
+    auto it_common = OpenCLProgramMap.find("common");
+    if (it_source != OpenCLProgramMap.end() && it_common != OpenCLProgramMap.end()) {
         cl::Program::Sources sources;
         std::string source(it_source->second.begin(), it_source->second.end());
-        sources.push_back(source);
+        std::string common(it_common->second.begin(), it_common->second.end());
+        sources.push_back(common + source);
         *program = cl::Program(context(), sources);
         return true;
     } else {

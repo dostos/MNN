@@ -1,19 +1,3 @@
-#ifdef MNN_SUPPORT_FP16
-#pragma OPENCL EXTENSION cl_khr_fp16 : enable
-#endif
-
-#define EXP exp
-#define GLOBAL_SIZE_3_DIMS \
-    __private const int global_size_dim0, __private const int global_size_dim1, __private const int global_size_dim2,
-
-#define DEAL_NON_UNIFORM_DIM3(input1, input2, input3)                                             \
-    if (input1 >= global_size_dim0 || input2 >= global_size_dim1 || input3 >= global_size_dim2) { \
-        return;                                                                                   \
-    }
-
-__constant sampler_t SAMPLER = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP | CLK_FILTER_NEAREST;
-
-
 __kernel void softmax_channel(GLOBAL_SIZE_3_DIMS __read_only image2d_t input, __write_only image2d_t output, __private const int output_channels,
                               __private const int remain_channels) {
 
@@ -55,7 +39,7 @@ __kernel void softmax_channel(GLOBAL_SIZE_3_DIMS __read_only image2d_t input, __
     FLOAT accum_result       = 0;
     for (short i = 0; i < global_size_dim0 - 1; ++i) {
         input_data = RI_F(input, SAMPLER, (int2)(width_idx + i * global_size_dim1, batch_height_idx));
-        input_data = EXP(input_data - float_max_value);
+        input_data = exp(input_data - float_max_value);
         accum_result += input_data.x;
         accum_result += input_data.y;
         accum_result += input_data.z;
@@ -65,19 +49,19 @@ __kernel void softmax_channel(GLOBAL_SIZE_3_DIMS __read_only image2d_t input, __
     input_data = RI_F(input, SAMPLER, (int2)(width_idx + (global_size_dim0 - 1) * global_size_dim1, batch_height_idx));
     input_data -= float_max_value;
     if (remain_channels == 0) {
-        accum_result += EXP(input_data.w);
-        accum_result += EXP(input_data.z);
-        accum_result += EXP(input_data.y);
-        accum_result += EXP(input_data.x);
+        accum_result += exp(input_data.w);
+        accum_result += exp(input_data.z);
+        accum_result += exp(input_data.y);
+        accum_result += exp(input_data.x);
     } else if (remain_channels == 1) {
-        accum_result += EXP(input_data.z);
-        accum_result += EXP(input_data.y);
-        accum_result += EXP(input_data.x);
+        accum_result += exp(input_data.z);
+        accum_result += exp(input_data.y);
+        accum_result += exp(input_data.x);
     } else if (remain_channels == 2) {
-        accum_result += EXP(input_data.y);
-        accum_result += EXP(input_data.x);
+        accum_result += exp(input_data.y);
+        accum_result += exp(input_data.x);
     } else if (remain_channels == 3) {
-        accum_result += EXP(input_data.x);
+        accum_result += exp(input_data.x);
     }
 
     int cur_out_width_pos  = mad24(channel_block_idx, global_size_dim1, width_idx);
@@ -85,16 +69,16 @@ __kernel void softmax_channel(GLOBAL_SIZE_3_DIMS __read_only image2d_t input, __
     const int output_remain = output_channels - mul24(channel_block_idx, 4);
 
     if (output_remain == 1) {
-        input_data.x = EXP(input_data.x) / accum_result;
+        input_data.x = exp(input_data.x) / accum_result;
     } else if (output_remain == 2) {
-        input_data.y = EXP(input_data.y) / accum_result;
-        input_data.x = EXP(input_data.x) / accum_result;
+        input_data.y = exp(input_data.y) / accum_result;
+        input_data.x = exp(input_data.x) / accum_result;
     } else if (output_remain == 3) {
-        input_data.z = EXP(input_data.z) / accum_result;
-        input_data.y = EXP(input_data.y) / accum_result;
-        input_data.x = EXP(input_data.x) / accum_result;
+        input_data.z = exp(input_data.z) / accum_result;
+        input_data.y = exp(input_data.y) / accum_result;
+        input_data.x = exp(input_data.x) / accum_result;
     } else{
-        input_data = EXP(input_data) / accum_result;
+        input_data = exp(input_data) / accum_result;
     }
 
     WI_F(output, (int2)(cur_out_width_pos, batch_height_idx), input_data);

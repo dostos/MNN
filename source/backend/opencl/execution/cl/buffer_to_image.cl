@@ -1,10 +1,3 @@
-#define GLOBAL_SIZE_2_DIMS __private const int global_size_dim0, __private const int global_size_dim1,
-#define DEAL_NON_UNIFORM_DIM2(input1, input2)                       \
-    if (input1 >= global_size_dim0 || input2 >= global_size_dim1) { \
-        return;                                                     \
-    }
-__constant sampler_t SAMPLER = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP | CLK_FILTER_NEAREST;
-
 
 __kernel void nc4hw4_buffer_to_image(GLOBAL_SIZE_2_DIMS __global const float *input_ptr, __private const int2 output_shape,
                                      __private const int channel_4, __write_only image2d_t output) {

@@ -1,11 +1,3 @@
-#define GLOBAL_SIZE_3_DIMS \
-    __private const int global_size_dim0, __private const int global_size_dim1, __private const int global_size_dim2,
-#define DEAL_NON_UNIFORM_DIM3(input1, input2, input3)                                             \
-    if (input1 >= global_size_dim0 || input2 >= global_size_dim1 || input3 >= global_size_dim2) { \
-        return;                                                                                   \
-    }
-__constant sampler_t SAMPLER = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP | CLK_FILTER_NEAREST;
-
 __kernel void normalize_kernel(GLOBAL_SIZE_3_DIMS __read_only image2d_t input, __read_only image2d_t scale,
                                __private const float eps, __private const int channels,
                                __private const int remain_channels, __write_only image2d_t output) {

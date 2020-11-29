@@ -1,16 +1,3 @@
-#ifdef MNN_SUPPORT_FP16
-#pragma OPENCL EXTENSION cl_khr_fp16 : enable
-#endif
-__constant sampler_t SAMPLER = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP | CLK_FILTER_NEAREST;
-
-#define DEAL_NON_UNIFORM_DIM3(input1, input2, input3)                                             \
-    if (input1 >= global_size_dim0 || input2 >= global_size_dim1 || input3 >= global_size_dim2) { \
-        return;                                                                                   \
-    }
-
-#define GLOBAL_SIZE_3_DIMS \
-    __private const int global_size_dim0, __private const int global_size_dim1, __private const int global_size_dim2,
-
 __kernel void batch_to_space(GLOBAL_SIZE_3_DIMS __read_only image2d_t uInput, __write_only image2d_t uOutput,
                              __private const int4 inImageSize, __private const int4 outImgSize,
                              __private const int2 padding, __private const int2 blockShape) {

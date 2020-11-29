@@ -1,13 +1,3 @@
-#ifdef MNN_SUPPORT_FP16
-#pragma OPENCL EXTENSION cl_khr_fp16 : enable
-#endif
-#define GLOBAL_SIZE_2_DIMS __private const int global_size_dim0, __private const int global_size_dim1,
-#define DEAL_NON_UNIFORM_DIM2(input1, input2)                       \
-    if (input1 >= global_size_dim0 || input2 >= global_size_dim1) { \
-        return;                                                     \
-    }
-__constant sampler_t SAMPLER = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP | CLK_FILTER_NEAREST;
-
 __kernel void crop(GLOBAL_SIZE_2_DIMS __read_only image2d_t input, __write_only image2d_t output,
                    __private const int inputH, __private const int intputW, __private const int offsetB,
                    __private const int offsethH, __private const int offsetW, __private const int offsetC4,

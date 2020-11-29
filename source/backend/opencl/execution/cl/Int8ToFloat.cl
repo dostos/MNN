@@ -1,8 +1,3 @@
-#ifdef MNN_SUPPORT_FP16
-#pragma OPENCL EXTENSION cl_khr_fp16 : enable
-#endif
-__constant sampler_t SAMPLER = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP | CLK_FILTER_NEAREST;
-
 __kernel void int8_to_float(
                       __private const int global_size_dim0, __private const int global_size_dim1, __private const int global_size_dim2,
                        __global char* input_ptr, __write_only image2d_t output, __global FLOAT* scale_ptr, __private const int height, __private const int width) {

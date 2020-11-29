@@ -1,9 +1,3 @@
-#ifdef MNN_SUPPORT_FP16
-#pragma OPENCL EXTENSION cl_khr_fp16 : enable
-#endif
-
-__constant sampler_t SAMPLER = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP | CLK_FILTER_NEAREST;
-
 __kernel void maxpool_grad(__read_only image2d_t originInput, __read_only image2d_t originOutput, __read_only image2d_t inputGrad, __write_only image2d_t output, int2 shape, int2 poolShape, int2 kernelSize, int2 stride) {
     const int2 pos = (int2)(get_global_id(1), get_global_id(0)); // read_imagef and write_imagef need (w, h) layout position
     const int h = pos.y % shape.x, w = pos.x % shape.y;
