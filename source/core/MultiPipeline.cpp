@@ -74,7 +74,7 @@ ErrorCode MultiPipeline::run() {
 
 
 MultiUnit::MultiUnit(std::vector<std::vector<Unit*>> units, Backend* backend)
-    :mUnits(units), mBackend(backend) {
+    :mUnits(units), mBackend(backend), mMultiExecution(nullptr) {
     bool supportMultiExecution = true;
 
     std::vector<std::vector<Execution *>> multiExecutions;

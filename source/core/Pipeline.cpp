@@ -103,7 +103,9 @@ ErrorCode Unit::execute() {
     if (mConst) {
         return NO_ERROR;
     }
+#ifdef MNN_DEBUG_TENSOR_SIZE
     MNN_PRINT("\t==> execute op: %s, [%s]\n", mContent->name.c_str(), mContent->type.c_str());
+#endif
     auto code = mExecution->onExecute(mInputs, mOutputs);
 
     if (NO_ERROR != code) {
@@ -162,7 +164,7 @@ ErrorCode Unit::prepare(Backend* bn, Backend* cpuBn) {
         }
     }
     mContent->flops = SizeComputer::computeFlops(mOriginOp, mInputs, mOutputs);
-
+   
 #ifdef MNN_DEBUG_TENSOR_SIZE
     MNN_PRINT("\t===> compute shape: %s, [%s]\n", mOriginOp->name()->c_str(), MNN::EnumNameOpType(mOriginOp->type()));
     if (mInputs.size()) {

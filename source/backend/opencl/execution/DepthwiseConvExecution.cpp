@@ -59,10 +59,10 @@ DepthwiseConvExecution::DepthwiseConvExecution(const std::vector<Tensor *> &inpu
     imageBufferConvertor.convertBufferToImage(filterBuffer.get(), MNN::OpenCL::DW_CONV2D_FILTER, mFilter.get());
     auto runtime = mOpenCLBackend->getOpenCLRuntime();
     std::set<std::string> buildOptions;
-    std::string kernelName = "depthwise_conv2d";
+    mKernelName = "depthwise_conv2d";
     if (mConv2dCommonParams->strideX() == 1 && mConv2dCommonParams->strideY() == 1 &&
         mConv2dCommonParams->dilateX() == 1 && mConv2dCommonParams->dilateY() == 1) {
-        kernelName = "depthwise_conv2d_s1";
+        mKernelName = "depthwise_conv2d_s1";
     }
 
     if (mConv2dCommonParams->relu() == true) {
@@ -71,7 +71,8 @@ DepthwiseConvExecution::DepthwiseConvExecution(const std::vector<Tensor *> &inpu
         buildOptions.emplace("-DRELU6");
     }
 
-    mKernel           = runtime->buildKernel("depthwise_conv2d", kernelName, buildOptions);
+    mProgramName = "depthwise_conv2d";
+    mKernel           = runtime->buildKernel(mProgramName, mKernelName, buildOptions);
     mMaxWorkGroupSize = static_cast<uint32_t>(runtime->getMaxWorkGroupSize(mKernel));
 }
 

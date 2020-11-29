@@ -336,6 +336,8 @@ ConvExecution::ConvExecution(const std::vector<Tensor *> &inputs, const MNN::Op 
     mConv2dCommonParams            = conv2dCommonParams;
     mStrides                       = {conv2dCommonParams->strideY(), conv2dCommonParams->strideX()};
     mDilations                     = {conv2dCommonParams->dilateY(), conv2dCommonParams->dilateX()};
+    mName = "Conv2D";
+
 
     mPaddings[0]    = conv2dCommonParams->padY() * 2;
     mPaddings[1]    = conv2dCommonParams->padX() * 2;

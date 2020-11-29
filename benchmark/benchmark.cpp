@@ -150,11 +150,6 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
     MNN::SessionId id = multiSession.addSession(session);
     MNN::SessionId id2 =multiSession.addSession(session2);
 
-    for(auto i : session->getTensors()) {
-        std::cout << i.first << std::endl;
-        i.second->printShape();
-    }
-
     auto inputShape = input->shape();
 
     std::cout << "Input shape : " << inputShape[0] << " " << inputShape[1] << " " << inputShape[2] << " " << inputShape[3] << " " << std::endl;
@@ -196,10 +191,6 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
         auto timeEnd = getTimeInUs();
         costs.push_back((timeEnd - timeBegin) / 1000.0);
     }
-
-    outputTensor->print();
-    outputTensor2->print();
-
     return costs;
 }
 

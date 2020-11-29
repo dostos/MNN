@@ -70,13 +70,14 @@ DeconvExecution::DeconvExecution(const std::vector<Tensor *> &inputs, const MNN:
     auto runtime = mOpenCLBackend->getOpenCLRuntime();
 
     std::set<std::string> buildOptions;
-    std::string kernelName = "deconv_2d";
+    mKernelName = "deconv_2d";
     if (conv2dCommonParams->relu() == true) {
         buildOptions.emplace("-DRELU");
     } else if (conv2dCommonParams->relu6() == true) {
         buildOptions.emplace("-DRELU6");
     }
-    mKernel = runtime->buildKernel("deconv_2d", kernelName, buildOptions);
+    mProgramName = "deconv_2d";
+    mKernel = runtime->buildKernel("deconv_2d", mKernelName, buildOptions);
 }
 
 DeconvExecution::~DeconvExecution() {

@@ -16,7 +16,6 @@ ErrorCode MultiExecution::onPrepare(const MultiExecutionTensors &inputs, const M
             auto fusionableExecution = dynamic_cast<FusionableExecution *>(mExecutions[subPipelineIdx][executionIdx]);
             std::string kernelName = fusionableExecution->getKernelName();
             std::string programName = fusionableExecution->getProgramName();
-            MNN_PRINT("%s %s\n", programName.c_str(), kernelName.c_str());
             std::string kernelString = mBackend->getOpenCLRuntime()->getKernelSource(programName, kernelName);
 
             MNN_PRINT("%s", kernelString.c_str());

@@ -5,7 +5,7 @@ namespace OpenCL {
     FusionableExecution::FusionableExecution(Backend* backend) : Execution(backend) {}
 
     bool FusionableExecution::fusionable() const {
-        return true;
+        return false;
     }
 
     const std::string &FusionableExecution::getProgramName() const {

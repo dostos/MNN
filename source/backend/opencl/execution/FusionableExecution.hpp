@@ -17,6 +17,7 @@ public:
     const std::string &getKernelName() const;
 
 protected:
+    std::string mName;
     std::string mProgramName;
     std::string mKernelName;
 };

@@ -310,16 +310,23 @@ std::string OpenCLRuntime::getKernelSource(const std::string &programName, const
     if (it_source != OpenCLProgramMap.end()) {
         std::string programSource{it_source->second.begin(), it_source->second.end()};
 
-        std::regex kernelNameRegex(R"(\s)" + kernelName + R"(\s*[()");
+        // Find kernel name (emptyspace)kernelName(emptyspace)(
+        std::regex kernelNameRegex("\\s+" + kernelName + "\\s*\\(");
         std::smatch regexMatch;
-        std::regex_match(programSource, regexMatch, kernelNameRegex);
-
+        std::regex_search(programSource, regexMatch, kernelNameRegex);
+    
+        std::string::size_type kernelStart = regexMatch.position();
         MNN_ASSERT(regexMatch.size() == 1);
+        
+        std::string::size_type argumentsStart = kernelStart + regexMatch.length();
+        std::string arguments = programSource.substr(argumentsStart, programSource.find_first_of(")", argumentsStart) - argumentsStart);
 
-        std::string::size_type kernelStart = programSource.substr(0, regexMatch.position()).find_last_of("__kernel");
+        //MNN_PRINT("%s \n", programSource.substr(programSource.find_first_of(')', argumentsStart)));
 
+        //MNN_PRINT("args\n");
+        //MNN_PRINT("%s ", arguments.c_str());
         return programSource.substr(kernelStart);
-    }
+    }   
     else
     {
         MNN_PRINT("Can't find kernel source !\n");
