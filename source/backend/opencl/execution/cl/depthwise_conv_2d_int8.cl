@@ -1,4 +1,4 @@
-__kernel void depthwise_conv_2d(GLOBAL_SIZE_3_DIMS __global char* input_ptr, __global char* weights_ptr,
+__kernel void depthwise_conv_2d(GLOBAL_SIZE_3_DIMS(0) __global char* input_ptr, __global char* weights_ptr,
                       __global int* bias_ptr,
                       __global char* output_ptr,
                       __global float* scale_ptr,
@@ -17,7 +17,7 @@ __kernel void depthwise_conv_2d(GLOBAL_SIZE_3_DIMS __global char* input_ptr, __g
     const int out_b_h_idx  = get_global_id(2);
 
     const int out_h_idx = out_b_h_idx % output_shape.x;
-    DEAL_NON_UNIFORM_DIM3(out_c_b_idx, out_w_idx, out_b_h_idx);
+    DEAL_NON_UNIFORM_DIM3(0, out_c_b_idx, out_w_idx, out_b_h_idx);
 
     int4 out0 = vload4(out_c_b_idx, bias_ptr);
 

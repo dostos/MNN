@@ -1,11 +1,11 @@
-__kernel void crop(GLOBAL_SIZE_2_DIMS __read_only image2d_t input, __write_only image2d_t output,
+__kernel void crop(GLOBAL_SIZE_2_DIMS(0) __read_only image2d_t input, __write_only image2d_t output,
                    __private const int inputH, __private const int intputW, __private const int offsetB,
                    __private const int offsethH, __private const int offsetW, __private const int offsetC4,
                    __private const int outputH, __private const int outputW) {
     int crop_image_width_idx  = get_global_id(0);
     int crop_image_height_idx = get_global_id(1);
 
-    DEAL_NON_UNIFORM_DIM2(crop_image_width_idx, crop_image_height_idx);
+    DEAL_NON_UNIFORM_DIM2(0, crop_image_width_idx, crop_image_height_idx);
     const int height = outputH;
     const int width  = outputW;
 

@@ -1,4 +1,4 @@
-__kernel void conv_2d1x1(GLOBAL_SIZE_3_DIMS __global char* input_ptr, __global char* weights_ptr,
+__kernel void conv_2d1x1(GLOBAL_SIZE_3_DIMS(0) __global char* input_ptr, __global char* weights_ptr,
                       __global int* bias_ptr,
                       __global char* output_ptr,
                       __global float* scale_ptr,
@@ -11,7 +11,7 @@ __kernel void conv_2d1x1(GLOBAL_SIZE_3_DIMS __global char* input_ptr, __global c
     const int out_w_idx  = get_global_id(1);
     const int out_h_idx  = get_global_id(2);
 
-    DEAL_NON_UNIFORM_DIM3(out_c_b_idx, out_w_idx, out_h_idx);
+    DEAL_NON_UNIFORM_DIM3(0, out_c_b_idx, out_w_idx, out_h_idx);
 
     const int out_w4_idx = mul24(out_w_idx, 4);
 
@@ -105,7 +105,7 @@ __kernel void conv_2d1x1(GLOBAL_SIZE_3_DIMS __global char* input_ptr, __global c
 
 }
 
-__kernel void conv_2d(GLOBAL_SIZE_3_DIMS __global char* input_ptr, __global char* weights_ptr,
+__kernel void conv_2d(GLOBAL_SIZE_3_DIMS(0) __global char* input_ptr, __global char* weights_ptr,
                       __global int* bias_ptr,
                       __global char* output_ptr,
                       __global float* scale_ptr,
@@ -124,7 +124,7 @@ __kernel void conv_2d(GLOBAL_SIZE_3_DIMS __global char* input_ptr, __global char
     const int out_b_h_idx  = get_global_id(2);
 
     const int out_h_idx = out_b_h_idx % output_shape.x;
-    DEAL_NON_UNIFORM_DIM3(out_c_b_idx, out_w_idx, out_b_h_idx);
+    DEAL_NON_UNIFORM_DIM3(0, out_c_b_idx, out_w_idx, out_b_h_idx);
 
     const int out_w4_idx = mul24(out_w_idx, 4);
 

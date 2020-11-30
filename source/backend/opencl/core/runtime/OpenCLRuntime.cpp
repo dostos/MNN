@@ -40,6 +40,9 @@ OpenCLRuntime::OpenCLRuntime(bool permitFloat16) {
 #ifdef LOG_VERBOSE
     MNN_PRINT("start OpenCLRuntime !\n");
 #endif
+    
+    mKernelParser = std::make_shared<OpenCL::KernelParser>(getProgramSource("common"));
+
     mDefaultBuildParams = " -cl-mad-enable";
     std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
@@ -220,6 +223,10 @@ cl::CommandQueue &OpenCLRuntime::commandQueue() {
     return *mCommandQueuePtr;
 }
 
+OpenCL::KernelParser &OpenCLRuntime::kernelParser() {
+    return *mKernelParser;
+}
+
 uint64_t OpenCLRuntime::deviceGlobalMemeryCacheSize() const {
     return mGPUGlobalMemeryCacheSize;
 }
@@ -305,27 +312,11 @@ cl::Kernel OpenCLRuntime::buildKernel(const std::string &programName, const std:
     return kernel;
 }
 
-std::string OpenCLRuntime::getKernelSource(const std::string &programName, const std::string &kernelName) const {
+std::string OpenCLRuntime::getProgramSource(const std::string &programName) const {
     auto it_source = OpenCLProgramMap.find(programName);
     if (it_source != OpenCLProgramMap.end()) {
         std::string programSource{it_source->second.begin(), it_source->second.end()};
-
-        // Find kernel name (emptyspace)kernelName(emptyspace)(
-        std::regex kernelNameRegex("\\s+" + kernelName + "\\s*\\(");
-        std::smatch regexMatch;
-        std::regex_search(programSource, regexMatch, kernelNameRegex);
-    
-        std::string::size_type kernelStart = regexMatch.position();
-        MNN_ASSERT(regexMatch.size() == 1);
-        
-        std::string::size_type argumentsStart = kernelStart + regexMatch.length();
-        std::string arguments = programSource.substr(argumentsStart, programSource.find_first_of(")", argumentsStart) - argumentsStart);
-
-        //MNN_PRINT("%s \n", programSource.substr(programSource.find_first_of(')', argumentsStart)));
-
-        //MNN_PRINT("args\n");
-        //MNN_PRINT("%s ", arguments.c_str());
-        return programSource.substr(kernelStart);
+        return programSource;
     }   
     else
     {

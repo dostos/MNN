@@ -1,10 +1,10 @@
-__kernel void spatial_product(GLOBAL_SIZE_3_DIMS __read_only image2d_t input, __read_only image2d_t input1,
+__kernel void spatial_product(GLOBAL_SIZE_3_DIMS(0) __read_only image2d_t input, __read_only image2d_t input1,
                               __private const int out_height, __write_only image2d_t output) {
     const int channel_block_idx = get_global_id(0);
     const int w                 = get_global_id(1);
     const int hb                = get_global_id(2);
 
-    DEAL_NON_UNIFORM_DIM3(channel_block_idx, w, hb);
+    DEAL_NON_UNIFORM_DIM3(0, channel_block_idx, w, hb);
     const int width = global_size_dim1;
 
     const int h     = hb % out_height;

@@ -115,6 +115,7 @@ ErrorCode ScaleExecution::onResize(const std::vector<Tensor *> &inputs, const st
     mKernel.setArg(idx++, gws[0]);
     mKernel.setArg(idx++, gws[1]);
     mKernel.setArg(idx++, gws[2]);
+    mKernel.setArg(idx++, width);
 
     mKernel.setArg(idx++, openCLImage(inputs[0]));
     mKernel.setArg(idx++, openCLImage(mScale.get()));

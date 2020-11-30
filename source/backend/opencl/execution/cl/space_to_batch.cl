@@ -1,4 +1,4 @@
-__kernel void space_to_batch(GLOBAL_SIZE_3_DIMS __read_only image2d_t uInput, __write_only image2d_t uOutput,
+__kernel void space_to_batch(GLOBAL_SIZE_3_DIMS(0) __read_only image2d_t uInput, __write_only image2d_t uOutput,
                              __private const int4 inImageSize, __private const int4 outImgSize,
                              __private const int2 padding, __private const int2 blockShape) {
 
@@ -6,7 +6,7 @@ __kernel void space_to_batch(GLOBAL_SIZE_3_DIMS __read_only image2d_t uInput, __
     const int ou_w_idx = get_global_id(1);
     const int out_hb_idx = get_global_id(2);
 
-    DEAL_NON_UNIFORM_DIM3(out_c_idx, ou_w_idx, out_hb_idx);
+    DEAL_NON_UNIFORM_DIM3(0, out_c_idx, ou_w_idx, out_hb_idx);
 
     const int out_b_idx = out_hb_idx / outImgSize.s1;
     const int out_h_idx = out_hb_idx - mul24(out_b_idx, outImgSize.s1);

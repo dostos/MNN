@@ -175,6 +175,9 @@ ErrorCode SoftmaxExecution::onResize(const std::vector<Tensor *> &inputs, const 
         mKernel.setArg(idx++, mGlobalWorkSize[0]);
         mKernel.setArg(idx++, mGlobalWorkSize[1]);
         mKernel.setArg(idx++, mGlobalWorkSize[2]);
+        
+        mKernel.setArg(idx++, channelBlocks);
+        mKernel.setArg(idx++, outputWidth);
 
         mKernel.setArg(idx++, openCLImage(input));
         mKernel.setArg(idx++, openCLImage(output));

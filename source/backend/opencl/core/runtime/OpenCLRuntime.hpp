@@ -23,6 +23,7 @@
 #include "core/Macro.h"
 #include "Type_generated.h"
 #include "backend/opencl/core/runtime/OpenCLWrapper.hpp"
+#include "backend/opencl/core/KernelParser.hpp"
 
 namespace MNN {
 
@@ -51,6 +52,7 @@ public:
     bool isSupportedDotAccInt8() const;
     ::cl::Context &context();
     ::cl::CommandQueue &commandQueue();
+    OpenCL::KernelParser &kernelParser();
     uint64_t deviceGlobalMemeryCacheSize() const;
     uint32_t deviceComputeUnits() const;
     uint32_t maxFreq() const;
@@ -70,7 +72,7 @@ public:
     ::cl::Kernel buildKernel(const std::string &programName, const std::string &kernelName,
                              const std::set<std::string> &buildOptions);
 
-    std::string getKernelSource(const std::string &programName, const std::string &kernelName) const;
+    std::string getProgramSource(const std::string &programName) const;
 
     std::vector<size_t> getMaxImage2DSize();
     bool isCreateError() const;
@@ -92,6 +94,7 @@ private:
     std::shared_ptr<::cl::Context> mContext;
     std::shared_ptr<::cl::Device> mFirstGPUDevicePtr;
     std::shared_ptr<::cl::CommandQueue> mCommandQueuePtr;
+    std::shared_ptr<OpenCL::KernelParser> mKernelParser;
     std::map<std::string, ::cl::Program> mBuildProgramMap;
     uint64_t mGPUGlobalMemeryCacheSize;
     uint32_t mGPUComputeUnits;

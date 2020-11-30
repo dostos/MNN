@@ -1,5 +1,8 @@
-__kernel void pooling(GLOBAL_SIZE_3_DIMS __read_only image2d_t input,
-                      __private const int2 input_shape, __private const int output_height, __private const int2 pad_shape,
+__kernel void pooling(GLOBAL_SIZE_3_DIMS(0) __read_only image2d_t input,
+                      __private const int2 input_shape, 
+                      __private const int output_height, 
+                      __private const int output_width, 
+                      __private const int2 pad_shape,
                       __private const int2 stride_shape,
                       __private const int2 kernel_shape,
                       __write_only image2d_t output) {
@@ -7,9 +10,8 @@ __kernel void pooling(GLOBAL_SIZE_3_DIMS __read_only image2d_t input,
     const int output_width_idx        = get_global_id(1);
     const int output_batch_height_idx = get_global_id(2);
 
-    DEAL_NON_UNIFORM_DIM3(output_channel_idx, output_width_idx, output_batch_height_idx);
-    const int output_width = global_size_dim1;
-
+    DEAL_NON_UNIFORM_DIM3(0, output_channel_idx, output_width_idx, output_batch_height_idx);
+ 
     const int output_batch_idx    = output_batch_height_idx / output_height;
     const int output_height_idx   = output_batch_height_idx - mul24(output_batch_idx, output_height);
     const int input_start         = mul24(output_batch_idx, input_shape.x);

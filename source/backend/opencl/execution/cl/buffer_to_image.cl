@@ -1,11 +1,11 @@
 
-__kernel void nc4hw4_buffer_to_image(GLOBAL_SIZE_2_DIMS __global const float *input_ptr, __private const int2 output_shape,
+__kernel void nc4hw4_buffer_to_image(GLOBAL_SIZE_2_DIMS(0) __global const float *input_ptr, __private const int2 output_shape,
                                      __private const int channel_4, __write_only image2d_t output) {
 
     int image_width_idx  = get_global_id(0);
     int image_height_idx = get_global_id(1);
 
-    DEAL_NON_UNIFORM_DIM2(image_width_idx, image_height_idx);
+    DEAL_NON_UNIFORM_DIM2(0, image_width_idx, image_height_idx);
 
     const int batch_idx         = image_height_idx / output_shape.x;
     const int height_idx        = image_height_idx % output_shape.x;
@@ -20,14 +20,14 @@ __kernel void nc4hw4_buffer_to_image(GLOBAL_SIZE_2_DIMS __global const float *in
     write_imagef(output, coord, values);
 }
 
-__kernel void image_to_nc4hw4_buffer(GLOBAL_SIZE_2_DIMS __global float *output, /* nchw */
+__kernel void image_to_nc4hw4_buffer(GLOBAL_SIZE_2_DIMS(0) __global float *output, /* nchw */
                                      __private const int2 output_shape,
                                      __private const int channel_4,
                                      __read_only image2d_t input_ptr) {
     int image_width_idx  = get_global_id(0);
     int image_height_idx = get_global_id(1);
 
-    DEAL_NON_UNIFORM_DIM2(image_width_idx, image_height_idx);
+    DEAL_NON_UNIFORM_DIM2(0, image_width_idx, image_height_idx);
 
     const int batch_idx   = image_height_idx / output_shape.x;
     const int height_idx  = image_height_idx % output_shape.x;
@@ -44,14 +44,14 @@ __kernel void image_to_nc4hw4_buffer(GLOBAL_SIZE_2_DIMS __global float *output, 
 }
 
 // convert kernel : from buffer(oi ) to image(oc, ic/4)
-__kernel void conv2d1x1_opt_filter_buffer_to_image(GLOBAL_SIZE_2_DIMS __global const float *input_ptr,
+__kernel void conv2d1x1_opt_filter_buffer_to_image(GLOBAL_SIZE_2_DIMS(0) __global const float *input_ptr,
                                             __private const int input_channel, __private const int2 kernel_shape, __private const int ic_h_w_size,
                                             __private const int height_width_size, __write_only image2d_t output) {
     
     int ic_4_idx  = get_global_id(0); // ic/4
     int oc_idx = get_global_id(1); // oc
 
-    DEAL_NON_UNIFORM_DIM2(ic_4_idx, oc_idx);
+    DEAL_NON_UNIFORM_DIM2(0, ic_4_idx, oc_idx);
 
     const int ic_idx  = ic_4_idx * 4;
 
@@ -87,13 +87,13 @@ __kernel void conv2d1x1_opt_filter_buffer_to_image(GLOBAL_SIZE_2_DIMS __global c
 }
 
 // convert kernel : from buffer(oihw) to image(oc/4 h w , ic oc4)
-__kernel void conv2d_filter_buffer_to_image(GLOBAL_SIZE_2_DIMS __global const float *input_ptr,
+__kernel void conv2d_filter_buffer_to_image(GLOBAL_SIZE_2_DIMS(0) __global const float *input_ptr,
                                             __private const int output_channel, __private const int2 kernel_shape, __private const int ic_h_w_size,
                                             __private const int height_width_size, __write_only image2d_t output) {
     int image_width_idx  = get_global_id(0); // ic
     int image_height_idx = get_global_id(1); // oc/4 h w
 
-    DEAL_NON_UNIFORM_DIM2(image_width_idx, image_height_idx);
+    DEAL_NON_UNIFORM_DIM2(0, image_width_idx, image_height_idx);
 
     const int input_channel_4_idx  = image_width_idx;
     const int output_channel_4_idx = (image_height_idx / height_width_size) * 4;
@@ -140,14 +140,14 @@ __kernel void conv2d_filter_buffer_to_image(GLOBAL_SIZE_2_DIMS __global const fl
 
 // only for debug
 // convert kernel : from image(oc/4 h w , ic oc4) to buffer(oihw)
-__kernel void conv2d_filter_image_to_buffer(GLOBAL_SIZE_2_DIMS __global float *output_ptr,
+__kernel void conv2d_filter_image_to_buffer(GLOBAL_SIZE_2_DIMS(0) __global float *output_ptr,
                                             __private const int output_channel, __private const int2 kernel_shape,
                                             __private const int ic_h_w_size,
                                             __private const int height_width_size, __read_only image2d_t input_ptr) {
     int image_width_idx  = get_global_id(0);
     int image_height_idx = get_global_id(1);
 
-    DEAL_NON_UNIFORM_DIM2(image_width_idx, image_height_idx);
+    DEAL_NON_UNIFORM_DIM2(0, image_width_idx, image_height_idx);
 
     const int input_channel_4_idx  = image_width_idx;
     const int output_channel_4_idx = image_height_idx / height_width_size * 4;
@@ -194,13 +194,13 @@ __kernel void conv2d_filter_image_to_buffer(GLOBAL_SIZE_2_DIMS __global float *o
 
 // convert kernel from buffer(mihw) to image(ic/4, ic4 h w m)
 // but now dw only support m == 1
-__kernel void dw_filter_buffer_to_image(GLOBAL_SIZE_2_DIMS __global const float *input_ptr,
+__kernel void dw_filter_buffer_to_image(GLOBAL_SIZE_2_DIMS(0) __global const float *input_ptr,
                                         __private const int4 kernel_shape,
                                         __private const int height_width_size, __write_only image2d_t output) {
     const int image_width_idx  = get_global_id(0);
     const int image_height_idx = get_global_id(1);
 
-    DEAL_NON_UNIFORM_DIM2(image_width_idx, image_height_idx);
+    DEAL_NON_UNIFORM_DIM2(0, image_width_idx, image_height_idx);
 
     float4 output_values = 0;
     if (kernel_shape.x == 1) {
@@ -246,13 +246,13 @@ __kernel void dw_filter_buffer_to_image(GLOBAL_SIZE_2_DIMS __global const float 
 }
 
 // convert data from buffer(nhwc) to image(b h, ic/4 w ic4)
-__kernel void nhwc_buffer_to_image(GLOBAL_SIZE_2_DIMS __global const float *input_ptr, __private const int height,
+__kernel void nhwc_buffer_to_image(GLOBAL_SIZE_2_DIMS(0) __global const float *input_ptr, __private const int height,
                                    __private const int width, __private const int channels,
                                    __write_only image2d_t output) {
     int image_width_idx  = get_global_id(0);
     int image_height_idx = get_global_id(1);
 
-    DEAL_NON_UNIFORM_DIM2(image_width_idx, image_height_idx);
+    DEAL_NON_UNIFORM_DIM2(0, image_width_idx, image_height_idx);
 
     const int batch_idx     = image_height_idx / height;
     const int height_idx    = image_height_idx % height;
@@ -279,13 +279,13 @@ __kernel void nhwc_buffer_to_image(GLOBAL_SIZE_2_DIMS __global const float *inpu
 }
 
 // convert data from buffer(nchw) to image(b h, ic/4 w ic4)
-__kernel void nchw_buffer_to_image(GLOBAL_SIZE_2_DIMS __global const float *input_ptr, /* nchw */
+__kernel void nchw_buffer_to_image(GLOBAL_SIZE_2_DIMS(0) __global const float *input_ptr, /* nchw */
                                    __private const int height, __private const int width, __private const int channels,
                                    __write_only image2d_t output) {
     int image_width_idx  = get_global_id(0);
     int image_height_idx = get_global_id(1);
 
-    DEAL_NON_UNIFORM_DIM2(image_width_idx, image_height_idx);
+    DEAL_NON_UNIFORM_DIM2(0, image_width_idx, image_height_idx);
 
     const int batch_idx     = image_height_idx / height;
     const int height_idx    = image_height_idx % height;
@@ -328,13 +328,13 @@ __kernel void nchw_buffer_to_image(GLOBAL_SIZE_2_DIMS __global const float *inpu
 
 // only for debug
 // convert data from image(b h, ic/4 w ic4) to buffer(nhwc)
-__kernel void image_to_nhwc_buffer(GLOBAL_SIZE_2_DIMS __global float *output, /* nhwc */
+__kernel void image_to_nhwc_buffer(GLOBAL_SIZE_2_DIMS(0) __global float *output, /* nhwc */
                                    __private const int height, __private const int width, __private const int channels,
                                    __read_only image2d_t input_ptr) {
     int image_width_idx  = get_global_id(0);
     int image_height_idx = get_global_id(1);
 
-    DEAL_NON_UNIFORM_DIM2(image_width_idx, image_height_idx);
+    DEAL_NON_UNIFORM_DIM2(0, image_width_idx, image_height_idx);
 
     const int batch_idx     = image_height_idx / height;
     const int height_idx    = image_height_idx % height;
@@ -367,13 +367,13 @@ __kernel void image_to_nhwc_buffer(GLOBAL_SIZE_2_DIMS __global float *output, /*
 
 // only for debug
 // convert data from image(b h, ic/4 w ic4) to buffer(nhwc)
-__kernel void image_to_nchw_buffer(GLOBAL_SIZE_2_DIMS __global float *output, /* nchw */
+__kernel void image_to_nchw_buffer(GLOBAL_SIZE_2_DIMS(0) __global float *output, /* nchw */
                                    __private const int height, __private const int width, __private const int channels,
                                    __read_only image2d_t input_ptr) {
     int image_width_idx  = get_global_id(0);
     int image_height_idx = get_global_id(1);
 
-    DEAL_NON_UNIFORM_DIM2(image_width_idx, image_height_idx);
+    DEAL_NON_UNIFORM_DIM2(0, image_width_idx, image_height_idx);
 
     const int batch_idx  = image_height_idx / height;
     const int height_idx = image_height_idx % height;
@@ -414,12 +414,12 @@ __kernel void image_to_nchw_buffer(GLOBAL_SIZE_2_DIMS __global float *output, /*
 }
 
 // convert arg as 4 alignment
-__kernel void arg_buffer_to_image(GLOBAL_SIZE_2_DIMS __global const float *input_ptr, __private const int count,
+__kernel void arg_buffer_to_image(GLOBAL_SIZE_2_DIMS(0) __global const float *input_ptr, __private const int count,
                                   __write_only image2d_t output) {
     int image_width_idx  = get_global_id(0);
     int image_height_idx = get_global_id(1);
 
-    DEAL_NON_UNIFORM_DIM2(image_width_idx, image_height_idx);
+    DEAL_NON_UNIFORM_DIM2(0, image_width_idx, image_height_idx);
 
     const int buffer_4_offset = image_width_idx << 2;
     const int remain          = count - buffer_4_offset;
@@ -445,12 +445,12 @@ __kernel void arg_buffer_to_image(GLOBAL_SIZE_2_DIMS __global const float *input
 }
 
 // only for debug
-__kernel void arg_image_to_buffer(GLOBAL_SIZE_2_DIMS __global float *output, __private const int count,
+__kernel void arg_image_to_buffer(GLOBAL_SIZE_2_DIMS(0) __global float *output, __private const int count,
                                   __read_only image2d_t input_ptr) {
     int image_width_idx  = get_global_id(0);
     int image_height_idx = get_global_id(1);
 
-    DEAL_NON_UNIFORM_DIM2(image_width_idx, image_height_idx);
+    DEAL_NON_UNIFORM_DIM2(0, image_width_idx, image_height_idx);
 
     const int buffer_4_offset = image_width_idx << 2;
 

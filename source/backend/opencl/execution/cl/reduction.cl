@@ -90,7 +90,7 @@ __kernel void reduce_sum_use_local_along_channel(__read_only image2d_t input, __
     }
 }
 
-__kernel void reduct_1d(GLOBAL_SIZE_3_DIMS
+__kernel void reduct_1d(GLOBAL_SIZE_3_DIMS(0)
                         __read_only image2d_t input,
                         __write_only image2d_t output,
                         __private const int groupWorkSize,
@@ -234,7 +234,7 @@ __kernel void reduct_1d(GLOBAL_SIZE_3_DIMS
     }
 }
 
-__kernel void reduct_2d(GLOBAL_SIZE_3_DIMS
+__kernel void reduct_2d(GLOBAL_SIZE_3_DIMS(0)
                         __read_only image2d_t input,
                         __write_only image2d_t output,
                         __local FLOAT4 *groupBuffer,

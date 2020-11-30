@@ -1,11 +1,11 @@
-__kernel void normalize_kernel(GLOBAL_SIZE_3_DIMS __read_only image2d_t input, __read_only image2d_t scale,
+__kernel void normalize_kernel(GLOBAL_SIZE_3_DIMS(0) __read_only image2d_t input, __read_only image2d_t scale,
                                __private const float eps, __private const int channels,
                                __private const int remain_channels, __write_only image2d_t output) {
     const int chan_blk_idx = get_global_id(0);
     const int width_idx    = get_global_id(1);
     const int hb_idx       = get_global_id(2);
 
-    DEAL_NON_UNIFORM_DIM3(chan_blk_idx, width_idx, hb_idx);
+    DEAL_NON_UNIFORM_DIM3(0, chan_blk_idx, width_idx, hb_idx);
     int chan_blks;
     if (0 == remain_channels) {
         chan_blks = global_size_dim0;

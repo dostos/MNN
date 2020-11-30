@@ -99,6 +99,7 @@ ErrorCode PoolExecution::onResize(const std::vector<Tensor *> &inputs, const std
     mKernel.setArg(idx++, openCLImage(input));
     mKernel.setArg(idx++, sizeof(inputImageShape), inputImageShape);
     mKernel.setArg(idx++, static_cast<int32_t>(outputHeight));
+    mKernel.setArg(idx++, static_cast<int32_t>(outputWidth));
     mKernel.setArg(idx++, sizeof(paddingShape), paddingShape);
     mKernel.setArg(idx++, sizeof(strideShape), strideShape);
     mKernel.setArg(idx++, sizeof(kernelShape), kernelShape);

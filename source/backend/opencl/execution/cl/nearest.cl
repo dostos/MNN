@@ -1,4 +1,4 @@
-__kernel void interp(GLOBAL_SIZE_3_DIMS __read_only image2d_t input, __write_only image2d_t output,
+__kernel void interp(GLOBAL_SIZE_3_DIMS(0) __read_only image2d_t input, __write_only image2d_t output,
                      __private const float height_scale, __private const float width_scale,
                      __private const int input_height, __private const int input_width,
                      __private const int out_height) {
@@ -6,7 +6,7 @@ __kernel void interp(GLOBAL_SIZE_3_DIMS __read_only image2d_t input, __write_onl
     const int output_width_block_idx        = get_global_id(1);
     const int output_batch_height_block_idx = get_global_id(2);
 
-    DEAL_NON_UNIFORM_DIM3(output_channel_block_idx, output_width_block_idx, output_batch_height_block_idx);
+    DEAL_NON_UNIFORM_DIM3(0, output_channel_block_idx, output_width_block_idx, output_batch_height_block_idx);
     const int output_channel_block_idxs = global_size_dim0;
     const int output_width              = global_size_dim1;
 

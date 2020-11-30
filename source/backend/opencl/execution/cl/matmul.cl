@@ -1,10 +1,10 @@
-__kernel void matmul(GLOBAL_SIZE_2_DIMS __read_only image2d_t input_a, __read_only image2d_t input_b,
+__kernel void matmul(GLOBAL_SIZE_2_DIMS(0) __read_only image2d_t input_a, __read_only image2d_t input_b,
                      __write_only image2d_t output_c, __private const int channels,
                      __private const int channel_blocks) {
     const int width_blocks_idx = get_global_id(0);
     const int height_idx       = get_global_id(1);
 
-    DEAL_NON_UNIFORM_DIM2(width_blocks_idx, height_idx);
+    DEAL_NON_UNIFORM_DIM2(0, width_blocks_idx, height_idx);
     FLOAT4 a;
     FLOAT4 b0 = 0, b1 = 0, b2 = 0, b3 = 0;
 
@@ -47,13 +47,13 @@ __kernel void matmul(GLOBAL_SIZE_2_DIMS __read_only image2d_t input_a, __read_on
     WI_F(output_c, (int2)(width_blocks_idx, height_idx), (FLOAT4)(result0, result1, result2, result3));
 }
 
-__kernel void matmul_transB(GLOBAL_SIZE_2_DIMS __read_only image2d_t input_a, __read_only image2d_t input_b,
+__kernel void matmul_transB(GLOBAL_SIZE_2_DIMS(0) __read_only image2d_t input_a, __read_only image2d_t input_b,
                      __write_only image2d_t output_c, __private const int channels,
                      __private const int channel_blocks) {
     const int width_blocks_idx = get_global_id(0);
     const int height_idx       = get_global_id(1);
 
-    DEAL_NON_UNIFORM_DIM2(width_blocks_idx, height_idx);
+    DEAL_NON_UNIFORM_DIM2(0, width_blocks_idx, height_idx);
     FLOAT4 a;
     FLOAT4 b0 = 0, b1 = 0, b2 = 0, b3 = 0;
 

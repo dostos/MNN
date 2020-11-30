@@ -20,20 +20,20 @@
     out##i = mad(in_sm##i[local_idx].z, weights2, out##i); \
     out##i = mad(in_sm##i[local_idx].w, weights3, out##i);   
 
-#define DEAL_NON_UNIFORM_DIM2(input1, input2)                       \
-    if (input1 >= global_size_dim0 || input2 >= global_size_dim1) { \
+#define DEAL_NON_UNIFORM_DIM2(i, input1, input2)                       \
+    if (input1 >= global_size_dim0##i || input2 >= global_size_dim1##i) { \
         return;                                                     \
     }
 
-#define DEAL_NON_UNIFORM_DIM3(input1, input2, input3)                                             \
-    if (input1 >= global_size_dim0 || input2 >= global_size_dim1 || input3 >= global_size_dim2) { \
+#define DEAL_NON_UNIFORM_DIM3(i, input1, input2, input3)                                             \
+    if (input1 >= global_size_dim0##i || input2 >= global_size_dim1##i || input3 >= global_size_dim2##i) { \
         return;                                                                                   \
     }
 
-#define GLOBAL_SIZE_2_DIMS __private const int global_size_dim0, __private const int global_size_dim1,
+#define GLOBAL_SIZE_2_DIMS(i) __private const int global_size_dim0##i, __private const int global_size_dim1##i,
 
-#define GLOBAL_SIZE_3_DIMS \
-    __private const int global_size_dim0, __private const int global_size_dim1, __private const int global_size_dim2,
+#define GLOBAL_SIZE_3_DIMS(i) \
+    __private const int global_size_dim0##i, __private const int global_size_dim1##i, __private const int global_size_dim2##i,
 
 #define UNIT 4
 

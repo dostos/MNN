@@ -1,4 +1,7 @@
-__kernel void scale(GLOBAL_SIZE_3_DIMS __read_only image2d_t input, __read_only image2d_t scale,
+__kernel void scale(GLOBAL_SIZE_3_DIMS(0) 
+                    __private const int width,
+                    __read_only image2d_t input, 
+                    __read_only image2d_t scale,
 #ifdef HAS_BIAS
                     __read_only image2d_t bias, /* cout%4 * cout/4 */
 #endif
@@ -8,8 +11,7 @@ __kernel void scale(GLOBAL_SIZE_3_DIMS __read_only image2d_t input, __read_only 
     const int w                 = get_global_id(1);
     const int hb                = get_global_id(2);
 
-    DEAL_NON_UNIFORM_DIM3(channel_block_idx, w, hb);
-    const int width = global_size_dim1;
+    DEAL_NON_UNIFORM_DIM3(0, channel_block_idx, w, hb);
 
     const int pos = mad24(channel_block_idx, width, w);
 

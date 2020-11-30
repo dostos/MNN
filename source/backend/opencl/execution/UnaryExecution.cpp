@@ -48,6 +48,7 @@ ErrorCode UnaryExecution::onResize(const std::vector<Tensor*>& inputs, const std
     mKernel.setArg(idx++, mGlobalWorkSize[0]);
     mKernel.setArg(idx++, mGlobalWorkSize[1]);
     mKernel.setArg(idx++, mGlobalWorkSize[2]);
+    mKernel.setArg(idx++, outputWidth);
     mKernel.setArg(idx++, openCLImage(input));
     mKernel.setArg(idx++, openCLImage(output));
 

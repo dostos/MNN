@@ -3,7 +3,7 @@ __kernel
 #if SET_ATTRIBUTE
 __attribute__((work_group_size_hint(16, 16, 1)))
 #endif
-void depthwise_conv2d_s1(GLOBAL_SIZE_2_DIMS __read_only image2d_t input, __read_only image2d_t filter,
+void depthwise_conv2d_s1(GLOBAL_SIZE_2_DIMS(0) __read_only image2d_t input, __read_only image2d_t filter,
                                   __read_only image2d_t bias,
                                   __write_only image2d_t output,
                                   __private const int2 input_shape,
@@ -14,7 +14,7 @@ void depthwise_conv2d_s1(GLOBAL_SIZE_2_DIMS __read_only image2d_t input, __read_
 
     const int outChannelWidthIdx = get_global_id(0);
     const int outHeightBlockIdx     = get_global_id(1);
-    DEAL_NON_UNIFORM_DIM2(outChannelWidthIdx, outHeightBlockIdx);
+    DEAL_NON_UNIFORM_DIM2(0, outChannelWidthIdx, outHeightBlockIdx);
     int ow4              = (outputShape.y + 3) / 4;
     const int outChannelBlockIdx = outChannelWidthIdx / ow4;
     const int outWidthBlockidx   = outChannelWidthIdx % ow4;
@@ -104,7 +104,7 @@ __kernel
 #if SET_ATTRIBUTE
 __attribute__((work_group_size_hint(16, 16, 1)))
 #endif
-void depthwise_conv2d(GLOBAL_SIZE_2_DIMS __read_only image2d_t input, __read_only image2d_t filter,
+void depthwise_conv2d(GLOBAL_SIZE_2_DIMS(0) __read_only image2d_t input, __read_only image2d_t filter,
                                __read_only image2d_t bias,
                                __write_only image2d_t output,
                                __private const int2 input_shape,
@@ -116,7 +116,7 @@ void depthwise_conv2d(GLOBAL_SIZE_2_DIMS __read_only image2d_t input, __read_onl
 
     const int outChannelWidthIdx = get_global_id(0);
     const int outHeightIdx     = get_global_id(1);
-    DEAL_NON_UNIFORM_DIM2(outChannelWidthIdx, outHeightIdx);
+    DEAL_NON_UNIFORM_DIM2(0, outChannelWidthIdx, outHeightIdx);
 
     int ow4              = (outputShape.y + 3) / 4;
     const int outChannelBlockIdx = outChannelWidthIdx / ow4;

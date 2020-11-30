@@ -2,7 +2,7 @@ __kernel
 #if SET_ATTRIBUTE
 __attribute__((work_group_size_hint(16, 16, 1)))
 #endif
-void conv_2d_1x1_mali(GLOBAL_SIZE_2_DIMS __private const int out_w_blocks, __read_only image2d_t input,
+void conv_2d_1x1_mali(GLOBAL_SIZE_2_DIMS(0) __private const int out_w_blocks, __read_only image2d_t input,
                           __global const FLOAT *kernel_ptr,
                           __global const FLOAT *bias_ptr,
                           __write_only image2d_t output,
@@ -12,7 +12,7 @@ void conv_2d_1x1_mali(GLOBAL_SIZE_2_DIMS __private const int out_w_blocks, __rea
     const int out_c_w_idx = get_global_id(0); //c/4 w
     const int out_b_h_idx  = get_global_id(1); //b h
 
-    DEAL_NON_UNIFORM_DIM2(out_c_w_idx, out_b_h_idx);
+    DEAL_NON_UNIFORM_DIM2(0, out_c_w_idx, out_b_h_idx);
 
     const int out_c_idx = out_c_w_idx / out_w_blocks;
     const int out_w_idx = out_c_w_idx % out_w_blocks;
@@ -114,7 +114,7 @@ void conv_2d_1x1_mali(GLOBAL_SIZE_2_DIMS __private const int out_w_blocks, __rea
 
 }
 
-__kernel void conv_2d_1x1_local(GLOBAL_SIZE_3_DIMS __read_only image2d_t input, __read_only image2d_t weights,
+__kernel void conv_2d_1x1_local(GLOBAL_SIZE_3_DIMS(0) __read_only image2d_t input, __read_only image2d_t weights,
                           __read_only image2d_t bias,
                           __write_only image2d_t output,
                           __private const int in_c_block, __private const int out_h,
@@ -127,7 +127,7 @@ __kernel void conv_2d_1x1_local(GLOBAL_SIZE_3_DIMS __read_only image2d_t input, 
     const int out_w_idx = get_global_id(1); //w
     const int out_b_h_idx  = get_global_id(2); //b h
 
-    DEAL_NON_UNIFORM_DIM3(out_c_idx, out_w_idx, out_b_h_idx);
+    DEAL_NON_UNIFORM_DIM3(0, out_c_idx, out_w_idx, out_b_h_idx);
 
     const int out_w4_idx = mul24(out_w_idx, 4);
 
@@ -223,7 +223,7 @@ __kernel
 #if SET_ATTRIBUTE
 __attribute__((work_group_size_hint(16, 16, 1)))
 #endif
-void conv_2d_1x1(GLOBAL_SIZE_2_DIMS __read_only image2d_t input, __read_only image2d_t weights,
+void conv_2d_1x1(GLOBAL_SIZE_2_DIMS(0) __read_only image2d_t input, __read_only image2d_t weights,
                           __read_only image2d_t bias,
                           __write_only image2d_t output,
                           __private const int2 input_shape,
@@ -233,7 +233,7 @@ void conv_2d_1x1(GLOBAL_SIZE_2_DIMS __read_only image2d_t input, __read_only ima
 
     const int output_channel_width_idx = get_global_id(0);
     const int output_batch_height_idx  = get_global_id(1);
-    DEAL_NON_UNIFORM_DIM2(output_channel_width_idx, output_batch_height_idx);
+    DEAL_NON_UNIFORM_DIM2(0, output_channel_width_idx, output_batch_height_idx);
 
     const int output_channel_block_idx = output_channel_width_idx / output_width_4;
     const int output_width_block_idx   = output_channel_width_idx % output_width_4;
@@ -324,7 +324,7 @@ __kernel
 #if SET_ATTRIBUTE
 __attribute__((work_group_size_hint(16, 16, 1)))
 #endif
-void conv_2d(GLOBAL_SIZE_2_DIMS __read_only image2d_t input, __read_only image2d_t weights,
+void conv_2d(GLOBAL_SIZE_2_DIMS(0) __read_only image2d_t input, __read_only image2d_t weights,
 #ifdef BIAS
                       __read_only image2d_t bias,
 #endif
@@ -340,7 +340,7 @@ void conv_2d(GLOBAL_SIZE_2_DIMS __read_only image2d_t input, __read_only image2d
 
     const int output_channel_width_idx = get_global_id(0);
     const int output_batch_height_idx  = get_global_id(1);
-    DEAL_NON_UNIFORM_DIM2(output_channel_width_idx, output_batch_height_idx);
+    DEAL_NON_UNIFORM_DIM2(0, output_channel_width_idx, output_batch_height_idx);
 
     const int out_channel_block_idx = output_channel_width_idx / out_width_blocks;
     const int out_height_block_idx   = output_channel_width_idx % out_width_blocks;
