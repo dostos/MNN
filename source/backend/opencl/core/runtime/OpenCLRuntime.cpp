@@ -41,7 +41,7 @@ OpenCLRuntime::OpenCLRuntime(bool permitFloat16) {
     MNN_PRINT("start OpenCLRuntime !\n");
 #endif
     
-    mKernelParser = std::make_shared<OpenCL::KernelParser>(getProgramSource("common"));
+    mKernelCompiler = std::make_shared<OpenCL::KernelCompiler>(getProgramSource("common"));
 
     mDefaultBuildParams = " -cl-mad-enable";
     std::vector<cl::Platform> platforms;
@@ -223,8 +223,8 @@ cl::CommandQueue &OpenCLRuntime::commandQueue() {
     return *mCommandQueuePtr;
 }
 
-OpenCL::KernelParser &OpenCLRuntime::kernelParser() {
-    return *mKernelParser;
+OpenCL::KernelCompiler &OpenCLRuntime::KernelCompiler() {
+    return *mKernelCompiler;
 }
 
 uint64_t OpenCLRuntime::deviceGlobalMemeryCacheSize() const {

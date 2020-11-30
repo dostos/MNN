@@ -23,7 +23,7 @@
 #include "core/Macro.h"
 #include "Type_generated.h"
 #include "backend/opencl/core/runtime/OpenCLWrapper.hpp"
-#include "backend/opencl/core/KernelParser.hpp"
+#include "backend/opencl/core/KernelCompiler.hpp"
 
 namespace MNN {
 
@@ -52,7 +52,7 @@ public:
     bool isSupportedDotAccInt8() const;
     ::cl::Context &context();
     ::cl::CommandQueue &commandQueue();
-    OpenCL::KernelParser &kernelParser();
+    OpenCL::KernelCompiler &KernelCompiler();
     uint64_t deviceGlobalMemeryCacheSize() const;
     uint32_t deviceComputeUnits() const;
     uint32_t maxFreq() const;
@@ -94,7 +94,7 @@ private:
     std::shared_ptr<::cl::Context> mContext;
     std::shared_ptr<::cl::Device> mFirstGPUDevicePtr;
     std::shared_ptr<::cl::CommandQueue> mCommandQueuePtr;
-    std::shared_ptr<OpenCL::KernelParser> mKernelParser;
+    std::shared_ptr<OpenCL::KernelCompiler> mKernelCompiler;
     std::map<std::string, ::cl::Program> mBuildProgramMap;
     uint64_t mGPUGlobalMemeryCacheSize;
     uint32_t mGPUComputeUnits;

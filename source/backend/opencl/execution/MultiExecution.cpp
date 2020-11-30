@@ -11,16 +11,28 @@ MultiExecution::MultiExecution(std::vector<std::vector<Execution *>> executions,
 }
 
 ErrorCode MultiExecution::onPrepare(const MultiExecutionTensors &inputs, const MultiExecutionTensors &outputs) {
+    std::vector<const KernelContent*> contents;
+    KernelCompiler &compiler = mBackend->getOpenCLRuntime()->KernelCompiler();
+
     for (int subPipelineIdx = 0; subPipelineIdx < mExecutions.size(); subPipelineIdx++) {
         for (int executionIdx = 0; executionIdx < mExecutions[subPipelineIdx].size(); executionIdx++) {
             auto fusionableExecution = dynamic_cast<FusionableExecution *>(mExecutions[subPipelineIdx][executionIdx]);
             std::string kernelName = fusionableExecution->getKernelName();
             std::string programName = fusionableExecution->getProgramName();
 
+            std::string programSource = mBackend->getOpenCLRuntime()->getProgramSource(programName);
 
-            MNN_PRINT("%s %s\n", programName.c_str(), kernelName.c_str());
+            contents.push_back(compiler.parse(kernelName, programSource));
         }
     }
+
+    // Fuse ops
+    auto content = compiler.fuse(contents);
+
+    MNN_PRINT("%s", content->source.c_str());
+
+    // Compile kernel
+
     return NO_ERROR;
 }
 

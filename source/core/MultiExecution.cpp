@@ -12,8 +12,9 @@ MultiExecution::MultiExecution(std::vector<std::vector<Execution *>> executions,
 static std::map<MNNForwardType, MultiExecution::Creator*>& getMultiExecutionCreators() {
     static std::once_flag flag;
     static std::map<MNNForwardType, MultiExecution::Creator*>* gExtraCreator;
-    std::call_once(flag,
-                   [&]() { gExtraCreator = new std::map<MNNForwardType, MultiExecution::Creator*>; });
+    if (gExtraCreator == nullptr) {
+        gExtraCreator = new std::map<MNNForwardType, MultiExecution::Creator*>;
+    }
     return *gExtraCreator;
 }
 
