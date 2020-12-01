@@ -179,8 +179,7 @@ void runTurnKernelLWS2D(const ::cl::Kernel &kernel, const std::vector<uint32_t> 
 
 
 std::vector<uint32_t> roundGws(const std::vector<uint32_t> &gws, const std::vector<uint32_t> &lws) {
-    MNN_ASSERT(lws.size() >= 2 && lws.size() <= 3);
-    MNN_ASSERT(lws.size() == gws.size());
+    MNN_ASSERT(gws.size() >= 2 && gws.size() <= 3);
 
     std::vector<uint32_t> roundedGws = gws;
     for (size_t i = 0; i < gws.size(); ++i) {
