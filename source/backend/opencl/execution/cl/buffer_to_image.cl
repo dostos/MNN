@@ -5,7 +5,7 @@ __kernel void nc4hw4_buffer_to_image(GLOBAL_SIZE_2_DIMS(0) __global const float 
     int image_width_idx  = get_global_id(0);
     int image_height_idx = get_global_id(1);
 
-    DEAL_NON_UNIFORM_DIM2(0, image_width_idx, image_height_idx);
+    DEAL_NON_UNIFORM_DIM2(0, 0, 0, image_width_idx, image_height_idx);
 
     const int batch_idx         = image_height_idx / output_shape.x;
     const int height_idx        = image_height_idx % output_shape.x;
@@ -27,7 +27,7 @@ __kernel void image_to_nc4hw4_buffer(GLOBAL_SIZE_2_DIMS(0) __global float *outpu
     int image_width_idx  = get_global_id(0);
     int image_height_idx = get_global_id(1);
 
-    DEAL_NON_UNIFORM_DIM2(0, image_width_idx, image_height_idx);
+    DEAL_NON_UNIFORM_DIM2(0, 0, 0, image_width_idx, image_height_idx);
 
     const int batch_idx   = image_height_idx / output_shape.x;
     const int height_idx  = image_height_idx % output_shape.x;
@@ -51,7 +51,7 @@ __kernel void conv2d1x1_opt_filter_buffer_to_image(GLOBAL_SIZE_2_DIMS(0) __globa
     int ic_4_idx  = get_global_id(0); // ic/4
     int oc_idx = get_global_id(1); // oc
 
-    DEAL_NON_UNIFORM_DIM2(0, ic_4_idx, oc_idx);
+    DEAL_NON_UNIFORM_DIM2(0, 0, 0, ic_4_idx, oc_idx);
 
     const int ic_idx  = ic_4_idx * 4;
 
@@ -93,7 +93,7 @@ __kernel void conv2d_filter_buffer_to_image(GLOBAL_SIZE_2_DIMS(0) __global const
     int image_width_idx  = get_global_id(0); // ic
     int image_height_idx = get_global_id(1); // oc/4 h w
 
-    DEAL_NON_UNIFORM_DIM2(0, image_width_idx, image_height_idx);
+    DEAL_NON_UNIFORM_DIM2(0, 0, 0, image_width_idx, image_height_idx);
 
     const int input_channel_4_idx  = image_width_idx;
     const int output_channel_4_idx = (image_height_idx / height_width_size) * 4;
@@ -147,7 +147,7 @@ __kernel void conv2d_filter_image_to_buffer(GLOBAL_SIZE_2_DIMS(0) __global float
     int image_width_idx  = get_global_id(0);
     int image_height_idx = get_global_id(1);
 
-    DEAL_NON_UNIFORM_DIM2(0, image_width_idx, image_height_idx);
+    DEAL_NON_UNIFORM_DIM2(0, 0, 0, image_width_idx, image_height_idx);
 
     const int input_channel_4_idx  = image_width_idx;
     const int output_channel_4_idx = image_height_idx / height_width_size * 4;
@@ -200,7 +200,7 @@ __kernel void dw_filter_buffer_to_image(GLOBAL_SIZE_2_DIMS(0) __global const flo
     const int image_width_idx  = get_global_id(0);
     const int image_height_idx = get_global_id(1);
 
-    DEAL_NON_UNIFORM_DIM2(0, image_width_idx, image_height_idx);
+    DEAL_NON_UNIFORM_DIM2(0, 0, 0, image_width_idx, image_height_idx);
 
     float4 output_values = 0;
     if (kernel_shape.x == 1) {
@@ -252,7 +252,7 @@ __kernel void nhwc_buffer_to_image(GLOBAL_SIZE_2_DIMS(0) __global const float *i
     int image_width_idx  = get_global_id(0);
     int image_height_idx = get_global_id(1);
 
-    DEAL_NON_UNIFORM_DIM2(0, image_width_idx, image_height_idx);
+    DEAL_NON_UNIFORM_DIM2(0, 0, 0, image_width_idx, image_height_idx);
 
     const int batch_idx     = image_height_idx / height;
     const int height_idx    = image_height_idx % height;
@@ -285,7 +285,7 @@ __kernel void nchw_buffer_to_image(GLOBAL_SIZE_2_DIMS(0) __global const float *i
     int image_width_idx  = get_global_id(0);
     int image_height_idx = get_global_id(1);
 
-    DEAL_NON_UNIFORM_DIM2(0, image_width_idx, image_height_idx);
+    DEAL_NON_UNIFORM_DIM2(0, 0, 0, image_width_idx, image_height_idx);
 
     const int batch_idx     = image_height_idx / height;
     const int height_idx    = image_height_idx % height;
@@ -334,7 +334,7 @@ __kernel void image_to_nhwc_buffer(GLOBAL_SIZE_2_DIMS(0) __global float *output,
     int image_width_idx  = get_global_id(0);
     int image_height_idx = get_global_id(1);
 
-    DEAL_NON_UNIFORM_DIM2(0, image_width_idx, image_height_idx);
+    DEAL_NON_UNIFORM_DIM2(0, 0, 0, image_width_idx, image_height_idx);
 
     const int batch_idx     = image_height_idx / height;
     const int height_idx    = image_height_idx % height;
@@ -373,7 +373,7 @@ __kernel void image_to_nchw_buffer(GLOBAL_SIZE_2_DIMS(0) __global float *output,
     int image_width_idx  = get_global_id(0);
     int image_height_idx = get_global_id(1);
 
-    DEAL_NON_UNIFORM_DIM2(0, image_width_idx, image_height_idx);
+    DEAL_NON_UNIFORM_DIM2(0, 0, 0, image_width_idx, image_height_idx);
 
     const int batch_idx  = image_height_idx / height;
     const int height_idx = image_height_idx % height;
@@ -419,7 +419,7 @@ __kernel void arg_buffer_to_image(GLOBAL_SIZE_2_DIMS(0) __global const float *in
     int image_width_idx  = get_global_id(0);
     int image_height_idx = get_global_id(1);
 
-    DEAL_NON_UNIFORM_DIM2(0, image_width_idx, image_height_idx);
+    DEAL_NON_UNIFORM_DIM2(0, 0, 0, image_width_idx, image_height_idx);
 
     const int buffer_4_offset = image_width_idx << 2;
     const int remain          = count - buffer_4_offset;
@@ -450,7 +450,7 @@ __kernel void arg_image_to_buffer(GLOBAL_SIZE_2_DIMS(0) __global float *output, 
     int image_width_idx  = get_global_id(0);
     int image_height_idx = get_global_id(1);
 
-    DEAL_NON_UNIFORM_DIM2(0, image_width_idx, image_height_idx);
+    DEAL_NON_UNIFORM_DIM2(0, 0, 0, image_width_idx, image_height_idx);
 
     const int buffer_4_offset = image_width_idx << 2;
 

@@ -4,7 +4,7 @@ __kernel void matmul(GLOBAL_SIZE_2_DIMS(0) __read_only image2d_t input_a, __read
     const int width_blocks_idx = get_global_id(0);
     const int height_idx       = get_global_id(1);
 
-    DEAL_NON_UNIFORM_DIM2(0, width_blocks_idx, height_idx);
+    DEAL_NON_UNIFORM_DIM2(0, 0, 0, width_blocks_idx, height_idx);
     FLOAT4 a;
     FLOAT4 b0 = 0, b1 = 0, b2 = 0, b3 = 0;
 
@@ -53,7 +53,7 @@ __kernel void matmul_transB(GLOBAL_SIZE_2_DIMS(0) __read_only image2d_t input_a,
     const int width_blocks_idx = get_global_id(0);
     const int height_idx       = get_global_id(1);
 
-    DEAL_NON_UNIFORM_DIM2(0, width_blocks_idx, height_idx);
+    DEAL_NON_UNIFORM_DIM2(0, 0, 0, width_blocks_idx, height_idx);
     FLOAT4 a;
     FLOAT4 b0 = 0, b1 = 0, b2 = 0, b3 = 0;
 

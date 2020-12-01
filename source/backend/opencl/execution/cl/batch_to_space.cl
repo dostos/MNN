@@ -6,7 +6,8 @@ __kernel void batch_to_space(GLOBAL_SIZE_3_DIMS(0) __read_only image2d_t uInput,
     const int in_w_idx = get_global_id(1);
     const int in_hb_idx = get_global_id(2);
 
-    DEAL_NON_UNIFORM_DIM3(0, in_c_idx, in_w_idx, in_hb_idx);
+    DEAL_NON_UNIFORM_DIM3(0, 0, 0, 0, in_c_idx, in_w_idx, in_hb_idx);
+
 
     const int in_b_idx = in_hb_idx / inImageSize.s1;
     const int in_h_idx = in_hb_idx - mul24(in_b_idx, inImageSize.s1);

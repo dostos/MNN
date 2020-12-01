@@ -16,7 +16,7 @@ __kernel void deconv_2d(GLOBAL_SIZE_3_DIMS(0) __read_only image2d_t input, __rea
     const int out_w_idx          = get_global_id(1);
     const int out_batch_height_idx   = get_global_id(2);
 
-    DEAL_NON_UNIFORM_DIM3(0, out_channel_blocks_idx, out_w_idx, out_batch_height_idx);
+    DEAL_NON_UNIFORM_DIM3(0, 0, 0, 0, out_channel_blocks_idx, out_w_idx, out_batch_height_idx);
 
 #ifdef BIAS
     FLOAT4 out0 = RI_F(bias, SAMPLER, (int2)(out_channel_blocks_idx, 0));
