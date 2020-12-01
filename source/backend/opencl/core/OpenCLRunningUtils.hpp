@@ -95,6 +95,8 @@ void getImageShape(const std::vector<int> &shape, /* NHWC */
 
 std::vector<uint32_t> turnLocalSize(cl::Kernel *kernel, std::vector<uint32_t> &gws, OpenCLRuntime *runtime);
 
+std::vector<uint32_t> roundGws(const std::vector<uint32_t> &gws, const std::vector<uint32_t> &lws);
+
 void run3DKernelDefault(const ::cl::Kernel &kernel, const std::vector<uint32_t> &gws, const std::vector<uint32_t> &lws,
                         OpenCLRuntime *runtime, cl::Event* eventPtr = nullptr);
 

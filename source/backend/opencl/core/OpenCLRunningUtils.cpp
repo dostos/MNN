@@ -177,6 +177,19 @@ void runTurnKernelLWS2D(const ::cl::Kernel &kernel, const std::vector<uint32_t> 
 #endif
 }
 
+
+std::vector<uint32_t> roundGws(const std::vector<uint32_t> &gws, const std::vector<uint32_t> &lws) {
+    MNN_ASSERT(lws.size() >= 2 && lws.size() <= 3);
+    MNN_ASSERT(lws.size() == gws.size());
+
+    std::vector<uint32_t> roundedGws = gws;
+    for (size_t i = 0; i < gws.size(); ++i) {
+        roundedGws[i] = ROUND_UP(gws[i], std::max((uint32_t)1, lws[i]));
+    }
+
+    return roundedGws;
+}
+
 void run3DKernelDefault(const ::cl::Kernel &kernel, const std::vector<uint32_t> &gws, const std::vector<uint32_t> &lws,
                         OpenCLRuntime *runtime, cl::Event* eventPtr) {
 #ifdef LOG_VERBOSE
@@ -184,10 +197,7 @@ void run3DKernelDefault(const ::cl::Kernel &kernel, const std::vector<uint32_t> 
 #endif
 
     MNN_ASSERT(lws.size() >= 3);
-    std::vector<uint32_t> internalGlobalWS = gws;
-    for (size_t i = 0; i < 3; ++i) {
-        internalGlobalWS[i] = ROUND_UP(gws[i], std::max((uint32_t)1, lws[i]));
-    }
+    std::vector<uint32_t> internalGlobalWS = roundGws(gws, lws);
 
     cl_int error = CL_SUCCESS;
     if(eventPtr == nullptr){
@@ -213,10 +223,7 @@ void runKernel2D(const ::cl::Kernel &kernel, const std::vector<uint32_t> &gws, c
     MNN_PRINT("start runKernel2D !\n");
 #endif
 
-    std::vector<uint32_t> internalGlobalWS = gws;
-    for (size_t i = 0; i < 2; ++i) {
-        internalGlobalWS[i] = ROUND_UP(gws[i], std::max((uint32_t)1, lws[i]));
-    }
+    std::vector<uint32_t> internalGlobalWS = roundGws(gws, lws);
 
     cl_int error = CL_SUCCESS;
     if(eventPtr == nullptr){
