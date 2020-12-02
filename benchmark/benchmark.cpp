@@ -121,6 +121,75 @@ static inline uint64_t getTimeInUs() {
     return time;
 }
 
+std::vector<float> doBench(std::vector<Model>& models, int loop, int warmup = 10, int forward = MNN_FORWARD_CPU, bool only_inference = true,
+                           int numberThread = 4, int precision = 2) {
+    std::vector<std::shared_ptr<MNN::Interpreter>> nets;
+
+    for (int i = 0; i < models.size(); i++) {
+
+        auto revertor = std::unique_ptr<Revert>(new Revert(models[i].model_file.c_str()));
+        revertor->initialize();
+        auto modelBuffer = revertor->getBuffer();
+        const auto bufferSize = revertor->getBufferSize();
+        nets.push_back(std::shared_ptr<MNN::Interpreter>(MNN::Interpreter::createFromBuffer(modelBuffer, bufferSize)));
+    }
+
+    MNN::ScheduleConfig config;
+    MNN::MultiSession multiSession;
+    config.numThread = numberThread;
+    config.type = static_cast<MNNForwardType>(forward);
+    MNN::BackendConfig backendConfig;
+    backendConfig.precision = (MNN::BackendConfig::PrecisionMode)precision;
+    backendConfig.power = MNN::BackendConfig::Power_High;
+    config.backendConfig = &backendConfig;
+
+    std::vector<MNN::Session*> sessions;
+    std::vector<MNN::Tensor *> inputs, outputs;
+    std::vector<std::shared_ptr<MNN::Tensor>> givenTensors, expectedTensors;
+    std::set<MNN::SessionId> sessionIds;
+
+    for (int i = 0; i < models.size(); i++) {
+        MNN::Session *session = nets[i]->createSession(config);
+        sessions.push_back(session);
+        inputs.push_back(nets[i]->getSessionInput(session, NULL));
+        outputs.push_back(nets[i]->getSessionOutput(session, NULL));
+
+        givenTensors.push_back(std::shared_ptr<MNN::Tensor>(MNN::Tensor::createHostTensorFromDevice(inputs.back(), false)));
+        expectedTensors.push_back(std::shared_ptr<MNN::Tensor>(MNN::Tensor::createHostTensorFromDevice(outputs.back(), false)));
+
+        sessionIds.insert(multiSession.addSession(session));
+    }
+
+    multiSession.prepare();
+
+    for (int i = 0; i < warmup; ++i) {
+        for (int j = 0; j < models.size(); j++) {
+            inputs[j]->copyFromHostTensor(givenTensors[j].get());
+        }
+        multiSession.runParallel(sessionIds);
+        for (int j = 0; j < models.size(); j++) {
+            outputs[j]->copyToHostTensor(expectedTensors[j].get());
+        }
+    }
+
+    std::vector<float> costs;
+    for (int round = 0; round < loop; round++) {
+        auto timeBegin = getTimeInUs();
+
+        for (int j = 0; j < models.size(); j++) {
+            inputs[j]->copyFromHostTensor(givenTensors[j].get());
+        }
+        multiSession.runParallel(sessionIds);
+        for (int j = 0; j < models.size(); j++) {
+            outputs[j]->copyToHostTensor(expectedTensors[j].get());
+        }
+
+        auto timeEnd = getTimeInUs();
+        costs.push_back((timeEnd - timeBegin) / 1000.0);
+    }
+    return costs;
+}
+
 std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward = MNN_FORWARD_CPU, bool only_inference = true,
                            int numberThread = 4, int precision = 2, int batch = 1) {
     auto revertor = std::unique_ptr<Revert>(new Revert(model.model_file.c_str()));
@@ -162,12 +231,13 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
 
     multiSession.prepare();
 
-    const MNN::Backend *inBackend = net->getBackend(session, input);
+    std::cout << "Preparation end." << std::endl;
 
-    std::shared_ptr<MNN::Tensor> givenTensor(MNN::Tensor::createHostTensorFromDevice(input, false));
+    const MNN::Backend *inBackend = net->getBackend(session, input);
 
     auto outputTensor = net->getSessionOutput(session, NULL);
     auto outputTensor2 = net->getSessionOutput(session, NULL);
+    std::shared_ptr<MNN::Tensor> givenTensor(MNN::Tensor::createHostTensorFromDevice(input, false));
     std::shared_ptr<MNN::Tensor> expectTensor(MNN::Tensor::createHostTensorFromDevice(outputTensor, false));
     std::shared_ptr<MNN::Tensor> expectTensor2(MNN::Tensor::createHostTensorFromDevice(outputTensor2, false));
     // Warming up...
@@ -405,8 +475,11 @@ int main(int argc, const char *argv[]) {
     /* not called yet */
     // set_cpu_affinity();
 
-    for (auto &m : models) {
-        std::vector<float> costs = doBench(m, loop, warmup, forward, false, numberThread, precision, batch);
-        displayStats(m.name, costs);
-    }
+    //std::vector<float> costs = doBench(models, loop, warmup, forward, false, numberThread, precision);
+    //displayStats("all", costs);
+
+   for (auto &m : models) {
+       std::vector<float> costs = doBench(m, loop, warmup, forward, false, numberThread, precision, batch);
+       displayStats(m.name, costs);
+   }
 }
