@@ -43,6 +43,10 @@ const KernelContent* KernelCompiler::parse(std::string kernelName, std::string s
         size_t argsEndOffset = regexMatch.position();
         content->args = source.substr(argsStartOffset, argsEndOffset);
 
+        //int a = 0;
+        //if (kernelName == "conv_2d")
+        //    a++;
+
         // Parse args 
         {  
             // Add , for convinience to match last arg
@@ -55,9 +59,16 @@ const KernelContent* KernelCompiler::parse(std::string kernelName, std::string s
             });
         }
 
-        size_t contentStartOffset = source.find("{", argsEndOffset);
+        size_t contentStartOffset = source.find("{", argsStartOffset + argsEndOffset);
         size_t contentEndOffset = contentStartOffset + 1;
 
+        //if (a > 0) {
+        //    std::cout << "Args end offset" << std::endl;
+        //    std::cout << source.substr(argsStartOffset + argsEndOffset);
+        //    std::cout << "Content start offset" << std::endl;
+        //    std::cout << source.substr(contentStartOffset);
+        //}
+//
         int bracketCount = 1;
 
         while (bracketCount > 0) {
@@ -95,10 +106,12 @@ const KernelContent*  KernelCompiler::fuse(std::vector<const KernelContent* > ke
 
         std::string content = kernels[i]->content;
 
+        argsString += " ";
+
         // Add additional index to args
         for (auto arg : kernels[i]->pureArgs) {
             std::smatch match;
-            std::regex_search(argsString, match, std::regex{"\\W(" + arg + ")\\W*"});
+            std::regex_search(argsString, match, std::regex{"[^\\d\\w_](" + arg + ")[^\\d\\w_]"});
             argsString.replace(match[1].first, match[1].second, arg + std::to_string(i));
         }
 
@@ -110,7 +123,7 @@ const KernelContent*  KernelCompiler::fuse(std::vector<const KernelContent* > ke
         // Update arg names in a source
         for (auto arg : kernels[i]->pureArgs) {
             std::smatch match;
-            while (std::regex_search(content, match, std::regex{"[^\\d\\w](" + arg + ")[^\\d\\w]"})) {
+            while (std::regex_search(content, match, std::regex{"[^\\d\\w_](" + arg + ")[^\\d\\w_]"})) {
                 content.replace(match[1].first, match[1].second, arg + std::to_string(i));
             };
         }

@@ -19,6 +19,8 @@ public:
     virtual ~DepthwiseConvExecution();
 
     virtual ErrorCode onResize(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) override;
+    virtual ErrorCode onPrepare(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs, 
+                                cl::Kernel* kernel, uint32_t& argIdx, std::vector<uint32_t> offset) override;
     virtual ErrorCode onExecute(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) override;
     std::vector<uint32_t> depthwiseConvLocalWS(const std::vector<uint32_t> &gws, const uint32_t maxWorkGroupSize);
 
@@ -31,8 +33,6 @@ private:
     std::shared_ptr<Tensor> mFilter;
     cl::Kernel mKernel;
     uint32_t mMaxWorkGroupSize;
-    std::vector<uint32_t> mGlobalWorkSize{1, 1, 1};
-    std::vector<uint32_t> mLocalWorkSize{1, 1, 1, 1};
     OpenCLBackend *mOpenCLBackend;
 };
 

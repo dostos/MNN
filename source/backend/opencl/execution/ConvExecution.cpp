@@ -502,9 +502,22 @@ ConvExecution::~ConvExecution() {
 }
 
 ErrorCode ConvExecution::onResize(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) {
-#ifdef LOG_VERBOSE
+    uint32_t argIdx = 0;
+    return onPrepare(inputs, outputs, nullptr, argIdx, {});
+}
+
+ErrorCode ConvExecution::onPrepare(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs, cl::Kernel* kernel, uint32_t& argIdx, std::vector<uint32_t> offset) {
+    #ifdef LOG_VERBOSE
     MNN_PRINT("Start ConvExecution onResize !\n");
 #endif
+
+    if (kernel == nullptr) {
+        kernel = &mKernel;
+    } else {
+        int offset[2] = {offset[0], offset[1]};
+        kernel->setArg(argIdx++, sizeof(offset), offset);
+    }
+
     auto input  = inputs[0];
     auto output = outputs[0];
 
@@ -539,38 +552,34 @@ ErrorCode ConvExecution::onResize(const std::vector<Tensor *> &inputs, const std
 
     if (kernelHeight == kernelWidth && kernelHeight == 1 && mPaddings[0] == 0 && mPaddings[1] == 0) {
         if(mConv1x1Opt){
-
-            auto kernel             = &mKernel;
-            uint32_t idx            = 0;
-
             if(mUseLocalMem){
                 mGlobalWorkSize = {static_cast<uint32_t>(UP_DIV(outputShape.at(3), 4)), static_cast<uint32_t>(UP_DIV(outputShape.at(2), 4)),
                 static_cast<uint32_t>(outputShape.at(0) * outputShape.at(1))};
                 std::vector<uint32_t> lws{UNIT, UNIT, 1};
                 mLocalWorkSize = lws;
-                kernel->setArg(idx++, mGlobalWorkSize[0]);
-                kernel->setArg(idx++, mGlobalWorkSize[1]);
-                kernel->setArg(idx++, mGlobalWorkSize[2]);
-                kernel->setArg(idx++, openCLImage(input));
-                kernel->setArg(idx++, openCLImage(mFilter.get()));
-                kernel->setArg(idx++, openCLImage(mBias.get()));
-                kernel->setArg(idx++, openCLImage(output));
-                kernel->setArg(idx++, static_cast<int>(inputChannelBlocks));
-                kernel->setArg(idx++, height);
-                kernel->setArg(idx++, width);
+                kernel->setArg(argIdx++, mGlobalWorkSize[0]);
+                kernel->setArg(argIdx++, mGlobalWorkSize[1]);
+                kernel->setArg(argIdx++, mGlobalWorkSize[2]);
+                kernel->setArg(argIdx++, openCLImage(input));
+                kernel->setArg(argIdx++, openCLImage(mFilter.get()));
+                kernel->setArg(argIdx++, openCLImage(mBias.get()));
+                kernel->setArg(argIdx++, openCLImage(output));
+                kernel->setArg(argIdx++, static_cast<int>(inputChannelBlocks));
+                kernel->setArg(argIdx++, height);
+                kernel->setArg(argIdx++, width);
             }else{
                 mGlobalWorkSize = {static_cast<uint32_t>(UP_DIV(outputShape.at(3), 4) * UP_DIV(outputShape.at(2), 4)),
                            static_cast<uint32_t>(outputShape.at(0) * outputShape.at(1))};
-                kernel->setArg(idx++, mGlobalWorkSize[0]);
-                kernel->setArg(idx++, mGlobalWorkSize[1]);
-                kernel->setArg(idx++, UP_DIV(width, 4));
-                kernel->setArg(idx++, openCLImage(input));
-                kernel->setArg(idx++, *mKernelBuffer.get());
-                kernel->setArg(idx++, *mBiasBuffer.get());
-                kernel->setArg(idx++, openCLImage(output));
-                kernel->setArg(idx++, static_cast<int>(inputChannelBlocks));
-                kernel->setArg(idx++, height);
-                kernel->setArg(idx++, width);
+                kernel->setArg(argIdx++, mGlobalWorkSize[0]);
+                kernel->setArg(argIdx++, mGlobalWorkSize[1]);
+                kernel->setArg(argIdx++, UP_DIV(width, 4));
+                kernel->setArg(argIdx++, openCLImage(input));
+                kernel->setArg(argIdx++, *mKernelBuffer.get());
+                kernel->setArg(argIdx++, *mBiasBuffer.get());
+                kernel->setArg(argIdx++, openCLImage(output));
+                kernel->setArg(argIdx++, static_cast<int>(inputChannelBlocks));
+                kernel->setArg(argIdx++, height);
+                kernel->setArg(argIdx++, width);
                 
                 mLocalWorkSize          = conv2d1x1LocalWSOpt(mGlobalWorkSize, mMaxWorkGroupSize);
             }
@@ -581,22 +590,20 @@ ErrorCode ConvExecution::onResize(const std::vector<Tensor *> &inputs, const std
             static_cast<uint32_t>(UP_DIV(outputShape.at(3), 4) * static_cast<uint32_t>(UP_DIV(outputShape.at(2), 4))),
             static_cast<uint32_t>(outputShape.at(0) * outputShape.at(1))};
             
-            auto kernel             = &mKernel;
-            uint32_t idx            = 0;
             int inputImageShape[2]  = {inputHeight, inputWidth};
             int outputImageShape[2] = {height, width};
             int stideShape[2]       = {mStrides[0], mStrides[1]};
-            kernel->setArg(idx++, mGlobalWorkSize[0]);
-            kernel->setArg(idx++, mGlobalWorkSize[1]);
-            kernel->setArg(idx++, openCLImage(input));
-            kernel->setArg(idx++, openCLImage(mFilter.get()));
-            kernel->setArg(idx++, openCLImage(mBias.get()));
-            kernel->setArg(idx++, openCLImage(output));
-            kernel->setArg(idx++, sizeof(inputImageShape), inputImageShape);
-            kernel->setArg(idx++, static_cast<int>(inputChannelBlocks));
-            kernel->setArg(idx++, sizeof(outputImageShape), outputImageShape);
-            kernel->setArg(idx++, sizeof(stideShape), stideShape);
-            kernel->setArg(idx++, UP_DIV(width, 4));
+            kernel->setArg(argIdx++, mGlobalWorkSize[0]);
+            kernel->setArg(argIdx++, mGlobalWorkSize[1]);
+            kernel->setArg(argIdx++, openCLImage(input));
+            kernel->setArg(argIdx++, openCLImage(mFilter.get()));
+            kernel->setArg(argIdx++, openCLImage(mBias.get()));
+            kernel->setArg(argIdx++, openCLImage(output));
+            kernel->setArg(argIdx++, sizeof(inputImageShape), inputImageShape);
+            kernel->setArg(argIdx++, static_cast<int>(inputChannelBlocks));
+            kernel->setArg(argIdx++, sizeof(outputImageShape), outputImageShape);
+            kernel->setArg(argIdx++, sizeof(stideShape), stideShape);
+            kernel->setArg(argIdx++, UP_DIV(width, 4));
             mLocalWorkSize          = conv2d1x1LocalWS(mGlobalWorkSize, mMaxWorkGroupSize);
 
         }
@@ -610,22 +617,20 @@ ErrorCode ConvExecution::onResize(const std::vector<Tensor *> &inputs, const std
         int strideShape[2]      = {mStrides[0], mStrides[1]};
         int paddingShape[2]     = {mPaddings[0] / 2, mPaddings[1] / 2};
         int dilationShape[2]    = {mDilations[0], mDilations[1]};
-        uint32_t idx            = 0;
-        auto kernel             = &mKernel;
-        kernel->setArg(idx++, mGlobalWorkSize[0]);
-        kernel->setArg(idx++, mGlobalWorkSize[1]);
-        kernel->setArg(idx++, openCLImage(input));
-        kernel->setArg(idx++, openCLImage(mFilter.get()));
-        kernel->setArg(idx++, openCLImage(mBias.get()));
-        kernel->setArg(idx++, openCLImage(output));
-        kernel->setArg(idx++, sizeof(inputImageShape), inputImageShape);
-        kernel->setArg(idx++, inputChannelBlocks);
-        kernel->setArg(idx++, sizeof(outputImageShape), outputImageShape);
-        kernel->setArg(idx++, sizeof(kernelShape), kernelShape);
-        kernel->setArg(idx++, sizeof(strideShape), strideShape);
-        kernel->setArg(idx++, sizeof(paddingShape), paddingShape);
-        kernel->setArg(idx++, sizeof(dilationShape), dilationShape);
-        kernel->setArg(idx++, UP_DIV(width, 4));
+        kernel->setArg(argIdx++, mGlobalWorkSize[0]);
+        kernel->setArg(argIdx++, mGlobalWorkSize[1]);
+        kernel->setArg(argIdx++, openCLImage(input));
+        kernel->setArg(argIdx++, openCLImage(mFilter.get()));
+        kernel->setArg(argIdx++, openCLImage(mBias.get()));
+        kernel->setArg(argIdx++, openCLImage(output));
+        kernel->setArg(argIdx++, sizeof(inputImageShape), inputImageShape);
+        kernel->setArg(argIdx++, inputChannelBlocks);
+        kernel->setArg(argIdx++, sizeof(outputImageShape), outputImageShape);
+        kernel->setArg(argIdx++, sizeof(kernelShape), kernelShape);
+        kernel->setArg(argIdx++, sizeof(strideShape), strideShape);
+        kernel->setArg(argIdx++, sizeof(paddingShape), paddingShape);
+        kernel->setArg(argIdx++, sizeof(dilationShape), dilationShape);
+        kernel->setArg(argIdx++, UP_DIV(width, 4));
         
         mLocalWorkSize          = conv2dGeneralLocalWS(mGlobalWorkSize, kernelHeight * kernelWidth, mMaxWorkGroupSize);
         

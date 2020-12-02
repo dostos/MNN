@@ -19,13 +19,13 @@ public:
     virtual ~DepthwiseDeconvExecution();
 
     virtual ErrorCode onResize(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) override;
+    virtual ErrorCode onPrepare(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs, 
+                                cl::Kernel* kernel, uint32_t& argIdx, std::vector<uint32_t> offset) override;
     virtual ErrorCode onExecute(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) override;
 
 private:
     const Convolution2DCommon *mConv2dCommonParams;
     const Convolution2D *mCon2dParams;
-    std::vector<uint32_t> mLWS{0, 0, 0, 0};
-    std::vector<uint32_t> mGWS{0, 0, 0, 0};
     std::vector<int> mStrides{1, 1};
     std::vector<int> mPaddings{0, 0};
     std::vector<int> mDilations{1, 1};

@@ -1,4 +1,4 @@
-__kernel void deconv_2d(GLOBAL_SIZE_3_DIMS(0) __read_only image2d_t input, __read_only image2d_t weights,
+__kernel void deconv_2d(GLOBAL_SIZE_3_DIMS(0) __read_only image2d_t input, __read_only image2d_t in_weights,
 #ifdef BIAS
                         __read_only image2d_t bias,
 #endif
@@ -48,10 +48,10 @@ __kernel void deconv_2d(GLOBAL_SIZE_3_DIMS(0) __read_only image2d_t input, __rea
             for (int k_x = deal_kernel_width; k_x >= 0; k_x -= stride_shape.y) {
                 kernel_y = mad24(k_y, kernel_shape.y, k_x);
                 kernel_y = mad24(out_channel_blocks_idx, kernel_size, kernel_y);
-                weights0 = RI_F(weights, SAMPLER, (int2)(kernel_x_0, kernel_y));
-                weights1 = RI_F(weights, SAMPLER, (int2)(kernel_x_1, kernel_y));
-                weights2 = RI_F(weights, SAMPLER, (int2)(kernel_x_2, kernel_y));
-                weights3 = RI_F(weights, SAMPLER, (int2)(kernel_x_3, kernel_y));
+                weights0 = RI_F(in_weights, SAMPLER, (int2)(kernel_x_0, kernel_y));
+                weights1 = RI_F(in_weights, SAMPLER, (int2)(kernel_x_1, kernel_y));
+                weights2 = RI_F(in_weights, SAMPLER, (int2)(kernel_x_2, kernel_y));
+                weights3 = RI_F(in_weights, SAMPLER, (int2)(kernel_x_3, kernel_y));
 
                 int in_idx = mul24(ic, input_shape.y);
                 int in_width_value0 = in_width0;                                                           \

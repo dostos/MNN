@@ -2,7 +2,7 @@
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 #endif
 
-#define READ_INPUT_IMAGE(i, base)                                                                         \
+#define READ_INPUT_IMAGE(i, input, base, input_shape)                                                                         \
     int in_width_value##i = in_width##i + base;                                                           \
     in_width_value##i =                                                                                   \
         select(in_idx + in_width_value##i, -1, (in_width_value##i < 0 || in_width_value##i >= input_shape.y)); \

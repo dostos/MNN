@@ -36,7 +36,7 @@ __kernel void depthwise_deconv2d(GLOBAL_SIZE_3_DIMS(0) __read_only image2d_t inp
             in_width0 = in_width_idx;
 
             in_idx = mul24(out_channel_blocks_idx, input_shape.y);
-            READ_INPUT_IMAGE(0, 0);
+            READ_INPUT_IMAGE(0, input, 0, input_shape);
 
             kernel_image_x = mad24(k_y, kernel_shape.y, k_x);
             weight         = read_imagef(weights, SAMPLER, (int2)(kernel_image_x, out_channel_blocks_idx));

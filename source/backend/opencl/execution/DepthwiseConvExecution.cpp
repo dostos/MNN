@@ -80,6 +80,20 @@ DepthwiseConvExecution::~DepthwiseConvExecution() {
 }
 
 ErrorCode DepthwiseConvExecution::onResize(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) {
+    uint32_t argIdx = 0;
+    return onPrepare(inputs, outputs, nullptr, argIdx, {});
+}
+
+ErrorCode DepthwiseConvExecution::onPrepare(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs, 
+                            cl::Kernel* kernel, uint32_t& argIdx, std::vector<uint32_t> offset) {
+
+    if (kernel == nullptr) {
+        kernel = &mKernel;
+    } else {
+        int offset[2] = {offset[0], offset[1]};
+        kernel->setArg(argIdx++, sizeof(offset), offset);
+    }
+
     auto input                   = inputs[0];
     auto output                  = outputs[0];
     std::vector<int> inputShape  = tensorShapeFormat(input);
@@ -110,8 +124,6 @@ ErrorCode DepthwiseConvExecution::onResize(const std::vector<Tensor *> &inputs, 
     const int inputChannelBlocks = UP_DIV(inputChannels, 4);
     const int filterHeight       = mCon2dParams->common()->kernelY();
     const int filterWidth        = mCon2dParams->common()->kernelX();
-    uint32_t idx                 = 0;
-    auto kernel                  = &mKernel;
 
     int inputImageShape[2]  = {inputHeight, inputWidth};
     int outputImageShape[2] = {outputHeight, outputWidth};
@@ -120,20 +132,20 @@ ErrorCode DepthwiseConvExecution::onResize(const std::vector<Tensor *> &inputs, 
     int kernelShape[2]      = {filterHeight, filterWidth};
     int dilationShape[2]    = {mDilations[0], mDilations[1]};
 
-    kernel->setArg(idx++, mGlobalWorkSize[0]);
-    kernel->setArg(idx++, mGlobalWorkSize[1]);
-    kernel->setArg(idx++, openCLImage(input));
-    kernel->setArg(idx++, openCLImage(mFilter.get()));
-    kernel->setArg(idx++, openCLImage(mBias.get()));
-    kernel->setArg(idx++, openCLImage(output));
-    kernel->setArg(idx++, sizeof(inputImageShape), inputImageShape);
-    kernel->setArg(idx++, static_cast<int>(inputChannelBlocks));
-    kernel->setArg(idx++, sizeof(outputImageShape), outputImageShape);
-    kernel->setArg(idx++, sizeof(kernelShape), kernelShape);
-    kernel->setArg(idx++, sizeof(paddingShape), paddingShape);
+    kernel->setArg(argIdx++, mGlobalWorkSize[0]);
+    kernel->setArg(argIdx++, mGlobalWorkSize[1]);
+    kernel->setArg(argIdx++, openCLImage(input));
+    kernel->setArg(argIdx++, openCLImage(mFilter.get()));
+    kernel->setArg(argIdx++, openCLImage(mBias.get()));
+    kernel->setArg(argIdx++, openCLImage(output));
+    kernel->setArg(argIdx++, sizeof(inputImageShape), inputImageShape);
+    kernel->setArg(argIdx++, static_cast<int>(inputChannelBlocks));
+    kernel->setArg(argIdx++, sizeof(outputImageShape), outputImageShape);
+    kernel->setArg(argIdx++, sizeof(kernelShape), kernelShape);
+    kernel->setArg(argIdx++, sizeof(paddingShape), paddingShape);
     if (mStrides[0] != 1 || mStrides[1] != 1 || mDilations[0] != 1 || mDilations[1] != 1) {
-        kernel->setArg(idx++, sizeof(dilationShape), dilationShape);
-        kernel->setArg(idx++, sizeof(strideShape), strideShape);
+        kernel->setArg(argIdx++, sizeof(dilationShape), dilationShape);
+        kernel->setArg(argIdx++, sizeof(strideShape), strideShape);
     }
     
     mLocalWorkSize  = depthwiseConvLocalWS(mGlobalWorkSize, mMaxWorkGroupSize);

@@ -114,7 +114,7 @@ void conv_2d_1x1_mali(GLOBAL_SIZE_2_DIMS(0) __private const int out_w_blocks, __
 
 }
 
-__kernel void conv_2d_1x1_local(GLOBAL_SIZE_3_DIMS(0) __read_only image2d_t input, __read_only image2d_t weights,
+__kernel void conv_2d_1x1_local(GLOBAL_SIZE_3_DIMS(0) __read_only image2d_t input, __read_only image2d_t in_weights,
                           __read_only image2d_t bias,
                           __write_only image2d_t output,
                           __private const int in_c_block, __private const int out_h,
@@ -170,10 +170,10 @@ __kernel void conv_2d_1x1_local(GLOBAL_SIZE_3_DIMS(0) __read_only image2d_t inpu
             __private int kernel_cx4 = mad24(k, 4, kernel_index);
             __private int local_idx = col_x_unit + k;
 
-            weights0 = RI_F(weights, SAMPLER, (int2)(kernel_cx4++, out_c_idx));
-            weights1 = RI_F(weights, SAMPLER, (int2)(kernel_cx4++, out_c_idx));
-            weights2 = RI_F(weights, SAMPLER, (int2)(kernel_cx4++, out_c_idx));
-            weights3 = RI_F(weights, SAMPLER, (int2)(kernel_cx4++, out_c_idx));
+            weights0 = RI_F(in_weights, SAMPLER, (int2)(kernel_cx4++, out_c_idx));
+            weights1 = RI_F(in_weights, SAMPLER, (int2)(kernel_cx4++, out_c_idx));
+            weights2 = RI_F(in_weights, SAMPLER, (int2)(kernel_cx4++, out_c_idx));
+            weights3 = RI_F(in_weights, SAMPLER, (int2)(kernel_cx4++, out_c_idx));
 
             CALCULATE_OUTPUT_OPT(0);
             CALCULATE_OUTPUT_OPT(1);
@@ -223,7 +223,7 @@ __kernel
 #if SET_ATTRIBUTE
 __attribute__((work_group_size_hint(16, 16, 1)))
 #endif
-void conv_2d_1x1(GLOBAL_SIZE_2_DIMS(0) __read_only image2d_t input, __read_only image2d_t weights,
+void conv_2d_1x1(GLOBAL_SIZE_2_DIMS(0) __read_only image2d_t input, __read_only image2d_t in_weights,
                           __read_only image2d_t bias,
                           __write_only image2d_t output,
                           __private const int2 input_shape,
@@ -273,10 +273,10 @@ void conv_2d_1x1(GLOBAL_SIZE_2_DIMS(0) __read_only image2d_t input, __read_only 
         in2 = RI_F(input, SAMPLER, (int2)(input_width_base + intput_width_idx2, input_height_block_idx));
         in3 = RI_F(input, SAMPLER, (int2)(input_width_base + intput_width_idx3, input_height_block_idx));
 
-        weights0 = RI_F(weights, SAMPLER, (int2)(weights_width_base + 0, output_channel_block_idx));
-        weights1 = RI_F(weights, SAMPLER, (int2)(weights_width_base + 1, output_channel_block_idx));
-        weights2 = RI_F(weights, SAMPLER, (int2)(weights_width_base + 2, output_channel_block_idx));
-        weights3 = RI_F(weights, SAMPLER, (int2)(weights_width_base + 3, output_channel_block_idx));
+        weights0 = RI_F(in_weights, SAMPLER, (int2)(weights_width_base + 0, output_channel_block_idx));
+        weights1 = RI_F(in_weights, SAMPLER, (int2)(weights_width_base + 1, output_channel_block_idx));
+        weights2 = RI_F(in_weights, SAMPLER, (int2)(weights_width_base + 2, output_channel_block_idx));
+        weights3 = RI_F(in_weights, SAMPLER, (int2)(weights_width_base + 3, output_channel_block_idx));
 
         CALCULATE_OUTPUT(0);
         CALCULATE_OUTPUT(1);
@@ -324,7 +324,7 @@ __kernel
 #if SET_ATTRIBUTE
 __attribute__((work_group_size_hint(16, 16, 1)))
 #endif
-void conv_2d(GLOBAL_SIZE_2_DIMS(0) __read_only image2d_t input, __read_only image2d_t weights,
+void conv_2d(GLOBAL_SIZE_2_DIMS(0) __read_only image2d_t input, __read_only image2d_t in_weights,
 #ifdef BIAS
                       __read_only image2d_t bias,
 #endif
@@ -376,15 +376,15 @@ void conv_2d(GLOBAL_SIZE_2_DIMS(0) __read_only image2d_t input, __read_only imag
             int in_hb_value = iy + batch_idx;
             for (int w = 0; w < weights_shape.y; w++) {
                 int input_width_base = mul24(w, dilation_shape.y);
-                READ_INPUT_IMAGE(0, input_width_base);
-                READ_INPUT_IMAGE(1, input_width_base);
-                READ_INPUT_IMAGE(2, input_width_base);
-                READ_INPUT_IMAGE(3, input_width_base);
+                READ_INPUT_IMAGE(0, input, input_width_base, input_shape);
+                READ_INPUT_IMAGE(1, input, input_width_base, input_shape);
+                READ_INPUT_IMAGE(2, input, input_width_base, input_shape);
+                READ_INPUT_IMAGE(3, input, input_width_base, input_shape);
 
-                weights0 = RI_F(weights, SAMPLER, (int2)(weights_x_idx + 0, weights_y_idx)); 
-                weights1 = RI_F(weights, SAMPLER, (int2)(weights_x_idx + 1, weights_y_idx)); 
-                weights2 = RI_F(weights, SAMPLER, (int2)(weights_x_idx + 2, weights_y_idx)); 
-                weights3 = RI_F(weights, SAMPLER, (int2)(weights_x_idx + 3, weights_y_idx++));
+                weights0 = RI_F(in_weights, SAMPLER, (int2)(weights_x_idx + 0, weights_y_idx)); 
+                weights1 = RI_F(in_weights, SAMPLER, (int2)(weights_x_idx + 1, weights_y_idx)); 
+                weights2 = RI_F(in_weights, SAMPLER, (int2)(weights_x_idx + 2, weights_y_idx)); 
+                weights3 = RI_F(in_weights, SAMPLER, (int2)(weights_x_idx + 3, weights_y_idx++));
 
                 CALCULATE_OUTPUT(0);
                 CALCULATE_OUTPUT(1);

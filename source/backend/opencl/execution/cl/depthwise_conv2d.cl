@@ -146,10 +146,10 @@ void depthwise_conv2d(GLOBAL_SIZE_2_DIMS(0) __read_only image2d_t input, __read_
             FLOAT4 in0, in1, in2, in3;
             int inWidthIdx = mul24(kw, dilationShape.y);
 
-            READ_INPUT_IMAGE(0, inWidthIdx);
-            READ_INPUT_IMAGE(1, inWidthIdx);
-            READ_INPUT_IMAGE(2, inWidthIdx);
-            READ_INPUT_IMAGE(3, inWidthIdx);
+            READ_INPUT_IMAGE(0, input, inWidthIdx, input_shape);
+            READ_INPUT_IMAGE(1, input, inWidthIdx, input_shape);
+            READ_INPUT_IMAGE(2, input, inWidthIdx, input_shape);
+            READ_INPUT_IMAGE(3, input, inWidthIdx, input_shape);
 
             FLOAT4 weights = RI_F(filter, SAMPLER, (int2)(filterIdx, inChannelBlockIdx));
 
