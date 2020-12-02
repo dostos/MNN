@@ -31,6 +31,8 @@ ErrorCode MultiExecution::onPrepare(const MultiExecutionTensors &inputs, const M
 
     MNN_PRINT("%s", content->source.c_str());
 
+    mKernel = mBackend->getOpenCLRuntime()->buildKernelFromSource(content->name, content->source, {});
+
     // Compile kernel
 
     return NO_ERROR;

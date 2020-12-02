@@ -94,7 +94,7 @@ OpenCLRuntime::OpenCLRuntime(bool permitFloat16) {
                 std::string adrenoVersion = deviceVersion.substr(deviceVersion.size()-3);
                 //printf("Adreno Version:%s\n", adrenoVersion.c_str());
                 if(adrenoVersion > "300" && adrenoVersion < "512") {
-                    isSetWorkGroupAttribute = false;
+                    mIsSetWorkGroupAttribute = false;
                 }
             } else if (deviceName.find("Mali") != std::string::npos) {
                 mGpuType = MALI;
@@ -275,18 +275,7 @@ bool OpenCLRuntime::buildProgram(const std::string &buildOptionsStr, cl::Program
 
 cl::Kernel OpenCLRuntime::buildKernel(const std::string &programName, const std::string &kernelName,
                                       const std::set<std::string> &buildOptions) {
-    std::string buildOptionsStr;
-    if (mIsSupportedFP16) {
-        buildOptionsStr = "-DFLOAT=half -DFLOAT4=half4 -DFLOAT16=half16 -DRI_F=read_imageh -DWI_F=write_imageh -DCONVERT_FLOAT4=convert_half4 -DMNN_SUPPORT_FP16";
-    } else {
-        buildOptionsStr = "-DFLOAT=float -DFLOAT4=float4 -DRI_F=read_imagef -DFLOAT16=float16 -DWI_F=write_imagef -DCONVERT_FLOAT4=convert_float4";
-    }
-    
-    if(isSetWorkGroupAttribute) {
-        buildOptionsStr += " -DSET_ATTRIBUTE=true";
-    } else {
-        buildOptionsStr += " -DSET_ATTRIBUTE=false";
-    }
+    std::string buildOptionsStr = getCommonBuildString();
     for (auto &option : buildOptions) {
         buildOptionsStr += " " + option;
     }
@@ -310,6 +299,43 @@ cl::Kernel OpenCLRuntime::buildKernel(const std::string &programName, const std:
     cl::Kernel kernel = cl::Kernel(program, kernelName.c_str(), &err);
     MNN_CHECK_CL_SUCCESS(err);
     return kernel;
+}
+
+cl::Kernel OpenCLRuntime::buildKernelFromSource(const std::string &kernelName, const std::string &source,
+                                      const std::set<std::string> &buildOptions) {
+    if (mFusedKernelMap.find(kernelName) == mFusedKernelMap.end()) {
+        std::string buildOptionsStr = getCommonBuildString();
+        for (auto &option : buildOptions) {
+            buildOptionsStr += " " + option;
+        }
+
+        std::string kernelSource = getProgramSource("common") + "\n" + source;
+        cl::Program program(context(), kernelSource);
+        cl_int err;
+        cl::Kernel kernel = cl::Kernel(program, kernelName.c_str(), &err);
+        MNN_CHECK_CL_SUCCESS(err);
+        mFusedKernelMap[kernelName] = kernel;
+    }
+
+    return mFusedKernelMap[kernelName];
+}
+
+std::string OpenCLRuntime::getCommonBuildString() const {
+    std::string buildOptionsStr = mDefaultBuildParams;
+    if (mIsSupportedFP16) {
+        buildOptionsStr = "-DFLOAT=half -DFLOAT4=half4 -DFLOAT16=half16 -DRI_F=read_imageh -DWI_F=write_imageh -DCONVERT_FLOAT4=convert_half4 -DMNN_SUPPORT_FP16";
+    }
+    else {
+        buildOptionsStr = "-DFLOAT=float -DFLOAT4=float4 -DRI_F=read_imagef -DFLOAT16=float16 -DWI_F=write_imagef -DCONVERT_FLOAT4=convert_float4";
+    }
+
+    if(mIsSetWorkGroupAttribute) {
+        buildOptionsStr += " -DSET_ATTRIBUTE=true";
+    } else {
+        buildOptionsStr += " -DSET_ATTRIBUTE=false";
+    }
+
+    return buildOptionsStr;
 }
 
 std::string OpenCLRuntime::getProgramSource(const std::string &programName) const {

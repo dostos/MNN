@@ -2,6 +2,7 @@
 #define OpenCLMultiExecution_hpp
 
 #include "core/MultiExecution.hpp"
+#include "backend/opencl/core/runtime/OpenCLRuntime.hpp"
 
 namespace MNN {
 namespace OpenCL {
@@ -18,7 +19,7 @@ public:
 
 private:
     OpenCLBackend *mBackend;
-    
+    cl::Kernel mKernel;
 };
 }
 }

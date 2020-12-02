@@ -72,6 +72,10 @@ public:
     ::cl::Kernel buildKernel(const std::string &programName, const std::string &kernelName,
                              const std::set<std::string> &buildOptions);
 
+                             
+    ::cl::Kernel buildKernelFromSource(const std::string &kernelName, const std::string &source, 
+                             const std::set<std::string> &buildOptions);
+
     std::string getProgramSource(const std::string &programName) const;
 
     std::vector<size_t> getMaxImage2DSize();
@@ -90,12 +94,15 @@ private:
     bool buildProgram(const std::string &buildOptionsStr, cl::Program *program);
     bool getDeviceSupportsExtension(const cl::Device &device, const char *extensionName);
 
+    std::string getCommonBuildString() const;
+
 private:
     std::shared_ptr<::cl::Context> mContext;
     std::shared_ptr<::cl::Device> mFirstGPUDevicePtr;
     std::shared_ptr<::cl::CommandQueue> mCommandQueuePtr;
     std::shared_ptr<OpenCL::KernelCompiler> mKernelCompiler;
     std::map<std::string, ::cl::Program> mBuildProgramMap;
+    std::map<std::string, ::cl::Kernel> mFusedKernelMap;
     uint64_t mGPUGlobalMemeryCacheSize;
     uint32_t mGPUComputeUnits;
     uint32_t mMaxFreq;
@@ -105,7 +112,7 @@ private:
     bool mSupportDotInt8 = false;
     bool mSupportDotAccInt8 = false;
     GpuType mGpuType;
-    bool isSetWorkGroupAttribute = true;
+    bool mIsSetWorkGroupAttribute = true;
     std::string mDefaultBuildParams;
     float mFlops = 4.0f;
     bool mIsCreateError{false};
