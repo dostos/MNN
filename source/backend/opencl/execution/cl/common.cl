@@ -30,6 +30,9 @@
         return;                                                                                   \
     }
 
+#define GLOBAL_ID_CONDITION_2_DIMS(i) \
+    (offset##i.x > get_global_id(0) && offset##i.y > get_global_id(1))
+
 #define GLOBAL_ID_CONDITION_3_DIMS(i) \
     (offset##i.x > get_global_id(0) && offset##i.y > get_global_id(1) && offset##i.z > get_global_id(2))
 

@@ -102,7 +102,8 @@ const KernelContent*  KernelCompiler::fuse(std::vector<const KernelContent* > ke
             argsString.replace(match[1].first, match[1].second, arg + std::to_string(i));
         }
 
-        argsString = "__private const int3 offset" + std::to_string(i) + ",\n" + argsString;
+        // TODO : Support 3D
+        argsString = "__private const int2 offset" + std::to_string(i) + ",\n" + argsString;
 
         fusedArgs += argsString + (i == kernels.size() - 1 ? "" : ",\n");
 
@@ -114,8 +115,9 @@ const KernelContent*  KernelCompiler::fuse(std::vector<const KernelContent* > ke
             };
         }
 
+        // TODO : Support 3D
         // Add gws indexing checker
-        content = std::string(i == 0 ? "if" : "else if") + " GLOBAL_ID_CONDITION_3_DIMS(" + std::to_string(i) + ")" + content;
+        content = std::string(i == 0 ? "if" : "else if") + " GLOBAL_ID_CONDITION_2_DIMS(" + std::to_string(i) + ")" + content;
 
         fusedContents += content;
     }
