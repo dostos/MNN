@@ -297,6 +297,12 @@ cl::Kernel OpenCLRuntime::buildKernel(const std::string &programName, const std:
 
     cl_int err;
     cl::Kernel kernel = cl::Kernel(program, kernelName.c_str(), &err);
+    if (err != CL_SUCCESS) {
+        if (program.getBuildInfo<CL_PROGRAM_BUILD_STATUS>(*mFirstGPUDevicePtr) == CL_BUILD_ERROR) {
+            std::string buildLog = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(*mFirstGPUDevicePtr);
+            MNN_PRINT("Program build log: %s \n", buildLog.c_str());
+        }
+    }
     MNN_CHECK_CL_SUCCESS(err);
     return kernel;
 }
@@ -311,6 +317,7 @@ cl::Kernel OpenCLRuntime::buildKernelFromSource(const std::string &kernelName, c
 
         std::string kernelSource = getProgramSource("common") + "\n" + source;
         cl::Program program(context(), kernelSource);
+        buildProgram(buildOptionsStr, &program);
         cl_int err;
         cl::Kernel kernel = cl::Kernel(program, kernelName.c_str(), &err);
         MNN_CHECK_CL_SUCCESS(err);

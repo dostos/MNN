@@ -65,7 +65,7 @@ const KernelContent* KernelCompiler::parse(std::string kernelName, std::string s
             bracketCount += source[contentEndOffset++] == '{' ? 1 : -1;
         };
 
-        content->content = source.substr(contentStartOffset - 1, contentEndOffset - contentStartOffset + 1);
+        content->content = source.substr(contentStartOffset - 1, contentEndOffset - contentStartOffset + 2);
         mContentCaches[kernelName] = content;
         return content;
     }
@@ -95,14 +95,18 @@ const KernelContent*  KernelCompiler::fuse(std::vector<const KernelContent* > ke
 
         std::string content = kernels[i]->content;
 
+        // Add additional index to args
         for (auto arg : kernels[i]->pureArgs) {
             std::smatch match;
             std::regex_search(argsString, match, std::regex{"\\W(" + arg + ")\\W*"});
             argsString.replace(match[1].first, match[1].second, arg + std::to_string(i));
         }
 
+        argsString = "__private const int3 offset" + std::to_string(i) + ",\n" + argsString;
+
         fusedArgs += argsString + (i == kernels.size() - 1 ? "" : ",\n");
 
+        // Update arg names in a source
         for (auto arg : kernels[i]->pureArgs) {
             std::smatch match;
             while (std::regex_search(content, match, std::regex{"[^\\d\\w](" + arg + ")[^\\d\\w]"})) {
@@ -110,10 +114,13 @@ const KernelContent*  KernelCompiler::fuse(std::vector<const KernelContent* > ke
             };
         }
 
+        // Add gws indexing checker
+        content = std::string(i == 0 ? "if" : "else if") + " GLOBAL_ID_CONDITION_3_DIMS(" + std::to_string(i) + ")" + content;
+
         fusedContents += content;
     }
 
-    std::string source = prefix + fusedArgs + ")\n {" + fusedContents + "\n}";
+    std::string source = prefix + fusedArgs + ")\n {\n" + fusedContents + "}";
 
     KernelContent *fusedKernel = new KernelContent(fusedName,source);
     fusedKernel->args = fusedArgs;

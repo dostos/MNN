@@ -25,11 +25,13 @@
         return;                                                     \
     }
 
-
 #define DEAL_NON_UNIFORM_DIM3(i, offset1, offset2, offset3, input1, input2, input3)                                             \
     if (input1 - offset1 >= global_size_dim0##i || input2 - offset2 >= global_size_dim1##i || input3 - offset3 >= global_size_dim2##i) { \
         return;                                                                                   \
     }
+
+#define GLOBAL_ID_CONDITION_3_DIMS(i) \
+    (offset##i.x > get_global_id(0) && offset##i.y > get_global_id(1) && offset##i.z > get_global_id(2))
 
 #define GLOBAL_SIZE_2_DIMS(i) __private const int global_size_dim0##i, __private const int global_size_dim1##i,
 
