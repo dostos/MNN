@@ -320,8 +320,12 @@ cl::Kernel OpenCLRuntime::buildKernelFromSource(const std::string &kernelName, c
         buildProgram(buildOptionsStr, &program);
         cl_int err;
         cl::Kernel kernel = cl::Kernel(program, kernelName.c_str(), &err);
-        MNN_CHECK_CL_SUCCESS(err);
-        mFusedKernelMap[kernelName] = kernel;
+        if (err != CL_SUCCESS) {
+            MNN_PRINT("%s", source.c_str());                         
+            MNN_PRINT("ERROR CODE : %d %s \n", (int)err, getErrorString(err)); 
+            MNN_ASSERT(false);        
+        } else
+            mFusedKernelMap[kernelName] = kernel;
     }
 
     return mFusedKernelMap[kernelName];
