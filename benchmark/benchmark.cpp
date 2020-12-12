@@ -211,17 +211,12 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
 
     std::vector<float> costs;
     MNN::Session *session = net->createSession(config);
-    MNN::Session *session2 = net->createSession(config);
 
     MNN::Tensor *input = net->getSessionInput(session, NULL);
-    MNN::Tensor *input2 = net->getSessionInput(session2, NULL);
 
     MNN::SessionId id = multiSession.addSession(session);
-    MNN::SessionId id2 =multiSession.addSession(session2);
 
     auto inputShape = input->shape();
-
-    std::cout << "Input shape : " << inputShape[0] << " " << inputShape[1] << " " << inputShape[2] << " " << inputShape[3] << " " << std::endl;
 
     if (inputShape[0] != batch) {
         inputShape[0] = batch;
@@ -243,20 +238,16 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
     // Warming up...
     for (int i = 0; i < warmup; ++i) {
         input->copyFromHostTensor(givenTensor.get());
-        input2->copyFromHostTensor(givenTensor.get());
-        multiSession.runParallel({id, id2});
+        session->run();
         outputTensor->copyToHostTensor(expectTensor.get());
-        outputTensor2->copyToHostTensor(expectTensor2.get());
     }
 
     for (int round = 0; round < loop; round++) {
         auto timeBegin = getTimeInUs();
 
         input->copyFromHostTensor(givenTensor.get());
-        input2->copyFromHostTensor(givenTensor.get());
-        multiSession.runParallel({id, id2});
+        session->run();
         outputTensor->copyToHostTensor(expectTensor.get());
-        outputTensor2->copyToHostTensor(expectTensor2.get());
 
         auto timeEnd = getTimeInUs();
         costs.push_back((timeEnd - timeBegin) / 1000.0);
@@ -475,8 +466,8 @@ int main(int argc, const char *argv[]) {
     /* not called yet */
     // set_cpu_affinity();
 
-    //std::vector<float> costs = doBench(models, loop, warmup, forward, false, numberThread, precision);
-    //displayStats("all", costs);
+    std::vector<float> costs = doBench(models, loop, warmup, forward, false, numberThread, precision);
+    displayStats("all", costs);
 
    for (auto &m : models) {
        std::vector<float> costs = doBench(m, loop, warmup, forward, false, numberThread, precision, batch);
