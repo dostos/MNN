@@ -100,7 +100,7 @@ Executor::Executor(std::shared_ptr<Backend> backend) {
         info.type = MNN_FORWARD_CPU;
         info.numThread = 1;
         auto creator = MNNGetExtraBackendCreator(MNN_FORWARD_CPU);
-        mBackupBackend.reset(creator->onCreate(info));
+        mBackupBackend = creator->onCreate(info);
     }
     _resetCache();
 #ifdef MNN_EXPR_ENABLE_PROFILER

@@ -94,7 +94,6 @@ static const Tensor* createHostPlanar(const Tensor* source) {
             info.type    = MNN_FORWARD_CPU;
             auto backend = MNNGetExtraBackendCreator(MNN_FORWARD_CPU)->onCreate(info);
             backend->onCopyBuffer(source, result);
-            delete backend;
         }
         return result;
     } else {
