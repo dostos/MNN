@@ -76,29 +76,31 @@ ErrorCode MultiPipeline::run() {
 MultiUnit::MultiUnit(std::vector<std::vector<Unit*>> units, Backend* backend)
     :mUnits(units), mBackend(backend), mMultiExecution(nullptr) {
     bool supportMultiExecution = true;
+    // Fuse when there is multiple units
+    if (mUnits.size() > 1) {
+        std::vector<std::vector<Execution *>> multiExecutions;
 
-    std::vector<std::vector<Execution *>> multiExecutions;
+        for (auto units : mUnits) {
+            std::vector<std::vector<Tensor *>> subPipelineInput, subPipelineOutput;
+            std::vector<Execution *> executions;
+            for (auto unit : units) {
+                subPipelineInput.push_back(unit->mInputs);
+                subPipelineOutput.push_back(unit->mOutputs);
+                executions.push_back(unit->mExecution.get());
+                supportMultiExecution &= unit->mExecution->fusionable();
+            }
 
-    for (auto units : mUnits) {
-        std::vector<std::vector<Tensor *>> subPipelineInput, subPipelineOutput;
-        std::vector<Execution *> executions;
-        for (auto unit : units) {
-            subPipelineInput.push_back(unit->mInputs);
-            subPipelineOutput.push_back(unit->mOutputs);
-            executions.push_back(unit->mExecution.get());
-            supportMultiExecution &= unit->mExecution->fusionable();
+            mInput.push_back(subPipelineInput);
+            mOutput.push_back(subPipelineOutput);
+            multiExecutions.push_back(executions);
         }
 
-        mInput.push_back(subPipelineInput);
-        mOutput.push_back(subPipelineOutput);
-        multiExecutions.push_back(executions);
-    }
-
-    if (supportMultiExecution) {
-        auto creator = MultiExecution::getMultiExecutionCreator(backend->type());
-        if (creator) {
-            // merge ops & prepare kernel
-            mMultiExecution = std::shared_ptr<MultiExecution>(creator->onCreate(multiExecutions, backend));
+        if (supportMultiExecution) {
+            auto creator = MultiExecution::getMultiExecutionCreator(backend->type());
+            if (creator) {
+                // merge ops & prepare kernel
+                mMultiExecution = std::shared_ptr<MultiExecution>(creator->onCreate(multiExecutions, backend));
+            }
         }
     }
 }
