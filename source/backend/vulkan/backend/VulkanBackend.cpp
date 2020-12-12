@@ -464,7 +464,7 @@ static bool _testVulkan() {
 // –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
 class VulkanBackendCreator : public BackendCreator {
-    virtual Backend* onCreate(const Backend::Info& info) const {
+    virtual std::shared_ptr<Backend> onCreate(const Backend::Info& info) const {
         MNNVulkanContext* context = nullptr;
         if (InitVulkan()) {
             if (_testVulkan()) {
@@ -472,9 +472,8 @@ class VulkanBackendCreator : public BackendCreator {
                     MNN_PRINT("Use user's vulkan context\n");
                     context = static_cast<MNNVulkanContext*>(info.user->sharedContext);
                 }
-                auto backend = new VulkanBackend(context, info);
+                auto backend = std::shared_ptr<Backend>(new VulkanBackend(context, info));
                 if (!backend->success()) {
-                    delete backend;
                     return nullptr;
                 }
                 return backend;

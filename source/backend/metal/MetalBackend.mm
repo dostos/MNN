@@ -448,10 +448,10 @@ void MetalBackend::onCopyBuffer(const Tensor *src, const Tensor *dst, id<MTLComp
 
 
 class MetalBackendCreator : public BackendCreator {
-    virtual Backend *onCreate(const Backend::Info &info) const {
+    virtual std::shared_ptr<Backend> onCreate(const Backend::Info &info) const {
         static std::once_flag s_flag;
         std::call_once(s_flag, [&]() { registerMetalOps(); });
-        auto bn = new MetalBackend;
+        auto bn = std::shared_ptr<Backend>(new MetalBackend);
         if (nullptr == bn->context()) {
             return nullptr;
         }

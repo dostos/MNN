@@ -222,7 +222,7 @@ public:
      @param info    info to create backend.
      @return created backend
      */
-    virtual Backend* onCreate(const Backend::Info& info) const = 0;
+    virtual std::shared_ptr<Backend> onCreate(const Backend::Info& info) const = 0;
 
 
     /**

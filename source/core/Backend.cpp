@@ -32,16 +32,7 @@ const BackendCreator* MNNGetExtraBackendCreator(MNNForwardType type) {
     if (iter == gExtraCreator.end()) {
         return nullptr;
     }
-    if (!iter->second.second) {
-        return iter->second.first;
-    }
-    Backend::Info info;
-    info.type = type;
-    std::shared_ptr<Backend> bn(iter->second.first->onCreate(info));
-    if (nullptr != bn.get()) {
-        return iter->second.first;
-    }
-    return nullptr;
+    return iter->second.first;;
 }
 
 bool MNNInsertExtraBackendCreator(MNNForwardType type, const BackendCreator* creator, bool needCheck) {

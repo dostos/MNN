@@ -27,7 +27,7 @@ Backend* Session::_getDefaultBackend() {
         Backend::Info info;
         info.type      = defaultType;
         info.numThread = 1;
-        mBackends[info.type].reset(BackendFactory::create(info));
+        mBackends[info.type] = BackendFactory::create(info);
     }
     auto cpuBackend = mBackends.find(defaultType)->second.get();
     return cpuBackend;
@@ -47,7 +47,7 @@ Session::Session(const Schedule::ScheduleInfo& info) {
                 mValid = false;
                 return;
             }
-            mBackends[iter.first.type].reset(newBn);
+            mBackends[iter.first.type]  = newBn;
         }
         auto backend    = mBackends.find(iter.first.type)->second.get();
         auto cpuBackend = _getDefaultBackend();

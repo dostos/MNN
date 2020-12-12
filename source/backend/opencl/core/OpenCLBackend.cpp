@@ -398,7 +398,7 @@ bool OpenCLBackend::addCreator(OpType t, Creator* c) {
 
 class CLBackendCreator : public BackendCreator {
 public:
-    virtual Backend* onCreate(const Backend::Info& info) const override {
+    virtual std::shared_ptr<Backend> onCreate(const Backend::Info& info) const override {
 #ifdef MNN_USE_LIB_WRAPPER
         OpenCLSymbolsOperator::createOpenCLSymbolsOperatorSingleInstance();
         if (nullptr == OpenCLSymbolsOperator::getOpenclSymbolsPtr()) {
@@ -416,12 +416,18 @@ public:
             precision = info.user->precision;
             power     = info.user->power;
         }
-        auto backend = new OpenCLBackend(precision, power);
-        if(backend != nullptr){
-            if(!backend->isCreateError()){
-                return backend;
+        static std::once_flag flag;
+        static std::shared_ptr<OpenCLBackend> gBackend = nullptr;
+
+        if (gBackend == nullptr) {
+            gBackend = std::shared_ptr<OpenCLBackend>(new OpenCLBackend(precision, power));
+        }
+
+        if (gBackend != nullptr) {
+            if(!gBackend->isCreateError()){
+                return gBackend;
             }else{
-                delete backend;
+                gBackend = nullptr;
             }
         }
         return nullptr;

@@ -417,14 +417,14 @@ bool GLBackend::isCreateError() const {
 }
 class GLBackendCreator : public BackendCreator {
 public:
-    virtual Backend *onCreate(const Backend::Info &info) const override {
+    virtual std::shared_ptr<Backend> onCreate(const Backend::Info &info) const override {
         BackendConfig::PrecisionMode precision = BackendConfig::Precision_Normal;
         BackendConfig::PowerMode power         = BackendConfig::Power_Normal;
         if (nullptr != info.user) {
             precision = info.user->precision;
             power     = info.user->power;
         }
-        auto backend = new GLBackend(precision, power);
+        auto backend = std::shared_ptr<Backend>(new GLBackend(precision, power));
         if(backend != nullptr){
             if(!backend->isCreateError()){
                 return backend;

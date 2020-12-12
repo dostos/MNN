@@ -311,7 +311,7 @@ void CPUBackend::onCopyBuffer(const Tensor* srcTensor, const Tensor* dstTensor) 
 }
 
 struct CPUBackendCreator : BackendCreator {
-    Backend* onCreate(const Backend::Info& info) const override {
+    std::shared_ptr<Backend> onCreate(const Backend::Info& info) const override {
         auto power   = BackendConfig::Power_Normal;
         auto memory  = BackendConfig::Memory_Normal;
         size_t flags = 0;
@@ -326,7 +326,7 @@ struct CPUBackendCreator : BackendCreator {
         static std::once_flag s_flag;
         std::call_once(s_flag, [&]() { registerCPUOps(); });
 #endif
-        return new CPUBackend(info.numThread, memory, power, flags);
+        return std::shared_ptr<Backend>(new CPUBackend(info.numThread, memory, power, flags));
     }
 };
 

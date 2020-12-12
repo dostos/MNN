@@ -20,7 +20,7 @@ public:
      * @param info backend info.
      * @return created backend or NULL if failed.
      */
-    static Backend* create(const Backend::Info& info);
+    static std::shared_ptr<Backend> create(const Backend::Info& info);
 };
 } // namespace MNN
 

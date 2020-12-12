@@ -290,7 +290,7 @@ int Arm82Backend::numberThread() const {
 
 class Arm82BackendCreator : public BackendCreator {
 public:
-    virtual Backend* onCreate(const Backend::Info& info) const override {
+    virtual std::shared_ptr<Backend>* onCreate(const Backend::Info& info) const override {
         if (info.user == nullptr || info.user->sharedContext == nullptr) {
             return nullptr;
         }
@@ -302,7 +302,7 @@ public:
         });
 #endif
 
-        return new Arm82Backend(static_cast<CPUBackend*>(info.user->sharedContext));
+        return std::shared_ptr<Backend>(new Arm82Backend(static_cast<CPUBackend *>(info.user->sharedContext)));
     };
 };
 

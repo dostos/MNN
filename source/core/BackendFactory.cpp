@@ -11,7 +11,7 @@
 #include "core/Macro.h"
 
 namespace MNN {
-Backend* BackendFactory::create(const Backend::Info& info) {
+std::shared_ptr<Backend> BackendFactory::create(const Backend::Info& info) {
     auto creator = MNNGetExtraBackendCreator(info.type);
     if (nullptr == creator) {
         MNN_PRINT("Create Backend Failed because no creator for %d\n", info.type);
