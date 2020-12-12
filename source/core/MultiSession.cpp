@@ -27,7 +27,7 @@ ErrorCode MultiSession::prepare() {
     }
 
     mMultiSessionCaches.clear();
-    for (int numSessions = 2; numSessions <= ids.size(); numSessions++) {
+    for (int numSessions = 1; numSessions <= ids.size(); numSessions++) {
         std::vector<int> validIndexes(ids.size(), 0);
         for(int i = 0 ; i < numSessions; i++) {
             validIndexes[i] = 1;
@@ -109,7 +109,8 @@ MultiSession::MultiSessionCache::MultiSessionCache(std::vector<Session *> sessio
                 pipelines.push_back(session->mPipelines[pipelineIndex].get());
         }
 
-        mMultiPipelines.push_back(std::make_shared<MultiPipeline>(pipelines, sessions[0]->mBackends[MNN_FORWARD_OPENCL].get()));
+        if (!pipelines.empty())
+            mMultiPipelines.push_back(std::make_shared<MultiPipeline>(pipelines, sessions[0]->mBackends[MNN_FORWARD_OPENCL].get()));
         pipelineIndex++;
     } while (!pipelines.empty());
 }
