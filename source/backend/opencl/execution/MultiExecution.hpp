@@ -18,8 +18,12 @@ public:
     virtual ErrorCode onExecute(const MultiExecutionTensors &inputs, const MultiExecutionTensors &outputs) override;
 
 private:
+    std::vector<uint32_t> mGlobalWorkSize = {0, 0};
+    std::vector<uint32_t> mLocalWorkSize = {0, 0, 0, 0};
+
     OpenCLBackend *mBackend;
     cl::Kernel mKernel;
+    const KernelContent *mContent = nullptr;
 };
 }
 }

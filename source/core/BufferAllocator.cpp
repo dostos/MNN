@@ -92,7 +92,6 @@ bool BufferAllocator::free(void* pointer, bool needRelease) {
     // get node
     auto x = mUsedList.find(pointer);
     if (x == mUsedList.end()) {
-        MNN_ASSERT(false);
         return false;
     }
     if (needRelease) {

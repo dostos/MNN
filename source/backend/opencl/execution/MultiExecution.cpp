@@ -1,5 +1,6 @@
 #include "backend/opencl/execution/MultiExecution.hpp"
 #include "backend/opencl/core/OpenCLBackend.hpp"
+#include "backend/opencl/core/OpenCLRunningUtils.hpp"
 #include "FusionableExecution.hpp"
 #include "core/Execution.hpp"
 
@@ -27,19 +28,35 @@ ErrorCode MultiExecution::onPrepare(const MultiExecutionTensors &inputs, const M
     }
 
     // Fuse ops
-    auto content = compiler.fuse(contents);
+    mContent = compiler.fuse(contents);
 
     // Compile kernel
-    mKernel = mBackend->getOpenCLRuntime()->buildKernelFromSource(content->name, content->source, {});
+    mKernel = mBackend->getOpenCLRuntime()->buildKernelFromSource(mContent->name, mContent->source, {});
+    uint32_t argIdx = 0;
+
+    for (int subPipelineIdx = 0; subPipelineIdx < mExecutions.size(); subPipelineIdx++) {
+        for (int executionIdx = 0; executionIdx < mExecutions[subPipelineIdx].size(); executionIdx++) {
+            auto fusionableExecution = dynamic_cast<FusionableExecution *>(mExecutions[subPipelineIdx][executionIdx]);
+            fusionableExecution->onPrepare(inputs[subPipelineIdx][executionIdx], outputs[subPipelineIdx][executionIdx], &mKernel, argIdx, mGlobalWorkSize);
+            MNN_ASSERT(fusionableExecution->getGws().size() == 2);
+            for (int i = 0; i < 2; i++) {
+                mGlobalWorkSize[i] += fusionableExecution->getGws()[i];
+                mLocalWorkSize[i] = std::max(fusionableExecution->getLws()[i], mLocalWorkSize[i]);
+            }
+        }
+    }
     return NO_ERROR;    
 }
 
 ErrorCode MultiExecution::onExecute(const MultiExecutionTensors &inputs, const MultiExecutionTensors &outputs) {
-    for (int subPipelineIdx = 0; subPipelineIdx < mExecutions.size(); subPipelineIdx++) {
-        for (int executionIdx = 0; executionIdx < mExecutions[subPipelineIdx].size(); executionIdx++) {
-            mExecutions[subPipelineIdx][executionIdx]->onExecute(inputs[subPipelineIdx][executionIdx], inputs[subPipelineIdx][executionIdx]);
-        }
-    }
+    //for (int subPipelineIdx = 0; subPipelineIdx < mExecutions.size(); subPipelineIdx++) {
+    //    for (int executionIdx = 0; executionIdx < mExecutions[subPipelineIdx].size(); executionIdx++) {
+    //        mExecutions[subPipelineIdx][executionIdx]->onExecute(inputs[subPipelineIdx][executionIdx], inputs[subPipelineIdx][executionIdx]);
+    //    }
+    //}
+    
+    auto runtime = mBackend->getOpenCLRuntime();
+    runKernel2D(mKernel, mGlobalWorkSize, mLocalWorkSize, runtime);
     return NO_ERROR;
 }   
 }

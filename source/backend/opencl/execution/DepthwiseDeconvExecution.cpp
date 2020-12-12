@@ -82,8 +82,8 @@ ErrorCode DepthwiseDeconvExecution::onPrepare(const std::vector<Tensor *> &input
     if (kernel == nullptr) {
         kernel = &mKernel;
     } else {
-        int offset[2] = {offset[0], offset[1]};
-        kernel->setArg(argIdx++, sizeof(offset), offset);
+        int offsetArgs[2] = {offset[0], offset[1]};
+        kernel->setArg(argIdx++, sizeof(offsetArgs), offsetArgs);
     }
 
     auto input  = inputs[0];
