@@ -126,10 +126,15 @@ OpenCLRuntime::OpenCLRuntime(bool permitFloat16) {
 
             mCommandQueuePtr = std::make_shared<cl::CommandQueue>(*mContext, *mFirstGPUDevicePtr, properties, &err);
             MNN_CHECK_CL_SUCCESS(err);
-
+        
             mFirstGPUDevicePtr->getInfo(CL_DEVICE_GLOBAL_MEM_CACHE_SIZE, &mGPUGlobalMemeryCacheSize);
             mFirstGPUDevicePtr->getInfo(CL_DEVICE_MAX_COMPUTE_UNITS, &mGPUComputeUnits);
             mFirstGPUDevicePtr->getInfo(CL_DEVICE_MAX_CLOCK_FREQUENCY, &mMaxFreq);
+
+            uint32_t maxWorkGroup;
+            mFirstGPUDevicePtr->getInfo(CL_DEVICE_MAX_WORK_GROUP_SIZE, &maxWorkGroup);
+            MNN_PRINT("Max Workgroup Size : %u\n", maxWorkGroup);
+
             cl_device_fp_config fpConfig;
             auto success = mFirstGPUDevicePtr->getInfo(CL_DEVICE_HALF_FP_CONFIG, &fpConfig);
             mIsSupportedFP16     = CL_SUCCESS == success && fpConfig > 0;

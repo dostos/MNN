@@ -18,6 +18,7 @@ public:
     virtual ErrorCode onExecute(const MultiExecutionTensors &inputs, const MultiExecutionTensors &outputs) override;
 
 private:
+    uint32_t mArgIdx = 0;
     std::vector<uint32_t> mGlobalWorkSize = {0, 0};
     std::vector<uint32_t> mLocalWorkSize = {0, 0, 0, 0};
 

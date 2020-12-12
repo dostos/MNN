@@ -553,6 +553,7 @@ ErrorCode ConvExecution::onPrepare(const std::vector<Tensor *> &inputs, const st
     if (kernelHeight == kernelWidth && kernelHeight == 1 && mPaddings[0] == 0 && mPaddings[1] == 0) {
         if(mConv1x1Opt){
             if(mUseLocalMem){
+                // conv_2d_1x1_local
                 mGlobalWorkSize = {static_cast<uint32_t>(UP_DIV(outputShape.at(3), 4)), static_cast<uint32_t>(UP_DIV(outputShape.at(2), 4)),
                 static_cast<uint32_t>(outputShape.at(0) * outputShape.at(1))};
                 std::vector<uint32_t> lws{UNIT, UNIT, 1};
@@ -568,6 +569,7 @@ ErrorCode ConvExecution::onPrepare(const std::vector<Tensor *> &inputs, const st
                 kernel->setArg(argIdx++, height);
                 kernel->setArg(argIdx++, width);
             }else{
+                // conv_2d_1x1_mali
                 mGlobalWorkSize = {static_cast<uint32_t>(UP_DIV(outputShape.at(3), 4) * UP_DIV(outputShape.at(2), 4)),
                            static_cast<uint32_t>(outputShape.at(0) * outputShape.at(1))};
                 kernel->setArg(argIdx++, mGlobalWorkSize[0]);
@@ -586,6 +588,7 @@ ErrorCode ConvExecution::onPrepare(const std::vector<Tensor *> &inputs, const st
 
 
         }else{
+            // conv_2d_1x1
             mGlobalWorkSize = {
             static_cast<uint32_t>(UP_DIV(outputShape.at(3), 4) * static_cast<uint32_t>(UP_DIV(outputShape.at(2), 4))),
             static_cast<uint32_t>(outputShape.at(0) * outputShape.at(1))};

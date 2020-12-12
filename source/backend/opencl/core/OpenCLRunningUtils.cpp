@@ -154,6 +154,19 @@ std::vector<uint32_t> localWS3DDefault(const std::vector<uint32_t> &gws, const u
     return lws;
 }
 
+void printKernelExecutionError(cl_int error, const std::vector<uint32_t> &gws, const std::vector<uint32_t> &lws) {
+    if (error == CL_INVALID_WORK_GROUP_SIZE) {
+        MNN_PRINT("CL_INVALID_WORK_GROUP_SIZE gws : ");
+        for (int i : gws) {
+            MNN_PRINT("%d ", i);
+        }
+        MNN_PRINT("lws : ");
+        for (int i : lws) {
+            MNN_PRINT("%d ", i);
+        }
+    }
+}
+
 cl_int runTurnKernelLWS2D(const ::cl::Kernel &kernel, const std::vector<uint32_t> &gws, const std::vector<uint32_t> &lws,
                         OpenCLRuntime *runtime) {
 #ifdef LOG_VERBOSE
@@ -171,6 +184,7 @@ cl_int runTurnKernelLWS2D(const ::cl::Kernel &kernel, const std::vector<uint32_t
     error = runtime->commandQueue().enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(roundGWS[0], roundGWS[1]),
                                                          cl::NDRange(lws[0], lws[1]), nullptr, &event);
     MNN_CHECK_CL_SUCCESS(error);
+    printKernelExecutionError(error, roundGWS, lws);
 
 #ifdef LOG_VERBOSE
     MNN_PRINT("end runTurnKernelLWS2D !\n");
@@ -210,6 +224,7 @@ cl_int run3DKernelDefault(const ::cl::Kernel &kernel, const std::vector<uint32_t
             cl::NDRange(lws[0], lws[1], lws[2]), nullptr, eventPtr);
     }
     MNN_CHECK_CL_SUCCESS(error);
+    printKernelExecutionError(error, internalGlobalWS, lws);
 
 #ifdef LOG_VERBOSE
     MNN_PRINT("end run3DKernelDefault !\n");
@@ -235,7 +250,19 @@ cl_int runKernel2D(const ::cl::Kernel &kernel, const std::vector<uint32_t> &gws,
             kernel, cl::NullRange, cl::NDRange(internalGlobalWS[0], internalGlobalWS[1]), cl::NDRange(lws[0], lws[1]), nullptr, eventPtr);
     }
     MNN_CHECK_CL_SUCCESS(error);
-
+    printKernelExecutionError(error, internalGlobalWS, lws);
+    
+    unsigned int num_flush = runtime->getQueueNum();
+    if(runtime->getGpuType() != GpuType::ADRENO) {
+        if(num_flush % 2 == 0) {
+            runtime->commandQueue().flush();
+        }
+    }
+    else {
+        if(num_flush % 10 == 0) {
+            runtime->commandQueue().flush();
+        }
+    }
     
 #ifdef LOG_VERBOSE
     MNN_PRINT("end run3DKernelDefault !\n");
@@ -278,6 +305,7 @@ cl_int run2DKernelDefault(const cl::Kernel &kernel, const uint32_t *gws, const s
     #endif
     }
     MNN_CHECK_CL_SUCCESS(error);
+    printKernelExecutionError(error, internalGlobalWS, lws);
     return error;
 }
 void copyBufferToImage(OpenCLRuntime *runtime, const cl::Buffer &buffer, const cl::Image &image, int w, int h) {

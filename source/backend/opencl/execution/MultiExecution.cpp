@@ -32,12 +32,12 @@ ErrorCode MultiExecution::onPrepare(const MultiExecutionTensors &inputs, const M
 
     // Compile kernel
     mKernel = mBackend->getOpenCLRuntime()->buildKernelFromSource(mContent->name, mContent->source, {});
-    uint32_t argIdx = 0;
-
+    MNN_PRINT("MultiExecution : %s built\n", mContent->name.c_str());
+    
     for (int subPipelineIdx = 0; subPipelineIdx < mExecutions.size(); subPipelineIdx++) {
         for (int executionIdx = 0; executionIdx < mExecutions[subPipelineIdx].size(); executionIdx++) {
             auto fusionableExecution = dynamic_cast<FusionableExecution *>(mExecutions[subPipelineIdx][executionIdx]);
-            fusionableExecution->onPrepare(inputs[subPipelineIdx][executionIdx], outputs[subPipelineIdx][executionIdx], &mKernel, argIdx, mGlobalWorkSize);
+            fusionableExecution->onPrepare(inputs[subPipelineIdx][executionIdx], outputs[subPipelineIdx][executionIdx], &mKernel, mArgIdx, mGlobalWorkSize);
             MNN_ASSERT(fusionableExecution->getGws().size() == 2);
             for (int i = 0; i < 2; i++) {
                 mGlobalWorkSize[i] += fusionableExecution->getGws()[i];
@@ -54,11 +54,15 @@ ErrorCode MultiExecution::onExecute(const MultiExecutionTensors &inputs, const M
     //        mExecutions[subPipelineIdx][executionIdx]->onExecute(inputs[subPipelineIdx][executionIdx], inputs[subPipelineIdx][executionIdx]);
     //    }
     //}
-    
     auto runtime = mBackend->getOpenCLRuntime();
-    runKernel2D(mKernel, mGlobalWorkSize, mLocalWorkSize, runtime);
-    return NO_ERROR;
-}   
+    cl_int error = runKernel2D(mKernel, mGlobalWorkSize, mLocalWorkSize, runtime);
+
+    if (error != CL_SUCCESS) {
+        MNN_PRINT("MultiExecution : %s execution failed\n num args : %d\n %s\n", mContent->name.c_str(), mArgIdx, mContent->source.c_str());
+        return NO_EXECUTION;
+    } else 
+        return NO_ERROR;
+    }   
 }
 
 class OpenCLMultiExecutionCreator : public MultiExecution::Creator {

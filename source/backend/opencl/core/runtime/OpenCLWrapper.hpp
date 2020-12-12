@@ -28,7 +28,6 @@
     if (error != CL_SUCCESS)                         \
     {                                                \
         MNN_PRINT("ERROR CODE : %d %s \n", (int)error, getErrorString(error)); \
-        MNN_ASSERT(false);                           \
     }
 #ifdef MNN_USE_LIB_WRAPPER
 
