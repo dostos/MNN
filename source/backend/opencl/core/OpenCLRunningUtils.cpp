@@ -154,7 +154,7 @@ std::vector<uint32_t> localWS3DDefault(const std::vector<uint32_t> &gws, const u
     return lws;
 }
 
-void runTurnKernelLWS2D(const ::cl::Kernel &kernel, const std::vector<uint32_t> &gws, const std::vector<uint32_t> &lws,
+cl_int runTurnKernelLWS2D(const ::cl::Kernel &kernel, const std::vector<uint32_t> &gws, const std::vector<uint32_t> &lws,
                         OpenCLRuntime *runtime) {
 #ifdef LOG_VERBOSE
     MNN_PRINT("start runTurnKernelLWS2D !\n");
@@ -175,8 +175,8 @@ void runTurnKernelLWS2D(const ::cl::Kernel &kernel, const std::vector<uint32_t> 
 #ifdef LOG_VERBOSE
     MNN_PRINT("end runTurnKernelLWS2D !\n");
 #endif
+    return error;
 }
-
 
 std::vector<uint32_t> roundGws(const std::vector<uint32_t> &gws, const std::vector<uint32_t> &lws) {
     MNN_ASSERT(gws.size() >= 2 && gws.size() <= 3);
@@ -189,7 +189,7 @@ std::vector<uint32_t> roundGws(const std::vector<uint32_t> &gws, const std::vect
     return roundedGws;
 }
 
-void run3DKernelDefault(const ::cl::Kernel &kernel, const std::vector<uint32_t> &gws, const std::vector<uint32_t> &lws,
+cl_int run3DKernelDefault(const ::cl::Kernel &kernel, const std::vector<uint32_t> &gws, const std::vector<uint32_t> &lws,
                         OpenCLRuntime *runtime, cl::Event* eventPtr) {
 #ifdef LOG_VERBOSE
     MNN_PRINT("start run3DKernelDefault !\n");
@@ -214,9 +214,10 @@ void run3DKernelDefault(const ::cl::Kernel &kernel, const std::vector<uint32_t> 
 #ifdef LOG_VERBOSE
     MNN_PRINT("end run3DKernelDefault !\n");
 #endif
+    return error;
 }
 
-void runKernel2D(const ::cl::Kernel &kernel, const std::vector<uint32_t> &gws, const std::vector<uint32_t> &lws,
+cl_int runKernel2D(const ::cl::Kernel &kernel, const std::vector<uint32_t> &gws, const std::vector<uint32_t> &lws,
                  OpenCLRuntime *runtime,  cl::Event* eventPtr) {
 #ifdef LOG_VERBOSE
     MNN_PRINT("start runKernel2D !\n");
@@ -235,25 +236,14 @@ void runKernel2D(const ::cl::Kernel &kernel, const std::vector<uint32_t> &gws, c
     }
     MNN_CHECK_CL_SUCCESS(error);
 
-    unsigned int num_flush = runtime->getQueueNum();
-    if(runtime->getGpuType() != GpuType::ADRENO) {
-        if(num_flush % 2 == 0) {
-            runtime->commandQueue().flush();
-        }
-    }
-    else {
-        if(num_flush % 10 == 0) {
-            runtime->commandQueue().flush();
-        }
-    }
-
     
 #ifdef LOG_VERBOSE
     MNN_PRINT("end run3DKernelDefault !\n");
 #endif
+    return error;
 }
 
-void run2DKernelDefault(const cl::Kernel &kernel, const uint32_t *gws, const std::vector<uint32_t> &lws,
+cl_int run2DKernelDefault(const cl::Kernel &kernel, const uint32_t *gws, const std::vector<uint32_t> &lws,
                         OpenCLRuntime *runtime) {
 
     const std::vector<uint32_t> &params = lws;
@@ -288,7 +278,7 @@ void run2DKernelDefault(const cl::Kernel &kernel, const uint32_t *gws, const std
     #endif
     }
     MNN_CHECK_CL_SUCCESS(error);
-
+    return error;
 }
 void copyBufferToImage(OpenCLRuntime *runtime, const cl::Buffer &buffer, const cl::Image &image, int w, int h) {
     std::set<std::string> buildOptions;

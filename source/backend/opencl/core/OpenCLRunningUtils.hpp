@@ -97,16 +97,16 @@ std::vector<uint32_t> turnLocalSize(cl::Kernel *kernel, std::vector<uint32_t> &g
 
 std::vector<uint32_t> roundGws(const std::vector<uint32_t> &gws, const std::vector<uint32_t> &lws);
 
-void run3DKernelDefault(const ::cl::Kernel &kernel, const std::vector<uint32_t> &gws, const std::vector<uint32_t> &lws,
+cl_int run3DKernelDefault(const ::cl::Kernel &kernel, const std::vector<uint32_t> &gws, const std::vector<uint32_t> &lws,
                         OpenCLRuntime *runtime, cl::Event* eventPtr = nullptr);
 
-void run2DKernelDefault(const ::cl::Kernel &kernel, const uint32_t *gws, const std::vector<uint32_t> &lws,
+cl_int run2DKernelDefault(const ::cl::Kernel &kernel, const uint32_t *gws, const std::vector<uint32_t> &lws,
                         OpenCLRuntime *runtime);
 
-void runKernel2D(const ::cl::Kernel &kernel, const std::vector<uint32_t> &gws, const std::vector<uint32_t> &lws,
+cl_int runKernel2D(const ::cl::Kernel &kernel, const std::vector<uint32_t> &gws, const std::vector<uint32_t> &lws,
                  OpenCLRuntime *runtime, cl::Event* eventPtr = nullptr);
 
-void runTurnKernelLWS2D(const ::cl::Kernel &kernel, const std::vector<uint32_t> &gws, const std::vector<uint32_t> &lws,
+cl_int runTurnKernelLWS2D(const ::cl::Kernel &kernel, const std::vector<uint32_t> &gws, const std::vector<uint32_t> &lws,
                         OpenCLRuntime *runtime);
 
 std::vector<uint32_t> localWS3DDefault(const std::vector<uint32_t> &gws, const uint32_t maxWorkGroupSize,
