@@ -109,7 +109,7 @@ const KernelContent*  KernelCompiler::fuse(std::vector<const KernelContent* > ke
         }
 
         // TODO : Support 3D
-        argsString = "__private const int2 offset" + std::to_string(i) + ",\n" + argsString;
+        argsString = "__private const uint2 offset" + std::to_string(i) + ",\n" + argsString;
 
         fusedArgs += argsString + (i == kernels.size() - 1 ? "" : ",\n");
 

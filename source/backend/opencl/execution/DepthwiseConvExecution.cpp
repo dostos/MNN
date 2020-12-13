@@ -90,7 +90,7 @@ ErrorCode DepthwiseConvExecution::onPrepare(const std::vector<Tensor *> &inputs,
     if (kernel == nullptr) {
         kernel = &mKernel;
     } else {
-        int offsetArgs[2] = {offset[0], offset[1]};
+        uint32_t offsetArgs[2] = {offset[0], offset[1]};
         kernel->setArg(argIdx++, sizeof(offsetArgs), offsetArgs);
     }
 
