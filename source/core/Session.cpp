@@ -42,14 +42,18 @@ Session::Session(const Schedule::ScheduleInfo& info) {
     mTensors = info.allTensors;
     for (auto& iter : info.pipelineInfo) {
         if (mBackends.find(iter.first.type) == mBackends.end()) {
-            auto newBn = BackendFactory::create(iter.first);
-            if (nullptr == newBn) {
-                mValid = false;
-                return;
+            if (iter.first.backend && iter.first.backend->type() == iter.first.type) {
+                mBackends[iter.first.type] = iter.first.backend;
+            } else {
+                auto newBn = BackendFactory::create(iter.first);
+                if (nullptr == newBn) {
+                    mValid = false;
+                    return;
+                }
+                mBackends[iter.first.type]  = newBn;
             }
-            mBackends[iter.first.type]  = newBn;
         }
-        auto backend    = mBackends.find(iter.first.type)->second.get();
+        MNN::Backend* backend = mBackends.find(iter.first.type)->second.get();
         auto cpuBackend = _getDefaultBackend();
 
 #if defined(__aarch64__) && defined(ENABLE_ARMV82)

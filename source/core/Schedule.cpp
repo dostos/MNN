@@ -336,7 +336,11 @@ Schedule::ScheduleInfo Schedule::schedule(const Net* net, const std::vector<Sche
         compute.type      = _getApprociateType(config, net, allTensors, valid);
         compute.numThread = config.numThread;
         compute.user      = config.backendConfig;
-        auto oplists      = _scheduleUnit(net, config, allTensors);
+        compute.backend = config.backend;
+        if (config.backend != nullptr) {
+            compute.type = config.backend->type();
+        }
+        auto oplists = _scheduleUnit(net, config, allTensors);
         result.emplace_back(std::make_pair(compute, std::move(oplists)));
     }
 

@@ -2,9 +2,12 @@
     "cmake.debugConfig": {
         "args": [
             "${workspaceRoot}/benchmark/models_small",
+            "0",
             "100",
             "100",
-            "3"
+            "3",
+            "4",
+            "2"
         ]
     },
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"

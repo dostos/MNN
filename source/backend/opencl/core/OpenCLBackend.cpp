@@ -416,21 +416,14 @@ public:
             precision = info.user->precision;
             power     = info.user->power;
         }
-        static std::once_flag flag;
-        static std::shared_ptr<OpenCLBackend> gBackend = nullptr;
-
-        if (gBackend == nullptr) {
-            gBackend = std::shared_ptr<OpenCLBackend>(new OpenCLBackend(precision, power));
+        
+        std::shared_ptr<OpenCLBackend> backend = std::shared_ptr<OpenCLBackend>(new OpenCLBackend(precision, power));
+        
+        if(!backend->isCreateError()){
+            return backend;
+        }else{
+            return nullptr;
         }
-
-        if (gBackend != nullptr) {
-            if(!gBackend->isCreateError()){
-                return gBackend;
-            }else{
-                gBackend = nullptr;
-            }
-        }
-        return nullptr;
     }
 };
 

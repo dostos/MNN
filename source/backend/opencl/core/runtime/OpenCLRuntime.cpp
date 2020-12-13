@@ -102,7 +102,7 @@ OpenCLRuntime::OpenCLRuntime(bool permitFloat16) {
                 // Radeon series GPU is main product of Advanced Micro Devices (AMD)
                 mGpuType = RADEON;
             } else {
-                mGpuType = OTHER;
+                 mGpuType = OTHER;
             }
             const std::string extensions = platforms[0].getInfo<CL_PLATFORM_EXTENSIONS>();
             if(mGpuType == ADRENO && " " != extensions){
@@ -190,6 +190,7 @@ OpenCLRuntime::~OpenCLRuntime() {
     MNN_PRINT("start ~OpenCLRuntime !\n");
 #endif
     mBuildProgramMap.clear();
+    mCommandQueuePtr->finish();
     mCommandQueuePtr.reset();
     mContext.reset();
     mFirstGPUDevicePtr.reset();

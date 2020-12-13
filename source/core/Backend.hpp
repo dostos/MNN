@@ -43,6 +43,7 @@ public:
             INDIRECT = 1
         };
         Mode mode = DIRECT;
+        std::shared_ptr<Backend>backend = nullptr;
     };
 
     /** backend buffer storage type */

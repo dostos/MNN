@@ -18,6 +18,11 @@
 
 namespace MNN {
 
+class Session;
+struct Content;
+class Tensor;
+class Backend;
+
 /** session schedule config */
 struct ScheduleConfig {
     /** which tensor should be kept */
@@ -61,12 +66,9 @@ struct ScheduleConfig {
 
     /** extra backend config */
     BackendConfig* backendConfig = nullptr;
-};
 
-class Session;
-struct Content;
-class Tensor;
-class Backend;
+    std::shared_ptr<Backend> backend = nullptr;
+};
 
 class MNN_PUBLIC OperatorInfo {
     struct Info;
