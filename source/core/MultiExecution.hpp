@@ -4,7 +4,7 @@
 #include <MNN/ErrorCode.hpp>
 #include <MNN/MNNForwardType.h>
 #include <MNN/Tensor.hpp>
-#include "NonCopyable.hpp"
+#include "core/NonCopyable.hpp"
 #include <memory>
 
 namespace MNN {
@@ -16,7 +16,7 @@ typedef std::vector< // Per pipeline
         std::vector< // Per unit
             Tensor *>>> MultiExecutionTensors;
 
-class MultiExecution : public NonCopyable {
+class MNN_PUBLIC MultiExecution : public NonCopyable {
 public:
     MultiExecution(std::vector<std::vector<Execution *>> executions, Backend* backend);
     virtual ~MultiExecution() = default;

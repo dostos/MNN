@@ -13,7 +13,7 @@
 
 namespace MNN {
 /** backend factory */
-class BackendFactory {
+class MNN_PUBLIC BackendFactory {
 public:
     /**
      * @brief create backend with given info.
