@@ -79,6 +79,10 @@ const KernelContent*  KernelCompiler::fuse(std::vector<const KernelContent* > ke
         fusedName += kernels[i]->name + (i == kernels.size() - 1 ? "" : "_");
     }
 
+    if (mContentCaches.find(fusedName) != mContentCaches.end()) {
+        return mContentCaches[fusedName];
+    }
+
     std::string prefix = "__kernel void " + fusedName + "(";
     std::string fusedArgs;
     std::string fusedContents;
