@@ -105,6 +105,13 @@ void setInputData(MNN::Tensor *tensor) {
     }
 }
 
+void setInputData(MNN::Tensor *tensor, float value) {
+    float *data = tensor->host<float>();
+    for (int i = 0; i < tensor->elementSize(); i++) {
+        data[i] = value;
+    }
+}
+
 static inline uint64_t getTimeInUs() {
     uint64_t time;
 #if defined(_MSC_VER)
@@ -127,7 +134,6 @@ std::vector<float> doBench(std::vector<Model>& models, int loop, int warmup = 10
     std::vector<std::shared_ptr<MNN::Interpreter>> nets;
 
     for (int i = 0; i < models.size(); i++) {
-
         auto revertor = std::unique_ptr<Revert>(new Revert(models[i].model_file.c_str()));
         revertor->initialize();
         auto modelBuffer = revertor->getBuffer();
@@ -163,6 +169,7 @@ std::vector<float> doBench(std::vector<Model>& models, int loop, int warmup = 10
             outputs.push_back(nets[i]->getSessionOutput(session, NULL));
 
             givenTensors.push_back(std::shared_ptr<MNN::Tensor>(MNN::Tensor::createHostTensorFromDevice(inputs.back(), false)));
+            setInputData(givenTensors.back().get(), 5.0f);
             expectedTensors.push_back(std::shared_ptr<MNN::Tensor>(MNN::Tensor::createHostTensorFromDevice(outputs.back(), false)));
 
             sessionIds.insert(multiSession.addSession(session));
@@ -196,6 +203,15 @@ std::vector<float> doBench(std::vector<Model>& models, int loop, int warmup = 10
         auto timeEnd = getTimeInUs();
         costs.push_back((timeEnd - timeBegin) / 1000.0);
     }
+
+    for (int i = 0; i < batch; i++) {
+        for (int j = 0; j < models.size() - 1; j++) {
+            if (!MNN::TensorUtils::compareTensors(expectedTensors[i * models.size() + j].get(), expectedTensors[i * models.size() + j + 1].get())) {
+                std::cout << "Different tensor detected!" << std::endl;
+            }
+        }
+    }
+
     return costs;
 }
 
@@ -240,10 +256,9 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
     const MNN::Backend *inBackend = net->getBackend(session, input);
 
     auto outputTensor = net->getSessionOutput(session, NULL);
-    auto outputTensor2 = net->getSessionOutput(session, NULL);
     std::shared_ptr<MNN::Tensor> givenTensor(MNN::Tensor::createHostTensorFromDevice(input, false));
+    setInputData(givenTensor.get(), 1.0f);
     std::shared_ptr<MNN::Tensor> expectTensor(MNN::Tensor::createHostTensorFromDevice(outputTensor, false));
-    std::shared_ptr<MNN::Tensor> expectTensor2(MNN::Tensor::createHostTensorFromDevice(outputTensor2, false));
     // Warming up...
     for (int i = 0; i < warmup; ++i) {
         input->copyFromHostTensor(givenTensor.get());
@@ -261,6 +276,7 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
         auto timeEnd = getTimeInUs();
         costs.push_back((timeEnd - timeBegin) / 1000.0);
     }
+
     return costs;
 }
 
