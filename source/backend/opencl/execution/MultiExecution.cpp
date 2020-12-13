@@ -14,6 +14,7 @@ MultiExecution::MultiExecution(std::vector<std::vector<Execution *>> executions,
 ErrorCode MultiExecution::onPrepare(const MultiExecutionTensors &inputs, const MultiExecutionTensors &outputs) {
     std::vector<const KernelContent*> contents;
     KernelCompiler &compiler = mBackend->getOpenCLRuntime()->KernelCompiler();
+    std::set<std::string> buildOptions;
 
     for (int subPipelineIdx = 0; subPipelineIdx < mExecutions.size(); subPipelineIdx++) {
         for (int executionIdx = 0; executionIdx < mExecutions[subPipelineIdx].size(); executionIdx++) {
@@ -24,6 +25,7 @@ ErrorCode MultiExecution::onPrepare(const MultiExecutionTensors &inputs, const M
             std::string programSource = mBackend->getOpenCLRuntime()->getProgramSource(programName);
 
             contents.push_back(compiler.parse(kernelName, programSource));
+            buildOptions.insert(fusionableExecution->getBuildOptions().begin(), fusionableExecution->getBuildOptions().end());
         }
     }
 
@@ -31,7 +33,7 @@ ErrorCode MultiExecution::onPrepare(const MultiExecutionTensors &inputs, const M
     mContent = compiler.fuse(contents);
 
     // Compile kernel
-    mKernel = mBackend->getOpenCLRuntime()->buildKernelFromSource(mContent->name, mContent->source, {});
+    mKernel = mBackend->getOpenCLRuntime()->buildKernelFromSource(mContent->name, mContent->source, buildOptions);
     MNN_PRINT("MultiExecution : %s built\n", mContent->name.c_str());
     
     for (int subPipelineIdx = 0; subPipelineIdx < mExecutions.size(); subPipelineIdx++) {

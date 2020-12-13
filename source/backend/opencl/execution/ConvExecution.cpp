@@ -479,15 +479,14 @@ ConvExecution::ConvExecution(const std::vector<Tensor *> &inputs, const MNN::Op 
     }
 
     // Create Kernel
-    std::set<std::string> buildOptions;
-    buildOptions.emplace("-DBIAS");
+    mBuildOptions.emplace("-DBIAS");
     if (mConv2dCommonParams->relu()) {
-        buildOptions.emplace("-DRELU");
+        mBuildOptions.emplace("-DRELU");
     } else if (mConv2dCommonParams->relu6()) {
-        buildOptions.emplace("-DRELU6");
+        mBuildOptions.emplace("-DRELU6");
     }
 
-    mKernel = mOpenCLBackend->getOpenCLRuntime()->buildKernel(mProgramName, mKernelName, buildOptions);
+    mKernel = mOpenCLBackend->getOpenCLRuntime()->buildKernel(mProgramName, mKernelName, mBuildOptions);
     mMaxWorkGroupSize = static_cast<uint32_t>(mOpenCLBackend->getOpenCLRuntime()->getMaxWorkGroupSize(mKernel));
 
 #ifdef LOG_VERBOSE

@@ -18,6 +18,8 @@ public:
     const std::string &getProgramName() const;
     const std::string &getKernelName() const;
 
+    const std::set<std::string> &getBuildOptions() const;
+
     const std::vector<uint32_t> &getGws() const;
     const std::vector<uint32_t> &getLws() const;
 
@@ -25,6 +27,8 @@ protected:
     std::string mName;
     std::string mProgramName;
     std::string mKernelName;
+    
+    std::set<std::string> mBuildOptions;
 
     std::vector<uint32_t> mGlobalWorkSize;
     std::vector<uint32_t> mLocalWorkSize;

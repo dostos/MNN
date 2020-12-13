@@ -17,6 +17,10 @@ namespace OpenCL {
         return mKernelName;
     }
 
+    const std::set<std::string> &FusionableExecution::getBuildOptions() const {
+        return mBuildOptions;
+    }
+
     const std::vector<uint32_t> &FusionableExecution::getGws() const {
         return mGlobalWorkSize;
     }
