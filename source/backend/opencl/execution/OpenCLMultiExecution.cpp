@@ -1,4 +1,4 @@
-#include "backend/opencl/execution/MultiExecution.hpp"
+#include "backend/opencl/execution/OpenCLMultiExecution.hpp"
 #include "backend/opencl/core/OpenCLBackend.hpp"
 #include "backend/opencl/core/OpenCLRunningUtils.hpp"
 #include "FusionableExecution.hpp"
@@ -6,12 +6,12 @@
 
 namespace MNN {
 namespace OpenCL {
-MultiExecution::MultiExecution(std::vector<std::vector<Execution *>> executions, Backend* backend)
+OpenCLMultiExecution::OpenCLMultiExecution(std::vector<std::vector<Execution *>> executions, Backend* backend)
     :MNN::MultiExecution(executions, backend), mBackend(dynamic_cast<OpenCLBackend*>(backend)) {
     // TODO : merge ops & prepare kernel
 }
 
-ErrorCode MultiExecution::onPrepare(const MultiExecutionTensors &inputs, const MultiExecutionTensors &outputs) {
+ErrorCode OpenCLMultiExecution::onPrepare(const MultiExecutionTensors &inputs, const MultiExecutionTensors &outputs) {
     std::vector<const KernelContent*> contents;
     KernelCompiler &compiler = mBackend->getOpenCLRuntime()->KernelCompiler();
     std::set<std::string> buildOptions;
@@ -34,7 +34,6 @@ ErrorCode MultiExecution::onPrepare(const MultiExecutionTensors &inputs, const M
 
     // Compile kernel
     mKernel = mBackend->getOpenCLRuntime()->buildKernelFromSource(mContent->name, mContent->source, buildOptions);
-    MNN_PRINT("MultiExecution : %s built\n", mContent->name.c_str());
     
     for (int subPipelineIdx = 0; subPipelineIdx < mExecutions.size(); subPipelineIdx++) {
         for (int executionIdx = 0; executionIdx < mExecutions[subPipelineIdx].size(); executionIdx++) {
@@ -50,14 +49,18 @@ ErrorCode MultiExecution::onPrepare(const MultiExecutionTensors &inputs, const M
     return NO_ERROR;    
 }
 
-ErrorCode MultiExecution::onExecute(const MultiExecutionTensors &inputs, const MultiExecutionTensors &outputs) {
-    //for (int subPipelineIdx = 0; subPipelineIdx < mExecutions.size(); subPipelineIdx++) {
-    //    for (int executionIdx = 0; executionIdx < mExecutions[subPipelineIdx].size(); executionIdx++) {
-    //        mExecutions[subPipelineIdx][executionIdx]->onExecute(inputs[subPipelineIdx][executionIdx], inputs[subPipelineIdx][executionIdx]);
-    //    }
-    //}
+ErrorCode OpenCLMultiExecution::onExecute(const MultiExecutionTensors &inputs, const MultiExecutionTensors &outputs) {
     auto runtime = mBackend->getOpenCLRuntime();
+    
+#ifdef ENABLE_OPENCL_TIME_PROFILER
+    cl::Event event;
+    cl_int error = runKernel2D(mKernel, mGlobalWorkSize, mLocalWorkSize, runtime, &event);
+
+    int costTime = (int)runtime->getCostTime(&event);
+    MNN_PRINT("kernel cost:%d    us %s\n", costTime, mContent->name.c_str());
+#else
     cl_int error = runKernel2D(mKernel, mGlobalWorkSize, mLocalWorkSize, runtime);
+#endif
 
     if (error != CL_SUCCESS) {
         MNN_PRINT("MultiExecution : %s execution failed\n num args : %d\n %s\n", mContent->name.c_str(), mArgIdx, mContent->source.c_str());
@@ -69,7 +72,7 @@ ErrorCode MultiExecution::onExecute(const MultiExecutionTensors &inputs, const M
 
 class OpenCLMultiExecutionCreator : public MultiExecution::Creator {
     virtual MultiExecution* onCreate(std::vector<std::vector<Execution *>> executions, Backend* backend) const {
-        return new OpenCL::MultiExecution(executions, backend);
+        return new OpenCL::OpenCLMultiExecution(executions, backend);
     }
 };
 

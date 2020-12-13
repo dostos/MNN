@@ -2,7 +2,7 @@
 #define FusionableExecution_hpp
 
 #include "core/Execution.hpp"
-#include "backend/opencl/execution/MultiExecution.hpp"
+#include "backend/opencl/execution/OpenCLMultiExecution.hpp"
 
 namespace MNN {
 namespace OpenCL {

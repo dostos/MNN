@@ -8,11 +8,11 @@ namespace MNN {
 namespace OpenCL {
 class OpenCLBackend;
 
-class MultiExecution : public MNN::MultiExecution
+class OpenCLMultiExecution : public MNN::MultiExecution
 {
 public:
-    MultiExecution(std::vector<std::vector<Execution *>> executions, Backend *backend);
-    virtual ~MultiExecution() = default;
+    OpenCLMultiExecution(std::vector<std::vector<Execution *>> executions, Backend *backend);
+    virtual ~OpenCLMultiExecution() = default;
 
     virtual ErrorCode onPrepare(const MultiExecutionTensors &inputs, const MultiExecutionTensors &outputs) override;
     virtual ErrorCode onExecute(const MultiExecutionTensors &inputs, const MultiExecutionTensors &outputs) override;
