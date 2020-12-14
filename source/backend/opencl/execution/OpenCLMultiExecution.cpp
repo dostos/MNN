@@ -38,11 +38,13 @@ ErrorCode OpenCLMultiExecution::onPrepare(const MultiExecutionTensors &inputs, c
     for (int subPipelineIdx = 0; subPipelineIdx < mExecutions.size(); subPipelineIdx++) {
         for (int executionIdx = 0; executionIdx < mExecutions[subPipelineIdx].size(); executionIdx++) {
             auto fusionableExecution = dynamic_cast<FusionableExecution *>(mExecutions[subPipelineIdx][executionIdx]);
+            MNN_PRINT("MultiExecution prepare %s execution_gws : (%u, %u) offset : (%u, %u)\n", mContent->name.c_str(), fusionableExecution->getGws()[0], fusionableExecution->getGws()[1], mOffset[0], mOffset[1]);
+            
             fusionableExecution->onPrepare(inputs[subPipelineIdx][executionIdx], outputs[subPipelineIdx][executionIdx], &mKernel, mArgIdx, mOffset);
             MNN_ASSERT(fusionableExecution->getGws().size() == 2);
             // Expand gws in fixed dimension 
             mGlobalWorkSize[0] += fusionableExecution->getGws()[0];
-            mGlobalWorkSize[1] = std::max(fusionableExecution->getLws()[1], mGlobalWorkSize[1]);
+            mGlobalWorkSize[1] = std::max(fusionableExecution->getGws()[1], mGlobalWorkSize[1]);
 
             mOffset[0] += fusionableExecution->getGws()[0];
 
@@ -51,6 +53,8 @@ ErrorCode OpenCLMultiExecution::onPrepare(const MultiExecutionTensors &inputs, c
             }
         }
     }
+    MNN_PRINT("MultiExecution : %s gws : (%u, %u)\n", mContent->name.c_str(), mGlobalWorkSize[0], mGlobalWorkSize[1]);
+    MNN_PRINT("MultiExecution : %s ", mContent->source.c_str());
     return NO_ERROR;    
 }
 
@@ -66,7 +70,7 @@ ErrorCode OpenCLMultiExecution::onExecute(const MultiExecutionTensors &inputs, c
 #else
     cl_int error = runKernel2D(mKernel, mGlobalWorkSize, mLocalWorkSize, runtime);
 #endif
-    MNN_PRINT("MultiExecution : %s (%u, %u) \n", mContent->name.c_str(), mGlobalWorkSize[0], mGlobalWorkSize[1]);
+    //MNN_PRINT("MultiExecution : %s gws : (%u, %u)\n", mContent->name.c_str(), mGlobalWorkSize[0], mGlobalWorkSize[1]);
 
     if (error != CL_SUCCESS) {
         MNN_PRINT("MultiExecution : %s execution failed\n num args : %d\n %s\n", mContent->name.c_str(), mArgIdx, mContent->source.c_str());
