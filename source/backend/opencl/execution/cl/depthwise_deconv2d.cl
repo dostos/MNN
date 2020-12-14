@@ -12,7 +12,7 @@ __kernel void depthwise_deconv2d(GLOBAL_SIZE_3_DIMS(0) __read_only image2d_t inp
     const int out_width_idx          = get_global_id(1);
     const int out_batch_height_idx   = get_global_id(2);
 
-    DEAL_NON_UNIFORM_DIM3(0, 0, 0, 0, out_channel_blocks_idx, out_width_idx, out_batch_height_idx);
+    DEAL_NON_UNIFORM_DIM3(0, out_channel_blocks_idx, out_width_idx, out_batch_height_idx);
     float4 out0 = read_imagef(bias, SAMPLER, (int2)(out_channel_blocks_idx, 0));
 
     const int out_batch_idx  = out_batch_height_idx / output_shape.x;

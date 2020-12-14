@@ -11,7 +11,7 @@ __kernel void scale(GLOBAL_SIZE_3_DIMS(0)
     const int w                 = get_global_id(1);
     const int hb                = get_global_id(2);
 
-    DEAL_NON_UNIFORM_DIM3(0, 0, 0, 0, channel_block_idx, w, hb);
+    DEAL_NON_UNIFORM_DIM3(0, channel_block_idx, w, hb);
 
     const int pos = mad24(channel_block_idx, width, w);
 

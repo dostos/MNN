@@ -20,6 +20,7 @@ public:
 private:
     uint32_t mArgIdx = 0;
     std::vector<uint32_t> mGlobalWorkSize = {0, 0};
+    std::vector<uint32_t> mOffset = {0, 0};
     std::vector<uint32_t> mLocalWorkSize = {0, 0, 0, 0};
 
     OpenCLBackend *mBackend;

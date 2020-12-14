@@ -14,7 +14,7 @@ void depthwise_conv2d_s1(GLOBAL_SIZE_2_DIMS(0) __read_only image2d_t input, __re
 
     const int outChannelWidthIdx = get_global_id(0);
     const int outHeightBlockIdx     = get_global_id(1);
-    DEAL_NON_UNIFORM_DIM2(0, 0, 0, outChannelWidthIdx, outHeightBlockIdx);
+    DEAL_NON_UNIFORM_DIM2(0, outChannelWidthIdx, outHeightBlockIdx);
     int ow4              = (outputShape.y + 3) / 4;
     const int outChannelBlockIdx = outChannelWidthIdx / ow4;
     const int outWidthBlockidx   = outChannelWidthIdx % ow4;
@@ -116,7 +116,7 @@ void depthwise_conv2d(GLOBAL_SIZE_2_DIMS(0) __read_only image2d_t input, __read_
 
     const int outChannelWidthIdx = get_global_id(0);
     const int outHeightIdx     = get_global_id(1);
-    DEAL_NON_UNIFORM_DIM2(0, 0, 0, outChannelWidthIdx, outHeightIdx);
+    DEAL_NON_UNIFORM_DIM2(0, outChannelWidthIdx, outHeightIdx);
 
     int ow4              = (outputShape.y + 3) / 4;
     const int outChannelBlockIdx = outChannelWidthIdx / ow4;

@@ -38,10 +38,15 @@ ErrorCode OpenCLMultiExecution::onPrepare(const MultiExecutionTensors &inputs, c
     for (int subPipelineIdx = 0; subPipelineIdx < mExecutions.size(); subPipelineIdx++) {
         for (int executionIdx = 0; executionIdx < mExecutions[subPipelineIdx].size(); executionIdx++) {
             auto fusionableExecution = dynamic_cast<FusionableExecution *>(mExecutions[subPipelineIdx][executionIdx]);
-            fusionableExecution->onPrepare(inputs[subPipelineIdx][executionIdx], outputs[subPipelineIdx][executionIdx], &mKernel, mArgIdx, mGlobalWorkSize);
+            fusionableExecution->onPrepare(inputs[subPipelineIdx][executionIdx], outputs[subPipelineIdx][executionIdx], &mKernel, mArgIdx, mOffset);
             MNN_ASSERT(fusionableExecution->getGws().size() == 2);
+            // Expand gws in fixed dimension 
+            mGlobalWorkSize[0] += fusionableExecution->getGws()[0];
+            mGlobalWorkSize[1] = std::max(fusionableExecution->getLws()[1], mGlobalWorkSize[1]);
+
+            mOffset[0] += fusionableExecution->getGws()[0];
+
             for (int i = 0; i < 2; i++) {
-                mGlobalWorkSize[i] += fusionableExecution->getGws()[i];
                 mLocalWorkSize[i] = std::max(fusionableExecution->getLws()[i], mLocalWorkSize[i]);
             }
         }

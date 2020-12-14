@@ -121,6 +121,22 @@ const KernelContent*  KernelCompiler::fuse(std::vector<const KernelContent* > ke
             };
         }
 
+        if (i != 0) {
+            // Update offset to global id idx
+            for (int index = 0; index < 2; index++) {
+                std::smatch match;
+                std::regex_search(content, match, std::regex{"get_global_id\\(([" + std::to_string(index) + "])\\)"});
+                std::string newGlobalId = "get_global_id(" + std::to_string(index) + ") - offset" + std::to_string(i) + "." + (char)('x' + index);
+                content.replace(match[0].first, match[0].second, newGlobalId);
+            }
+
+            // Update DEAL_NON_UNIFORM_DIM2 to skip useless work elements
+            std::smatch match;
+            while (std::regex_search(content, match, std::regex{"(DEAL_NON_UNIFORM_DIM[\\d+]\\()0"})) {
+                content.replace(match[0].first, match[0].second, std::string(match[1]) + std::to_string(i));
+            };
+        }
+
         // TODO : Support 3D
         // Add gws indexing checker
         content = std::string(i == 0 ? "if" : "else if") + " GLOBAL_ID_CONDITION_2_DIMS(" + std::to_string(i) + ")" + content;

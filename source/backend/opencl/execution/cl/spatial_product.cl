@@ -4,7 +4,7 @@ __kernel void spatial_product(GLOBAL_SIZE_3_DIMS(0) __read_only image2d_t input,
     const int w                 = get_global_id(1);
     const int hb                = get_global_id(2);
 
-    DEAL_NON_UNIFORM_DIM3(0, 0, 0, 0, channel_block_idx, w, hb);
+    DEAL_NON_UNIFORM_DIM3(0, channel_block_idx, w, hb);
     const int width = global_size_dim1;
 
     const int h     = hb % out_height;
