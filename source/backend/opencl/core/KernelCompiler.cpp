@@ -139,11 +139,7 @@ const KernelContent*  KernelCompiler::fuse(std::vector<const KernelContent* > ke
 
         // TODO : Support 3D
         // Add gws indexing checker
-        if (i < kernels.size() - 1) {
-            content = std::string(i == 0 ? "if" : "else if") + " GLOBAL_ID_CONDITION_2_DIMS(" + std::to_string(i + 1) + ")" + content;
-        } else {
-            content = "else" + content;
-        }
+        content = std::string(i == 0 ? "if" : "else if") + " GLOBAL_ID_CONDITION_2_DIMS(" + std::to_string(i) + ")" + content;
 
         fusedContents += content;
     }

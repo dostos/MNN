@@ -38,11 +38,6 @@ ErrorCode OpenCLMultiExecution::onPrepare(const MultiExecutionTensors &inputs, c
     for (int subPipelineIdx = 0; subPipelineIdx < mExecutions.size(); subPipelineIdx++) {
         for (int executionIdx = 0; executionIdx < mExecutions[subPipelineIdx].size(); executionIdx++) {
             auto fusionableExecution = dynamic_cast<FusionableExecution *>(mExecutions[subPipelineIdx][executionIdx]);
-            MNN_PRINT("MultiExecution prepare %s execution_gws : (%u, %u) execution_lws : (%u, %u) offset : (%u, %u)\n", 
-                mContent->name.c_str(), 
-                fusionableExecution->getGws()[0], fusionableExecution->getGws()[1], 
-                fusionableExecution->getLws()[0], fusionableExecution->getLws()[1],
-                mOffset[0], mOffset[1]);
             
             fusionableExecution->onPrepare(inputs[subPipelineIdx][executionIdx], outputs[subPipelineIdx][executionIdx], &mKernel, mArgIdx, mOffset);
             MNN_ASSERT(fusionableExecution->getGws().size() == 2);
@@ -58,8 +53,6 @@ ErrorCode OpenCLMultiExecution::onPrepare(const MultiExecutionTensors &inputs, c
             }
         }
     }
-    MNN_PRINT("MultiExecution : %s gws : (%u, %u)\n", mContent->name.c_str(), mGlobalWorkSize[0], mGlobalWorkSize[1]);
-    MNN_PRINT("MultiExecution : %s ", mContent->source.c_str());
     return NO_ERROR;    
 }
 
