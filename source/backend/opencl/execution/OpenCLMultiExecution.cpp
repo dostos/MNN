@@ -38,15 +38,20 @@ ErrorCode OpenCLMultiExecution::onPrepare(const MultiExecutionTensors &inputs, c
     for (int subPipelineIdx = 0; subPipelineIdx < mExecutions.size(); subPipelineIdx++) {
         for (int executionIdx = 0; executionIdx < mExecutions[subPipelineIdx].size(); executionIdx++) {
             auto fusionableExecution = dynamic_cast<FusionableExecution *>(mExecutions[subPipelineIdx][executionIdx]);
-            MNN_PRINT("MultiExecution prepare %s execution_gws : (%u, %u) offset : (%u, %u)\n", mContent->name.c_str(), fusionableExecution->getGws()[0], fusionableExecution->getGws()[1], mOffset[0], mOffset[1]);
+            MNN_PRINT("MultiExecution prepare %s execution_gws : (%u, %u) execution_lws : (%u, %u) offset : (%u, %u)\n", 
+                mContent->name.c_str(), 
+                fusionableExecution->getGws()[0], fusionableExecution->getGws()[1], 
+                fusionableExecution->getLws()[0], fusionableExecution->getLws()[1],
+                mOffset[0], mOffset[1]);
             
             fusionableExecution->onPrepare(inputs[subPipelineIdx][executionIdx], outputs[subPipelineIdx][executionIdx], &mKernel, mArgIdx, mOffset);
             MNN_ASSERT(fusionableExecution->getGws().size() == 2);
-            // Expand gws in fixed dimension 
-            mGlobalWorkSize[0] += fusionableExecution->getGws()[0];
-            mGlobalWorkSize[1] = std::max(fusionableExecution->getGws()[1], mGlobalWorkSize[1]);
+            auto roundGws = OpenCL::roundGws(fusionableExecution->getGws(), fusionableExecution->getLws());
+            // Expand gws in fixed dimension
+            mGlobalWorkSize[0] += roundGws[0];
+            mGlobalWorkSize[1] = std::max(roundGws[1], mGlobalWorkSize[1]);
 
-            mOffset[0] += fusionableExecution->getGws()[0];
+            mOffset[0] += roundGws[0];
 
             for (int i = 0; i < 2; i++) {
                 mLocalWorkSize[i] = std::max(fusionableExecution->getLws()[i], mLocalWorkSize[i]);
