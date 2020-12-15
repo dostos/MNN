@@ -130,7 +130,7 @@ static inline uint64_t getTimeInUs() {
 }
 
 std::vector<float> doBench(std::vector<Model>& models, int loop, int warmup = 10, int forward = MNN_FORWARD_CPU, bool only_inference = true,
-                           int numberThread = 4, int precision = 2, int batch = 1) {
+                           int numberThread = 4, int precision = 2, int batch = 1, int fuseCount = 1) {
     std::vector<std::shared_ptr<MNN::Interpreter>> nets;
 
     for (int i = 0; i < models.size(); i++) {
@@ -162,10 +162,19 @@ std::vector<float> doBench(std::vector<Model>& models, int loop, int warmup = 10
     std::set<MNN::SessionId> sessionIds;
 
     for (int i = 0; i < models.size(); i++) {
-        for (int j = 0; j < batch; j++) {
+        for (int j = 0; j < fuseCount; j++) {
             MNN::Session *session = nets[i]->createSession(config);
             sessions.push_back(session);
             inputs.push_back(nets[i]->getSessionInput(session, NULL));
+
+            MNN::Tensor *input = inputs.back();
+            auto inputShape = input->shape();
+            if (inputShape[0] != batch) {
+                inputShape[0] = batch;
+                nets[i]->resizeTensor(input, inputShape);
+                std::cout << "Resized to " << batch << std::endl;
+            }
+
             outputs.push_back(nets[i]->getSessionOutput(session, NULL));
 
             givenTensors.push_back(std::shared_ptr<MNN::Tensor>(MNN::Tensor::createHostTensorFromDevice(inputs.back(), false)));
@@ -204,12 +213,16 @@ std::vector<float> doBench(std::vector<Model>& models, int loop, int warmup = 10
         costs.push_back((timeEnd - timeBegin) / 1000.0);
     }
 
-    for (int i = 0; i < batch; i++) {
-        for (int j = 0; j < models.size() - 1; j++) {
-            if (!MNN::TensorUtils::compareTensors(expectedTensors[i * models.size() + j].get(), expectedTensors[i * models.size() + j + 1].get())) {
+    for (int i = 0; i < models.size(); i++) {
+        for (int j = 0; j < fuseCount - 1; j++) {
+            if (!MNN::TensorUtils::compareTensors(expectedTensors[i * fuseCount + j].get(), expectedTensors[i * fuseCount + j + 1].get())) {
                 std::cout << "Different tensor detected!" << std::endl;
             }
         }
+    }
+    
+    for (int i = 0; i < models.size(); i++) {
+        expectedTensors[i]->print();
     }
 
     return costs;
@@ -276,6 +289,8 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
         auto timeEnd = getTimeInUs();
         costs.push_back((timeEnd - timeBegin) / 1000.0);
     }
+    
+    expectTensor->print();
 
     return costs;
 }
@@ -462,8 +477,9 @@ int main(int argc, const char *argv[]) {
     int numberThread = 4;
     int precision = 2;
     int batch = 1;
+    int fuseCount = 1;
     if (argc <= 2) {
-        std::cout << "Usage: " << argv[0] << " models_folder [mode] [loop_count] [warmup] [forwardtype] [numberThread] [precision] [batch]" << std::endl;
+        std::cout << "Usage: " << argv[0] << " models_folder [mode] [loop_count] [warmup] [forwardtype] [numberThread] [precision] [batch] [fuseCount]" << std::endl;
         return 1;
     }
     if (argc >= 3) {
@@ -487,6 +503,9 @@ int main(int argc, const char *argv[]) {
     if (argc >= 9) {
         batch = atoi(argv[8]);  
     }
+    if (argc >= 10) {
+        fuseCount = atoi(argv[9]);  
+    }
     std::cout << "Forward type: **" << forwardType(forward) << "** thread=" << numberThread << "** precision=" << precision << std::endl;
     std::vector<Model> models = findModelFiles(argv[1]);
 
@@ -496,7 +515,7 @@ int main(int argc, const char *argv[]) {
     // set_cpu_affinity();
 
     if (mode == 0) {
-        std::vector<float> costs = doBench(models, loop, warmup, forward, false, numberThread, precision, batch);
+        std::vector<float> costs = doBench(models, loop, warmup, forward, false, numberThread, precision, batch, fuseCount);
         displayStats("all", costs);
     } else {
         for (auto &m : models) {
