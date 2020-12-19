@@ -174,18 +174,24 @@ std::vector<float> doBench(std::vector<Model>& models, int loop, int warmup = 10
                 nets[i]->resizeTensor(input, inputShape);
                 std::cout << "Resized to " << batch << std::endl;
             }
-
-            outputs.push_back(nets[i]->getSessionOutput(session, NULL));
-
-            givenTensors.push_back(std::shared_ptr<MNN::Tensor>(MNN::Tensor::createHostTensorFromDevice(inputs.back(), false)));
-            setInputData(givenTensors.back().get(), 5.0f);
-            expectedTensors.push_back(std::shared_ptr<MNN::Tensor>(MNN::Tensor::createHostTensorFromDevice(outputs.back(), false)));
-
             sessionIds.insert(multiSession.addSession(session));
         }
     }
 
     multiSession.prepare();
+    
+
+    for (int i = 0; i < models.size(); i++) {
+        for (int j = 0; j < fuseCount; j++) {
+            MNN::Session *session = sessions[i * fuseCount + j];
+            outputs.push_back(nets[i]->getSessionOutput(session, NULL));
+
+            givenTensors.push_back(std::shared_ptr<MNN::Tensor>(MNN::Tensor::createHostTensorFromDevice(inputs.back(), false)));
+            setInputData(givenTensors.back().get(), 5.0f);
+            expectedTensors.push_back(std::shared_ptr<MNN::Tensor>(MNN::Tensor::createHostTensorFromDevice(outputs.back(), false)));
+        }
+    }
+
 
     for (int i = 0; i < warmup; ++i) {
         for (int j = 0; j < inputs.size(); j++) {
