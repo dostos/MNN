@@ -81,8 +81,7 @@ ErrorCode PoolExecution::onResize(const std::vector<Tensor *> &inputs, const std
     int channelBlocks = (channels + 3) / 4;
 
     mGlobalWorkSize = {
-        static_cast<uint32_t>(channelBlocks),
-        static_cast<uint32_t>(outputWidth),
+        static_cast<uint32_t>(channelBlocks * outputWidth),
         static_cast<uint32_t>(batch * outputHeight),
     };
 
@@ -95,7 +94,6 @@ ErrorCode PoolExecution::onResize(const std::vector<Tensor *> &inputs, const std
     uint32_t idx   = 0;
     mKernel.setArg(idx++, mGlobalWorkSize[0]);
     mKernel.setArg(idx++, mGlobalWorkSize[1]);
-    mKernel.setArg(idx++, mGlobalWorkSize[2]);
     mKernel.setArg(idx++, openCLImage(input));
     mKernel.setArg(idx++, sizeof(inputImageShape), inputImageShape);
     mKernel.setArg(idx++, static_cast<int32_t>(outputHeight));
@@ -147,27 +145,9 @@ std::vector<uint32_t> PoolExecution::poolLocalWS(const std::vector<uint32_t> &gw
             }
         }
         lws[1] = std::max<uint32_t>(std::min<uint32_t>(maxWorkGroupSize / lws[0], lws[1]), 1);
-
-        remain    = gws[2] % coreNum;
-        groupSize = gws[2] / coreNum;
-        if (remain == 0) {
-            lws[2] = groupSize;
-        } else {
-            while (groupSize) {
-                int remain = gws[2] % groupSize;
-                if (remain == 0) {
-                    lws[2] = groupSize;
-                    break;
-                }
-                groupSize--;
-            }
-        }
-
-        lws[2] = std::max<uint32_t>(std::min<uint32_t>(maxWorkGroupSize / (lws[0] * lws[1]), lws[2]), 1);
     } else {
         lws[0] = deviceComputeUnits * 2;
         lws[1] = 4;
-        lws[2] = 1;
     }
     return lws;
 }
@@ -179,13 +159,13 @@ ErrorCode PoolExecution::onExecute(const std::vector<Tensor *> &inputs, const st
     
 #ifdef ENABLE_OPENCL_TIME_PROFILER
     cl::Event event;
-    run3DKernelDefault(mKernel, mGlobalWorkSize, mLocalWorkSize,
+    runKernel2D(mKernel, mGlobalWorkSize, mLocalWorkSize,
                        mOpenCLBackend->getOpenCLRuntime(), &event);
     
     int costTime = (int)mOpenCLBackend->getOpenCLRuntime()->getCostTime(&event);
     MNN_PRINT("kernel cost:%d    us Pooling\n",costTime);
 #else
-    run3DKernelDefault(mKernel, mGlobalWorkSize, mLocalWorkSize,
+    runKernel2D(mKernel, mGlobalWorkSize, mLocalWorkSize,
                        mOpenCLBackend->getOpenCLRuntime());
 #endif
     
