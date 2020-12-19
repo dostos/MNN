@@ -15,23 +15,24 @@
 #include "core/Execution.hpp"
 #include "backend/opencl/core/OpenCLBackend.hpp"
 #include "backend/opencl/core/OpenCLRunningUtils.hpp"
+#include "backend/opencl/execution/FusionableExecution.hpp"
 namespace MNN {
 namespace OpenCL {
 
-class PoolExecution : public Execution {
+class PoolExecution : public FusionableExecution {
 public:
     PoolExecution(const std::vector<Tensor *> &inputs, const MNN::Op *op, Backend *backend);
     virtual ~PoolExecution() = default;
 
     virtual ErrorCode onResize(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) override;
+    virtual ErrorCode onPrepare(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs, 
+                                cl::Kernel* kernel, uint32_t& argIdx, std::vector<uint32_t> offset) override;
     virtual ErrorCode onExecute(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) override;
 
     std::vector<uint32_t> poolLocalWS(const std::vector<uint32_t> &gws, const uint32_t maxWorkGroupSize);
 
 private:
     const Pool *mPoolParams;
-    std::vector<uint32_t> mGlobalWorkSize{1, 1};
-    std::vector<uint32_t> mLocalWorkSize{1, 1, 1, 1};
     PoolType mPoolType;
     PoolPadType mPadType;
     std::vector<int> mStrides{1, 1};
