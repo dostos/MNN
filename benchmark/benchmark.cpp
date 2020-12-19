@@ -529,4 +529,5 @@ int main(int argc, const char *argv[]) {
             displayStats(m.name, costs);
         }
     }
+    return 0;
 }
