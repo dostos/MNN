@@ -15,7 +15,7 @@ namespace OpenCL {
 
 DepthwiseDeconvExecution::DepthwiseDeconvExecution(const std::vector<Tensor *> &inputs, const MNN::Op *op,
                                                    Backend *backend)
-    : ConvCommonExecution(op->main_as_Convolution2D(), backend, "depthwise_deconv2d", "depthwise_deconv2d") {
+    : ConvCommonExecution(op->main_as_Convolution2D(), op, backend, "depthwise_deconv2d", "depthwise_deconv2d") {
     mOpenCLBackend      = static_cast<OpenCLBackend *>(backend);
     mCon2dParams        = op->main_as_Convolution2D();
     mConv2dCommonParams = mCon2dParams->common();

@@ -23,10 +23,11 @@ namespace OpenCL {
 
 class ConvCommonExecution : public FusionableExecution {
 public:
-    ConvCommonExecution(const Convolution2D *op, Backend *backend, std::string programName, std::string kernelName = "");
+    ConvCommonExecution(const Convolution2D *conv_op, const MNN::Op *op, Backend *backend, std::string programName, std::string kernelName = "");
     virtual ~ConvCommonExecution();
 
 protected:
+    std::string mName;
     std::shared_ptr<Tensor> mBias;
 };
 

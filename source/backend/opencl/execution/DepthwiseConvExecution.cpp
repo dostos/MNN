@@ -16,7 +16,7 @@ namespace MNN {
 namespace OpenCL {
 
 DepthwiseConvExecution::DepthwiseConvExecution(const std::vector<Tensor *> &inputs, const MNN::Op *op, Backend *backend)
-    : ConvCommonExecution(op->main_as_Convolution2D(), backend, "depthwise_conv2d", "depthwise_conv2d") {
+    : ConvCommonExecution(op->main_as_Convolution2D(), op, backend, "depthwise_conv2d", "depthwise_conv2d") {
     mOpenCLBackend      = static_cast<OpenCLBackend *>(backend);
     mCon2dParams        = op->main_as_Convolution2D();
     mConv2dCommonParams = mCon2dParams->common();
@@ -159,7 +159,7 @@ std::vector<uint32_t> DepthwiseConvExecution::depthwiseConvLocalWS(const std::ve
     MNN_ASSERT(gws.size() == 2);
 
     auto& tunedLws = mOpenCLBackend->getOpenCLRuntime()->tunedLwsMap();
-    std::pair<std::string, std::vector<uint32_t>> info = std::make_pair("depthwiseConvLocalWS", gws);
+    std::pair<std::string, std::vector<uint32_t>> info = std::make_pair(mName + "depthwiseConvLocalWS", gws);
     if (tunedLws.find(info) != tunedLws.end()) {
         //printf("depthwiseConvLocalWS Found! gws:%d %d lws:%d %d\n", gws[0], gws[1], tunedLws[info][0], tunedLws[info][1]);
         return tunedLws[info];

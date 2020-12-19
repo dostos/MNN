@@ -27,7 +27,7 @@ std::vector<uint32_t> ConvExecution::conv2d1x1LocalWSOpt(std::vector<uint32_t> &
     MNN_ASSERT(gws.size() == 2);
     
     auto& tunedLws = mOpenCLBackend->getOpenCLRuntime()->tunedLwsMap();
-    std::pair<std::string, std::vector<uint32_t>> info = std::make_pair("conv2d1x1LocalWSOpt", gws);
+    std::pair<std::string, std::vector<uint32_t>> info = std::make_pair(mName + "conv2d1x1LocalWSOpt", gws);
     if (tunedLws.find(info) != tunedLws.end()) {
         //printf("conv2d1x1LocalWSOpt Found! gws:%d %d lws:%d %d\n", gws[0], gws[1], tunedLws[info][0], tunedLws[info][1]);
         return tunedLws[info];
@@ -120,7 +120,7 @@ std::vector<uint32_t> ConvExecution::conv2d1x1LocalWS(std::vector<uint32_t> &gws
     MNN_ASSERT(gws.size() == 2);
     
     auto& tunedLws = mOpenCLBackend->getOpenCLRuntime()->tunedLwsMap();
-    std::pair<std::string, std::vector<uint32_t>> info = std::make_pair("conv2d1x1LocalWS", gws);
+    std::pair<std::string, std::vector<uint32_t>> info = std::make_pair(mName + "conv2d1x1LocalWS", gws);
     if (tunedLws.find(info) != tunedLws.end()) {
         //printf("conv2d1x1LocalWS Found! gws:%d %d lws:%d %d\n", gws[0], gws[1], tunedLws[info][0], tunedLws[info][1]);
         return tunedLws[info];
@@ -189,7 +189,7 @@ std::vector<uint32_t> ConvExecution::conv2dGeneralLocalWS(const std::vector<uint
     MNN_ASSERT(gws.size() == 2);
     
     auto& tunedLws = mOpenCLBackend->getOpenCLRuntime()->tunedLwsMap();
-    std::pair<std::string, std::vector<uint32_t>> info = std::make_pair("conv2dGeneralLocalWS", gws);
+    std::pair<std::string, std::vector<uint32_t>> info = std::make_pair(mName + "conv2dGeneralLocalWS", gws);
     if (tunedLws.find(info) != tunedLws.end()) {
         //printf("conv2dGeneralLocalWS Found! gws:%d %d lws:%d %d\n", gws[0], gws[1], tunedLws[info][0], tunedLws[info][1]);
         return tunedLws[info];
@@ -300,8 +300,9 @@ std::vector<uint32_t> ConvExecution::conv2dGeneralLocalWS(const std::vector<uint
 #endif
 }
 
-ConvCommonExecution::ConvCommonExecution(const Convolution2D *conv2dParams, Backend *backend, std::string programName, std::string kernelName) 
+ConvCommonExecution::ConvCommonExecution(const Convolution2D *conv2dParams, const MNN::Op *op, Backend *backend, std::string programName, std::string kernelName) 
     : FusionableExecution(backend, programName, kernelName) {
+    mName = op->name()->c_str();
     auto openclBackend       = (OpenCLBackend *)backend;
     int biasSize             = conv2dParams->bias()->size();
     const float *biasDataPtr = conv2dParams->bias()->data();
@@ -327,7 +328,7 @@ ConvCommonExecution::~ConvCommonExecution() {
 }
 
 ConvExecution::ConvExecution(const std::vector<Tensor *> &inputs, const MNN::Op *op, Backend *backend)
-    : ConvCommonExecution(op->main_as_Convolution2D(), backend, "conv_2d") {
+    : ConvCommonExecution(op->main_as_Convolution2D(), op, backend, "conv_2d") {
 #ifdef LOG_VERBOSE
     MNN_PRINT("Start ConvExecution init !\n");
 #endif
@@ -691,7 +692,7 @@ public:
 
         auto conv2D = op->main_as_Convolution2D();
         if (ConvWinograd::valid(conv2D->common(), inputs[0])) {
-            return new ConvWinograd(conv2D, backend);
+            return new ConvWinograd(conv2D, op, backend);
         }
 
         return new ConvExecution(inputs, op, backend);

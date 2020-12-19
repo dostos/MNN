@@ -120,6 +120,7 @@ private:
     double mStartNanos;
     double mStopNanos;
 
+    static const char *sLwsCache;
     std::map<std::pair<std::string, std::vector<uint32_t>>, std::vector<uint32_t>> mTunedLws;
 
 };

@@ -21,7 +21,7 @@ class ConvWinograd : public Execution {
 public:
     virtual ~ConvWinograd() = default;
 
-    ConvWinograd(const MNN::Convolution2D* op, Backend* backend);
+    ConvWinograd(const MNN::Convolution2D* conv_op, const MNN::Op *op, Backend* backend);
 
     virtual ErrorCode onResize(const std::vector<Tensor*>& inputs, const std::vector<Tensor*>& outputs) override;
     virtual ErrorCode onExecute(const std::vector<Tensor*>& inputs, const std::vector<Tensor*>& outputs) override;
@@ -31,6 +31,8 @@ public:
 private:
     OpenCLBackend* mOpenCLBackend;
     const Convolution2DCommon* mCommon;
+    std::string mName;
+
     int mKernelX;
     int mKernelY;
     int mPadX;

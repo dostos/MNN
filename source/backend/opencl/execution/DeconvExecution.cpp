@@ -16,7 +16,7 @@ namespace MNN {
 namespace OpenCL {
 
 DeconvExecution::DeconvExecution(const std::vector<Tensor *> &inputs, const MNN::Op *op, Backend *backend)
-    : ConvCommonExecution(op->main_as_Convolution2D(), backend, "deconv_2d", "deconv_2d") {
+    : ConvCommonExecution(op->main_as_Convolution2D(), op, backend, "deconv_2d", "deconv_2d") {
     mOpenCLBackend                 = static_cast<OpenCLBackend *>(backend);
     const auto *conv2dParams       = op->main_as_Convolution2D();
     const auto *conv2dCommonParams = conv2dParams->common();

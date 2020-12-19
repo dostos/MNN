@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 #include <cstdlib>
 #include <fstream>
+#include <sstream>
 #include <memory>
 #include <string>
 #include <utility>
@@ -20,6 +21,7 @@
 #include <MNN/AutoTime.hpp>
 namespace MNN {
 
+const char* OpenCLRuntime::sLwsCache = "lws.cache";
 extern const std::map<std::string, std::vector<unsigned char>> OpenCLProgramMap;
 
 bool OpenCLRuntime::getDeviceSupportsExtension(const cl::Device &device, const char *extensionName) {
@@ -40,6 +42,34 @@ OpenCLRuntime::OpenCLRuntime(bool permitFloat16) {
 #ifdef LOG_VERBOSE
     MNN_PRINT("start OpenCLRuntime !\n");
 #endif
+
+    std::ifstream ifs(sLwsCache, std::fstream::in);
+    if(ifs.is_open()) {
+        std::string key;
+        while (std::getline(ifs, key)) {
+            std::string gws;
+            std::getline(ifs, gws);
+            std::stringstream gwsSs(gws);
+
+            std::vector<uint32_t> gwsVector;
+            uint32_t value;
+            while(gwsSs >> value) {
+                gwsVector.push_back(value);
+            };
+
+            std::string lws;
+            std::getline(ifs, lws);
+            std::stringstream lwsSs(lws);
+
+            std::vector<uint32_t> lwsVector;
+            while(lwsSs >> value) {
+                lwsVector.push_back(value);
+            };
+
+            mTunedLws[{key, gwsVector}] = lwsVector;
+        };
+        ifs.close();
+    }
     
     mKernelCompiler = std::make_shared<OpenCL::KernelCompiler>(getProgramSource("common"));
 
@@ -194,6 +224,23 @@ OpenCLRuntime::~OpenCLRuntime() {
     mCommandQueuePtr.reset();
     mContext.reset();
     mFirstGPUDevicePtr.reset();
+
+    std::ofstream ofs(sLwsCache, std::fstream::in | std::fstream::out | std::fstream::trunc);
+    if(ofs.is_open()) {
+        for(auto tunedLws : mTunedLws) {
+            ofs << tunedLws.first.first << std::endl;
+            for(auto gws : tunedLws.first.second) {
+                ofs << gws << " ";
+            }
+            ofs << std::endl;
+            for(auto lws : tunedLws.second) {
+                ofs << lws << " ";
+            }
+            ofs << std::endl;
+        }
+        ofs.close();
+    }
+
 #ifdef LOG_VERBOSE
     MNN_PRINT("end ~OpenCLRuntime !\n");
 #endif
