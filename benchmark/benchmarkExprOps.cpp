@@ -208,7 +208,7 @@ static std::vector<float> runOpCombinations(std::vector<std::shared_ptr<Interpre
     }
 
     std::map<Unit *, double> referenceTime;
-    std::vector<Unit *> units;
+    std::vector<std::pair<Unit*, Session*>> units;
 
     for (auto& session : sessions) {
         for (auto &pipeline : session->mPipelines) {
@@ -227,7 +227,7 @@ static std::vector<float> runOpCombinations(std::vector<std::shared_ptr<Interpre
 
                 // Only consider fusionable unit
                 if (unit.get()->mExecution->fusionable()){
-                    units.push_back(unit.get());
+                    units.push_back({unit.get(), session});
                 }
                 //else {
                 //    std::cout << "not fusable : " << unit->name() << std::endl;
@@ -244,17 +244,25 @@ static std::vector<float> runOpCombinations(std::vector<std::shared_ptr<Interpre
     std::fill(v.end() - combination, v.end(), true);
 
     do {
+        std::set<MNN::Session *> targetSessionSet;
         std::set<MNN::Unit *> targetUnitSet;
         std::vector<std::vector<MNN::Unit *>> targetUnits;
         double sumReferenceTime = 0;
         // Select current combination of units
         for (int i = 0; i < v.size(); ++i) {
             if (v[i]) {
-                targetUnits.push_back({units[i]});
-                targetUnitSet.insert(units[i]);
-                sumReferenceTime += referenceTime[units[i]];
+                targetUnits.push_back({units[i].first});
+                targetUnitSet.insert(units[i].first);
+                targetSessionSet.insert(units[i].second);
+                sumReferenceTime += referenceTime[units[i].first];
             }
-        }        
+        }
+        
+        // Skips combination from same model
+        if (targetUnitSet.size() != targetSessionSet.size()) {
+            continue;
+        }
+
         // Prepare multi-unit
         MNN::MultiUnit mu(targetUnits, backend.get());  
 
@@ -273,6 +281,8 @@ static std::vector<float> runOpCombinations(std::vector<std::shared_ptr<Interpre
         auto timeEnd = getTimeInUs();
 
         for (auto& unit : targetUnitSet) {
+            unit->mInputs[0]->printShape();
+            unit->mOutputs[0]->printShape();
             std::cout << unit->name() + " ";
         }
 
