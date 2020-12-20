@@ -11,6 +11,7 @@
 #undef min
 #undef max
 #else
+#include <dirent.h>
 #include <sys/time.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -28,6 +29,7 @@
 #include "core/BackendFactory.hpp"
 #include "core/Session.hpp"
 #include "core/MultiSession.hpp"
+#include "core/MultiPipeline.hpp"
 #include "core/TensorUtils.hpp"
 #include "revertMNNModel.hpp"
 #include <MNN/Interpreter.hpp>
@@ -37,6 +39,61 @@
 
 using namespace MNN;
 using namespace MNN::Express;
+
+struct Model {
+    std::string name;
+    std::string model_file;
+};
+
+#if !defined(_MSC_VER)
+inline bool file_exist(const char *file) {
+    struct stat buffer;
+    return stat(file, &buffer) == 0;
+}
+#endif
+
+std::vector<Model> findModelFiles(const char *dir) {
+    std::vector<Model> models;
+#if defined(_MSC_VER)
+    WIN32_FIND_DATA ffd;
+    HANDLE hFind = INVALID_HANDLE_VALUE;
+    std::string mnn_model_pattern = std::string(dir) + "\\*.mnn";
+    hFind = FindFirstFile(mnn_model_pattern.c_str(), &ffd);
+    if (INVALID_HANDLE_VALUE == hFind) {
+        std::cout << "open " << dir << " failed: " << strerror(errno) << std::endl;
+        return models;
+    }
+    do {
+        Model m;
+        m.name = ffd.cFileName;
+        m.model_file = std::string(dir) + "\\" + m.name;
+        if (INVALID_FILE_ATTRIBUTES != GetFileAttributes(m.model_file.c_str()) && GetLastError() != ERROR_FILE_NOT_FOUND) {
+            models.push_back(std::move(m));
+        }
+    } while (FindNextFile(hFind, &ffd) != 0);
+    FindClose(hFind);
+#else
+    DIR *root;
+    if ((root = opendir(dir)) == NULL) {
+        std::cout << "open " << dir << " failed: " << strerror(errno) << std::endl;
+        return models;
+    }
+
+    struct dirent *ent;
+    while ((ent = readdir(root)) != NULL) {
+        Model m;
+        if (ent->d_name[0] != '.') {
+            m.name = ent->d_name;
+            m.model_file = std::string(dir) + "/" + m.name;
+            if (file_exist(m.model_file.c_str())) {
+                models.push_back(std::move(m));
+            }
+        }
+    }
+    closedir(root);
+#endif
+    return models;
+}
 
 static inline uint64_t getTimeInUs() {
     uint64_t time;
@@ -119,13 +176,16 @@ Interpreter* createFromVARP(VARP netOutput) {
     return Interpreter::createFromBuffer(buf, size);
 }
 
-static std::vector<float> runNets(std::vector<VARP> models, int loop, int warmup = 10, int forward = MNN_FORWARD_CPU, 
-                           int numberThread = 4, int precision = 2, int batch = 1, int fuseCount = 1) {
-    std::vector<std::shared_ptr<MNN::Interpreter>> nets;
+Interpreter* createFromModel(Model& model) {
+    auto revertor = std::unique_ptr<Revert>(new Revert(model.model_file.c_str()));
+    revertor->initialize();
+    auto modelBuffer = revertor->getBuffer();
+    const auto bufferSize = revertor->getBufferSize();
+    return Interpreter::createFromBuffer(modelBuffer, bufferSize);
+}
 
-    for (int i = 0; i < models.size(); i++) {
-        nets.push_back(std::shared_ptr<MNN::Interpreter>(createFromVARP(models[i])));
-    }
+static std::vector<float> runOpCombinations(std::vector<std::shared_ptr<Interpreter>> nets, int loop, int warmup = 10, int forward = MNN_FORWARD_CPU, 
+                           int numberThread = 4, int precision = 2, int combination = 2) {
     
     MNN::BackendConfig backendConfig;
     backendConfig.precision = (MNN::BackendConfig::PrecisionMode)precision;
@@ -139,81 +199,88 @@ static std::vector<float> runNets(std::vector<VARP> models, int loop, int warmup
     auto backend = MNN::BackendFactory::create(info);
 
     MNN::ScheduleConfig config;
-    MNN::MultiSession multiSession;
     config.backend = backend;
 
     std::vector<MNN::Session*> sessions;
-    std::vector<MNN::Tensor *> inputs, outputs;
-    std::vector<std::shared_ptr<MNN::Tensor>> givenTensors, expectedTensors;
-    std::set<MNN::SessionId> sessionIds;
 
-    for (int i = 0; i < models.size(); i++) {
-        for (int j = 0; j < fuseCount; j++) {
-            MNN::Session *session = nets[i]->createSession(config);
-            sessions.push_back(session);
-            inputs.push_back(nets[i]->getSessionInput(session, NULL));
+    for (int i = 0; i < nets.size(); i++) {
+        sessions.push_back(nets[i]->createSession(config));
+    }
 
-            MNN::Tensor *input = inputs.back();
-            auto inputShape = input->shape();
-            if (inputShape[0] != batch) {
-                inputShape[0] = batch;
-                nets[i]->resizeTensor(input, inputShape);
-                std::cout << "Resized to " << batch << std::endl;
+    std::map<Unit *, double> referenceTime;
+    std::vector<Unit *> units;
+
+    for (auto& session : sessions) {
+        for (auto &pipeline : session->mPipelines) {
+            for (auto & unit: pipeline->mUnits) {
+                for (int i = 0; i < warmup; i++) {
+                    unit->execute();
+                }
+                backend->onWaitFinish();
+                double timeBegin = getTimeInUs();
+                for (int i = 0; i < loop; i++) {
+                    unit->execute();
+                }
+                backend->onWaitFinish();
+                double timeEnd = getTimeInUs();
+                referenceTime[unit.get()] = ((timeEnd - timeBegin)) / 1000.0 / (double)loop;
+
+                // Only consider fusionable unit
+                if (unit.get()->mExecution->fusionable()){
+                    units.push_back(unit.get());
+                }
+                //else {
+                //    std::cout << "not fusable : " << unit->name() << std::endl;
+                //}
+
+                //std::cout << unit->name() << " : " << (timeEnd - timeBegin) / 1000.0 << std::endl;
+
+                // TODO : Percentage of computation per model
             }
-            sessionIds.insert(multiSession.addSession(session));
         }
     }
 
-    multiSession.prepare();
-    
+    std::vector<bool> v(units.size());
+    std::fill(v.end() - combination, v.end(), true);
 
-    for (int i = 0; i < models.size(); i++) {
-        for (int j = 0; j < fuseCount; j++) {
-            MNN::Session *session = sessions[i * fuseCount + j];
-            outputs.push_back(nets[i]->getSessionOutput(session, NULL));
+    do {
+        std::set<MNN::Unit *> targetUnitSet;
+        std::vector<std::vector<MNN::Unit *>> targetUnits;
+        double sumReferenceTime = 0;
+        // Select current combination of units
+        for (int i = 0; i < v.size(); ++i) {
+            if (v[i]) {
+                targetUnits.push_back({units[i]});
+                targetUnitSet.insert(units[i]);
+                sumReferenceTime += referenceTime[units[i]];
+            }
+        }        
+        // Prepare multi-unit
+        MNN::MultiUnit mu(targetUnits, backend.get());  
 
-            givenTensors.push_back(std::shared_ptr<MNN::Tensor>(MNN::Tensor::createHostTensorFromDevice(inputs.back(), false)));
-            setInputData(givenTensors.back().get(), 5.0f);
-            expectedTensors.push_back(std::shared_ptr<MNN::Tensor>(MNN::Tensor::createHostTensorFromDevice(outputs.back(), false)));
+        mu.prepare();
+        
+        for (int i = 0; i < warmup; i++) {
+            mu.execute();
         }
-    }
-
-
-    for (int i = 0; i < warmup; ++i) {
-        for (int j = 0; j < inputs.size(); j++) {
-            inputs[j]->copyFromHostTensor(givenTensors[j].get());
-        }
-        multiSession.runParallel(sessionIds);
-        for (int j = 0; j < outputs.size(); j++) {
-            outputs[j]->copyToHostTensor(expectedTensors[j].get());
-        }
-    }
-
-    std::vector<float> costs;
-    for (int round = 0; round < loop; round++) {
+        backend->onWaitFinish();
         auto timeBegin = getTimeInUs();
-
-        for (int j = 0; j < inputs.size(); j++) {
-            inputs[j]->copyFromHostTensor(givenTensors[j].get());
+        for (int i = 0; i < loop; i++) {
+            mu.execute();
         }
-        multiSession.runParallel(sessionIds);
-        for (int j = 0; j < outputs.size(); j++) {
-            outputs[j]->copyToHostTensor(expectedTensors[j].get());
-        }
+        backend->onWaitFinish();
 
         auto timeEnd = getTimeInUs();
-        costs.push_back((timeEnd - timeBegin) / 1000.0);
-    }
 
-    for (int i = 0; i < models.size(); i++) {
-        for (int j = 0; j < fuseCount - 1; j++) {
-            if (!MNN::TensorUtils::compareTensors(expectedTensors[i * fuseCount + j].get(), expectedTensors[i * fuseCount + j + 1].get())) {
-                std::cout << "Different tensor detected!" << std::endl;
-            }
+        for (auto& unit : targetUnitSet) {
+            std::cout << unit->name() + " ";
         }
-    }
 
-    return costs;
+        double fusedTime = ((timeEnd - timeBegin) / 1000.0) / loop;
+        std::cout << " reference time : " << sumReferenceTime << " fused time : " << fusedTime << " efficiency : " << fusedTime / sumReferenceTime << std::endl;
+    } while (std::next_permutation(v.begin(), v.end()));
+
+    return {};
 }
 
 int main(int argc, const char* argv[]) {
@@ -225,10 +292,9 @@ int main(int argc, const char* argv[]) {
     MNNForwardType forward = MNN_FORWARD_CPU;
     int numberThread = 4;
     int precision = 2;
-    int batch = 1;
-    int fuseCount = 1;
+    int combination = 2;
     if (argc <= 2) {
-        std::cout << "Usage: " << argv[0] << " models_folder [mode] [loop_count] [warmup] [forwardtype] [numberThread] [precision] [batch] [fuseCount]" << std::endl;
+        std::cout << "Usage: " << argv[0] << " models_folder [mode] [loop_count] [warmup] [forwardtype] [numberThread] [precision] [combination]" << std::endl;
         return 1;
     }
     if (argc >= 3) {
@@ -250,24 +316,28 @@ int main(int argc, const char* argv[]) {
         precision = atoi(argv[7]);
     }
     if (argc >= 9) {
-        batch = atoi(argv[8]);  
-    }
-    if (argc >= 10) {
-        fuseCount = atoi(argv[9]);  
+        combination = atoi(argv[8]);  
     }
     std::cout << "Forward type: **" << forwardType(forward) << "** thread=" << numberThread << "** precision=" << precision << std::endl;
 
     std::cout << "--------> Benchmarking... loop = " << argv[3] << ", warmup = " << warmup << std::endl;
 
-    std::vector<VARP> models;
-
-    for (int i = 0; i < 2; i++) {
-        auto x = _Input({1, 3, 224, 224}, NC4HW4);
-        x = _Conv(rand() % 5, rand() % 5, x, {3, 24}, {1, 1}, SAME, {2, 2}, {1, 1}, 1);
-        models.push_back(x);
+    std::vector<std::shared_ptr<MNN::Interpreter>> nets;
+    if (mode == 0) {
+        for (int i = 0; i < 2; i++) {
+            auto x = _Input({1, 3, 224, 224}, NC4HW4);
+            x = _Conv(rand() % 5, rand() % 5, x, {3, 24}, {1, 1}, SAME, {2, 2}, {1, 1}, 1);
+            x = _Conv(rand() % 5, rand() % 5, x, {24, 24}, {1, 1}, SAME, {2, 2}, {1, 1}, 1);
+            nets.push_back(std::shared_ptr<MNN::Interpreter>(createFromVARP(x)));
+        }
+    } else if (mode == 1) {
+        std::vector<Model> models = findModelFiles(argv[1]);
+        for(auto& model : models) {
+            nets.push_back(std::shared_ptr<MNN::Interpreter>(createFromModel(model)));
+        }
     }
 
-    runNets(models, loop, warmup, forward, numberThread, precision, batch, fuseCount);
+    runOpCombinations(nets, loop, warmup, forward, numberThread, precision, combination);
 
     return 0;
 }
