@@ -242,8 +242,6 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
     const auto bufferSize = revertor->getBufferSize();
     auto net = std::shared_ptr<MNN::Interpreter>(MNN::Interpreter::createFromBuffer(modelBuffer, bufferSize));
 
-    MNN::MultiSession multiSession;
-
     revertor.reset();
     MNN::ScheduleConfig config;
     config.numThread = numberThread;
@@ -258,7 +256,6 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
 
     MNN::Tensor *input = net->getSessionInput(session, NULL);
 
-    MNN::SessionId id = multiSession.addSession(session);
 
     auto inputShape = input->shape();
 
@@ -268,7 +265,10 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
         std::cout << "Resized to " << batch << std::endl;
     }
 
-    multiSession.prepare();
+    
+    if (session->getNeedResize()) {
+        session->resize();
+    }
 
     std::cout << "Preparation end." << std::endl;
 
