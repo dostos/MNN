@@ -41,6 +41,9 @@ PoolExecution::PoolExecution(const std::vector<Tensor *> &inputs, const MNN::Op 
     mKernel           = runtime->buildKernel(mProgramName, mKernelName, buildOptions);
     mMaxWorkGroupSize = static_cast<uint32_t>(runtime->getMaxWorkGroupSize(mKernel));
 }
+bool PoolExecution::fusionable() const {
+    return false;
+}
 
 ErrorCode PoolExecution::onResize(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) {
     uint32_t argIdx = 0;

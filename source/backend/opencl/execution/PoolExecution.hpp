@@ -23,6 +23,7 @@ class PoolExecution : public FusionableExecution {
 public:
     PoolExecution(const std::vector<Tensor *> &inputs, const MNN::Op *op, Backend *backend);
     virtual ~PoolExecution() = default;
+    virtual bool fusionable() const override;
 
     virtual ErrorCode onResize(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) override;
     virtual ErrorCode onPrepare(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs, 
