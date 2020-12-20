@@ -62,7 +62,7 @@ protected:
         return this->mUnits;
     }
 
-private:
+public:
     friend class MultiPipeline;
     Backend* mBackend;
     Backend* mBackupBackend;

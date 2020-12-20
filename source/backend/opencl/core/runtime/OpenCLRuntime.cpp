@@ -358,7 +358,7 @@ cl::Kernel OpenCLRuntime::buildKernel(const std::string &programName, const std:
 
 cl::Kernel OpenCLRuntime::buildKernelFromSource(const std::string &kernelName, const std::string &source,
                                       const std::set<std::string> &buildOptions) {
-    if (mFusedKernelMap.find(kernelName) == mFusedKernelMap.end()) {
+    //if (mFusedKernelMap.find(kernelName) == mFusedKernelMap.end()) {
         std::string buildOptionsStr = getCommonBuildString();
         for (auto &option : buildOptions) {
             buildOptionsStr += " " + option;
@@ -372,12 +372,13 @@ cl::Kernel OpenCLRuntime::buildKernelFromSource(const std::string &kernelName, c
         if (err != CL_SUCCESS) {
             MNN_PRINT("%s", source.c_str());                         
             MNN_PRINT("ERROR CODE : %d %s \n", (int)err, getErrorString(err)); 
-            MNN_ASSERT(false);        
-        } else
-            mFusedKernelMap[kernelName] = kernel;
-    }
+            MNN_ASSERT(false);       
+        } 
+//        } else
+//            mFusedKernelMap[kernelName] = kernel;
+    //}
 
-    return mFusedKernelMap[kernelName];
+    return kernel; //mFusedKernelMap[kernelName];
 }
 
 std::string OpenCLRuntime::getCommonBuildString() const {

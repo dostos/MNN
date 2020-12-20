@@ -151,7 +151,7 @@ const KernelContent*  KernelCompiler::fuse(std::vector<const KernelContent* > ke
     fusedKernel->content = fusedContents;
     fusedKernel->pureArgs = fusedPureArgs;
 
-    mContentCaches[fusedName] = fusedKernel;
+    //mContentCaches[fusedName] = fusedKernel;
     return fusedKernel;
 }   
 }

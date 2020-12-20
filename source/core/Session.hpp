@@ -134,7 +134,7 @@ private:
     void _setUpTensorInfo(const Schedule::ScheduleInfo& info);
     Backend* _getDefaultBackend();
 
-private:
+public:
     friend class MultiSession;
 
     std::map<MNNForwardType, std::shared_ptr<Backend>> mBackends;
