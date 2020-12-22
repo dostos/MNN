@@ -95,6 +95,18 @@ ErrorCode MultiSession::runParallel(const std::set<SessionId> &requests, bool sy
     return NO_ERROR;
 }
 
+
+ErrorCode MultiSession::runWithCallBack(const std::set<SessionId> &requests, const TensorCallBackWithInfo& enterCallback, const TensorCallBackWithInfo& exitCallback, bool sync) {
+
+    if (mMultiSessionCaches.find(requests) != mMultiSessionCaches.end()) {
+        auto multiSessionCache = mMultiSessionCaches[requests];
+
+        return multiSessionCache->runWithCallBack(enterCallback, exitCallback);
+    }
+
+    return NO_ERROR;
+}
+
 MultiSession::MultiSessionCache::MultiSessionCache(std::vector<Session *> sessions)
     :mSessions(sessions) {
 
@@ -129,6 +141,17 @@ ErrorCode MultiSession::MultiSessionCache::prepare() {
 ErrorCode MultiSession::MultiSessionCache::run() {
     for(auto pipeline : mMultiPipelines) {
         auto code = pipeline->run();
+        MNN_ASSERT(code == NO_ERROR);
+        if (NO_ERROR != code) {
+            return code;
+        }
+    }
+    return NO_ERROR;
+}
+
+ErrorCode MultiSession::MultiSessionCache::runWithCallBack(const TensorCallBackWithInfo& enterCallback, const TensorCallBackWithInfo& exitCallback) {
+    for(auto pipeline : mMultiPipelines) {
+        auto code = pipeline->runWithCallBack(enterCallback, exitCallback);
         MNN_ASSERT(code == NO_ERROR);
         if (NO_ERROR != code) {
             return code;

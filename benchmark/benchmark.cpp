@@ -35,6 +35,7 @@
 #include "core/MultiSession.hpp"
 #include "core/TensorUtils.hpp"
 #include "revertMNNModel.hpp"
+#include "Profiler.hpp"
 #include <MNN/Interpreter.hpp>
 #include <MNN/MNNDefine.h>
 #include <MNN/Tensor.hpp>
@@ -130,7 +131,7 @@ static inline uint64_t getTimeInUs() {
 }
 
 std::vector<float> doBench(std::vector<Model>& models, int loop, int warmup = 10, int forward = MNN_FORWARD_CPU, bool only_inference = true,
-                           int numberThread = 4, int precision = 2, int batch = 1, int fuseCount = 1) {
+                           int numberThread = 4, int precision = 2, int batch = 1, int fuseCount = 1, bool profile = false) {
     std::vector<std::shared_ptr<MNN::Interpreter>> nets;
 
     for (int i = 0; i < models.size(); i++) {
@@ -202,6 +203,17 @@ std::vector<float> doBench(std::vector<Model>& models, int loop, int warmup = 10
             outputs[j]->copyToHostTensor(expectedTensors[j].get());
         }
     }
+    
+    auto profiler      = MNN::Profiler::getInstance();
+    auto beginCallBack = [&](const std::vector<MNN::Tensor*>& inputs, const MNN::OperatorInfo* info) {
+        profiler->start(info);
+        return true;
+    };
+    auto afterCallBack = [&](const std::vector<MNN::Tensor*>& inputs, const MNN::OperatorInfo* info) {
+        profiler->end(info);
+        return true;
+    };
+    profiler->clear();
 
     std::vector<float> costs;
     for (int round = 0; round < loop; round++) {
@@ -210,7 +222,11 @@ std::vector<float> doBench(std::vector<Model>& models, int loop, int warmup = 10
         for (int j = 0; j < inputs.size(); j++) {
             inputs[j]->copyFromHostTensor(givenTensors[j].get());
         }
-        multiSession.runParallel(sessionIds);
+        if (profile)
+            multiSession.runWithCallBack(sessionIds, beginCallBack, afterCallBack, true);
+        else
+            multiSession.runParallel(sessionIds);
+        
         for (int j = 0; j < outputs.size(); j++) {
             outputs[j]->copyToHostTensor(expectedTensors[j].get());
         }
@@ -226,16 +242,17 @@ std::vector<float> doBench(std::vector<Model>& models, int loop, int warmup = 10
             }
         }
     }
-    
-    for (int i = 0; i < models.size(); i++) {
-        expectedTensors[i]->print();
+
+    if (profile) {
+        profiler->printTimeByOrder(loop);
+        profiler->printTimeByType(loop);
     }
 
     return costs;
 }
 
 std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward = MNN_FORWARD_CPU, bool only_inference = true,
-                           int numberThread = 4, int precision = 2, int batch = 1) {
+                           int numberThread = 4, int precision = 2, int batch = 1, bool profile = false) {
     auto revertor = std::unique_ptr<Revert>(new Revert(model.model_file.c_str()));
     revertor->initialize();
     auto modelBuffer = revertor->getBuffer();
@@ -278,25 +295,43 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
     std::shared_ptr<MNN::Tensor> givenTensor(MNN::Tensor::createHostTensorFromDevice(input, false));
     setInputData(givenTensor.get(), 1.0f);
     std::shared_ptr<MNN::Tensor> expectTensor(MNN::Tensor::createHostTensorFromDevice(outputTensor, false));
+
+    auto profiler      = MNN::Profiler::getInstance();
+    auto beginCallBack = [&](const std::vector<MNN::Tensor*>& inputs, const MNN::OperatorInfo* info) {
+        profiler->start(info);
+        return true;
+    };
+    auto afterCallBack = [&](const std::vector<MNN::Tensor*>& inputs, const MNN::OperatorInfo* info) {
+        profiler->end(info);
+        return true;
+    };
+    profiler->clear();
+
     // Warming up...
     for (int i = 0; i < warmup; ++i) {
         input->copyFromHostTensor(givenTensor.get());
         session->run();
         outputTensor->copyToHostTensor(expectTensor.get());
     }
-
     for (int round = 0; round < loop; round++) {
         auto timeBegin = getTimeInUs();
-
         input->copyFromHostTensor(givenTensor.get());
-        session->run();
+        
+        if (profile)
+            session->runWithCallBack(beginCallBack, afterCallBack, true);
+        else
+            session->run();
+
         outputTensor->copyToHostTensor(expectTensor.get());
 
         auto timeEnd = getTimeInUs();
         costs.push_back((timeEnd - timeBegin) / 1000.0);
     }
-    
-    expectTensor->print();
+
+    if (profile) {
+        profiler->printTimeByOrder(loop);
+        profiler->printTimeByType(loop);
+    }
 
     return costs;
 }
@@ -484,8 +519,9 @@ int main(int argc, const char *argv[]) {
     int precision = 2;
     int batch = 1;
     int fuseCount = 1;
+    bool profile = true;
     if (argc <= 2) {
-        std::cout << "Usage: " << argv[0] << " models_folder [mode] [loop_count] [warmup] [forwardtype] [numberThread] [precision] [batch] [fuseCount]" << std::endl;
+        std::cout << "Usage: " << argv[0] << " models_folder [mode] [loop_count] [warmup] [forwardtype] [numberThread] [precision] [batch] [fuseCount] [profile]" << std::endl;
         return 1;
     }
     if (argc >= 3) {
@@ -512,6 +548,9 @@ int main(int argc, const char *argv[]) {
     if (argc >= 10) {
         fuseCount = atoi(argv[9]);  
     }
+    if (argc >= 11) {
+        profile = atoi(argv[10]);  
+    }
     std::cout << "Forward type: **" << forwardType(forward) << "** thread=" << numberThread << "** precision=" << precision << std::endl;
     std::vector<Model> models = findModelFiles(argv[1]);
 
@@ -521,11 +560,11 @@ int main(int argc, const char *argv[]) {
     // set_cpu_affinity();
 
     if (mode == 0) {
-        std::vector<float> costs = doBench(models, loop, warmup, forward, false, numberThread, precision, batch, fuseCount);
+        std::vector<float> costs = doBench(models, loop, warmup, forward, false, numberThread, precision, batch, fuseCount, profile);
         displayStats("all", costs);
     } else {
         for (auto &m : models) {
-            std::vector<float> costs = doBench(m, loop, warmup, forward, false, numberThread, precision, batch);
+            std::vector<float> costs = doBench(m, loop, warmup, forward, false, numberThread, precision, batch, profile);
             displayStats(m.name, costs);
         }
     }

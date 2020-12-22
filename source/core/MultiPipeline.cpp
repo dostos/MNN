@@ -72,10 +72,25 @@ ErrorCode MultiPipeline::run() {
     return NO_ERROR;
 }
 
+ErrorCode MultiPipeline::runWithCallBack(const TensorCallBackWithInfo &enterCallback, const TensorCallBackWithInfo &exitCallback) {
+    for (auto multiUnit : mMultiUnits) {
+        auto code = multiUnit->executeCallBack(enterCallback, exitCallback);
+        MNN_ASSERT(code == NO_ERROR);
+        if (code != NO_ERROR) {
+            return code;
+        }
+
+    }
+
+    return NO_ERROR;
+}
+
 
 MultiUnit::MultiUnit(std::vector<std::vector<Unit*>> units, Backend* backend)
     :mUnits(units), mBackend(backend), mMultiExecution(nullptr) {
     bool supportMultiExecution = true;
+    std::string type;
+    float flops;
     // Fuse when there is multiple units
     if (mUnits.size() > 1) {
         std::vector<std::vector<Execution *>> multiExecutions;
@@ -88,6 +103,8 @@ MultiUnit::MultiUnit(std::vector<std::vector<Unit*>> units, Backend* backend)
                 subPipelineOutput.push_back(unit->mOutputs);
                 executions.push_back(unit->mExecution.get());
                 supportMultiExecution &= unit->mExecution->fusionable();
+                type += unit->type();
+                flops += unit->flops();
             }
 
             mInput.push_back(subPipelineInput);
@@ -100,6 +117,8 @@ MultiUnit::MultiUnit(std::vector<std::vector<Unit*>> units, Backend* backend)
             if (creator) {
                 // merge ops & prepare kernel
                 mMultiExecution = std::shared_ptr<MultiExecution>(creator->onCreate(multiExecutions, backend));
+                mMultiExecution->mContent->type = type;
+                mMultiExecution->mContent->flops = flops;
             }
         }
     }
@@ -119,11 +138,28 @@ ErrorCode MultiUnit::prepare() {
 
 ErrorCode MultiUnit::execute() {
     if (mMultiExecution) {
-        mMultiExecution->onExecute(mInput, mOutput);
+        mMultiExecution->onExecute();
     } else {
         for (auto units : mUnits) {
             for (auto unit : units) {
                 auto code = unit->execute();
+                MNN_ASSERT(code == NO_ERROR);
+                if (code != NO_ERROR) {
+                    return code;
+                }
+            }
+        }
+    }
+    return NO_ERROR;
+
+}
+ErrorCode MultiUnit::executeCallBack(const TensorCallBackWithInfo &enterCallback, const TensorCallBackWithInfo &exitCallback) {
+    if (mMultiExecution) {
+        mMultiExecution->onExecuteCallback(enterCallback, exitCallback);
+    } else {
+        for (auto units : mUnits) {
+            for (auto unit : units) {
+                auto code = unit->executeCallBack(enterCallback, exitCallback);                
                 MNN_ASSERT(code == NO_ERROR);
                 if (code != NO_ERROR) {
                     return code;

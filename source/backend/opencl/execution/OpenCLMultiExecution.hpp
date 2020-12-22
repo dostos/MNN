@@ -15,7 +15,8 @@ public:
     virtual ~OpenCLMultiExecution() = default;
 
     virtual ErrorCode onPrepare(const MultiExecutionTensors &inputs, const MultiExecutionTensors &outputs) override;
-    virtual ErrorCode onExecute(const MultiExecutionTensors &inputs, const MultiExecutionTensors &outputs) override;
+    virtual ErrorCode onExecute() override;
+    virtual ErrorCode onExecuteCallback(const TensorCallBackWithInfo &enterCallback, const TensorCallBackWithInfo &exitCallback) override;
 
 private:
     uint32_t mArgIdx = 0;
@@ -25,7 +26,7 @@ private:
 
     OpenCLBackend *mBackend;
     cl::Kernel mKernel;
-    const KernelContent *mContent = nullptr;
+    const KernelContent *mKernelContent = nullptr;
 };
 }
 }

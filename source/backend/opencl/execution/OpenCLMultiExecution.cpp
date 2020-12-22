@@ -3,6 +3,8 @@
 #include "backend/opencl/core/OpenCLRunningUtils.hpp"
 #include "FusionableExecution.hpp"
 #include "core/Execution.hpp"
+#include "core/Pipeline.hpp"
+#include <MNN/Interpreter.hpp>
 
 namespace MNN {
 namespace OpenCL {
@@ -30,10 +32,10 @@ ErrorCode OpenCLMultiExecution::onPrepare(const MultiExecutionTensors &inputs, c
     }
 
     // Fuse ops
-    mContent = compiler.fuse(contents);
+    mKernelContent = compiler.fuse(contents);
 
     // Compile kernel
-    mKernel = mBackend->getOpenCLRuntime()->buildKernelFromSource(mContent->name, mContent->source, buildOptions);
+    mKernel = mBackend->getOpenCLRuntime()->buildKernelFromSource(mKernelContent->name, mKernelContent->source, buildOptions);
     
     for (int subPipelineIdx = 0; subPipelineIdx < mExecutions.size(); subPipelineIdx++) {
         for (int executionIdx = 0; executionIdx < mExecutions[subPipelineIdx].size(); executionIdx++) {
@@ -53,10 +55,12 @@ ErrorCode OpenCLMultiExecution::onPrepare(const MultiExecutionTensors &inputs, c
             }
         }
     }
+    
+    mContent->name = mKernelContent->name;
     return NO_ERROR;    
 }
 
-ErrorCode OpenCLMultiExecution::onExecute(const MultiExecutionTensors &inputs, const MultiExecutionTensors &outputs) {
+ErrorCode OpenCLMultiExecution::onExecute() {
     auto runtime = mBackend->getOpenCLRuntime();
     
 #ifdef ENABLE_OPENCL_TIME_PROFILER
@@ -68,15 +72,33 @@ ErrorCode OpenCLMultiExecution::onExecute(const MultiExecutionTensors &inputs, c
 #else
     cl_int error = runKernel2D(mKernel, mGlobalWorkSize, mLocalWorkSize, runtime);
 #endif
-    //MNN_PRINT("MultiExecution : %s gws : (%u, %u)\n", mContent->name.c_str(), mGlobalWorkSize[0], mGlobalWorkSize[1]);
 
     if (error != CL_SUCCESS) {
-        MNN_PRINT("MultiExecution : %s execution failed\n num args : %d\n %s\n", mContent->name.c_str(), mArgIdx, mContent->source.c_str());
+        MNN_PRINT("MultiExecution : %s execution failed\n num args : %d\n %s\n", mContent->name.c_str(), mArgIdx, mKernelContent->source.c_str());
+        return NO_EXECUTION;
+    } else 
+        return NO_ERROR;
+}   
+
+
+ ErrorCode OpenCLMultiExecution::onExecuteCallback(const TensorCallBackWithInfo &enterCallback, const TensorCallBackWithInfo &exitCallback) {
+
+    auto runtime = mBackend->getOpenCLRuntime();
+    cl::Event event;
+    enterCallback({}, this);
+    cl_int error = runKernel2D(mKernel, mGlobalWorkSize, mLocalWorkSize, runtime, &event);
+    int costTime = (int)runtime->getCostTime(&event);
+    exitCallback({}, this);
+    //MNN_PRINT("MultiExecution : %s gws : (%u, %u)\n", mKernelContent->name.c_str(), mGlobalWorkSize[0], mGlobalWorkSize[1]);
+
+    if (error != CL_SUCCESS) {
+        MNN_PRINT("MultiExecution : %s execution failed\n num args : %d\n %s\n", mKernelContent->name.c_str(), mArgIdx, mKernelContent->source.c_str());
         return NO_EXECUTION;
     } else 
         return NO_ERROR;
     }   
-}
+ }
+
 
 class OpenCLMultiExecutionCreator : public MultiExecution::Creator {
     virtual MultiExecution* onCreate(std::vector<std::vector<Execution *>> executions, Backend* backend) const {

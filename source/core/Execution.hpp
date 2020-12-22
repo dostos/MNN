@@ -14,6 +14,7 @@
 #include <MNN/ErrorCode.hpp>
 #include <MNN/MNNForwardType.h>
 #include "NonCopyable.hpp"
+#include "Profileable.hpp"
 #include <MNN/Tensor.hpp>
 
 namespace MNN {
@@ -21,7 +22,7 @@ class Backend;
 struct Op;
 
 /** abstract execution */
-class Execution : public NonCopyable {
+class Execution : public NonCopyable, public Profileable {
 public:
     /**
      * @brief initializer.

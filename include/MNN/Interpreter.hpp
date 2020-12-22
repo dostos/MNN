@@ -10,6 +10,7 @@
 #define Interpreter_hpp
 
 #include <functional>
+#include <memory>
 #include <map>
 #include <string>
 #include <MNN/ErrorCode.hpp>
@@ -83,10 +84,10 @@ public:
     /** Operator's flops, in M*/
     float flops() const;
 
+    Info* mContent;
 protected:
     OperatorInfo();
     ~OperatorInfo();
-    Info* mContent;
 };
 
 typedef std::function<bool(const std::vector<Tensor*>&, const std::string& /*opName*/)> TensorCallBack;

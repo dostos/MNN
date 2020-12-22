@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 #include <MNN/Interpreter.hpp>
@@ -46,6 +47,15 @@ public:
      * @param loops     loop count.
      */
     void printTimeByName(int loops = 1);
+    void printTimeByOrder(int loops = 1);
+    void clear() {
+        mMapByType.clear();
+        mMapByName.clear();
+        mVectorByOrder.clear();
+        mMapNameOrder.clear();
+        mTotalTime = 0.0f;
+        mTotalMFlops = 0.0f;
+    }
 
 private:
     ~Profiler() = default;
@@ -68,9 +78,13 @@ private:
     std::map<std::string, Record> mMapByType;
     std::map<std::string, Record> mMapByName;
 
+    std::vector<Record> mVectorByOrder;
+    std::map<std::string, uint32_t> mMapNameOrder;
+
 private:
     Record& getTypedRecord(const OperatorInfo* info);
     Record& getNamedRecord(const OperatorInfo* info);
+    Record& getOrderedRecord(const OperatorInfo* info);
 };
 
 } // namespace MNN

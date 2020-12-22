@@ -1,4 +1,4 @@
-add_executable(benchmark.out ${CMAKE_CURRENT_LIST_DIR}/benchmark.cpp ${CMAKE_CURRENT_SOURCE_DIR}/tools/cpp/revertMNNModel.cpp)
+add_executable(benchmark.out ${CMAKE_CURRENT_LIST_DIR}/benchmark.cpp ${CMAKE_CURRENT_SOURCE_DIR}/tools/cpp/Profiler.cpp ${CMAKE_CURRENT_SOURCE_DIR}/tools/cpp/revertMNNModel.cpp)
 target_include_directories(benchmark.out PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tools/cpp/ ${CMAKE_CURRENT_SOURCE_DIR}/tools/)
 target_link_libraries(benchmark.out ${MNN_DEPS})
 

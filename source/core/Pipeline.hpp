@@ -70,7 +70,7 @@ public:
 };
 
 /** op unit in pipeline */
-class Unit : public NonCopyable, public OperatorInfo {
+class MNN_PUBLIC Unit : public NonCopyable, public OperatorInfo {
 public:
     /**
      * @brief initialize with given op and its in-out tensors.

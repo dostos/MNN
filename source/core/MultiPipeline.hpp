@@ -20,6 +20,7 @@ public:
 
     ErrorCode prepare();
     ErrorCode run();
+    ErrorCode runWithCallBack(const TensorCallBackWithInfo &enterCallback, const TensorCallBackWithInfo &exitCallback);
 
 private:
     Backend *mBackend;
@@ -28,12 +29,13 @@ private:
     std::vector<std::shared_ptr<MultiUnit>> mMultiUnits;
 };
 
-class MultiUnit {
+class MNN_PUBLIC MultiUnit {
 public:
     MultiUnit(std::vector<std::vector<Unit*>> units, Backend *backend);
 
     ErrorCode prepare();
     ErrorCode execute();
+    ErrorCode executeCallBack(const TensorCallBackWithInfo &enterCallback, const TensorCallBackWithInfo &exitCallback);
 private:
     Backend *mBackend;
     // units that should run parallel 

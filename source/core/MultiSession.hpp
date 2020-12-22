@@ -28,6 +28,8 @@ public:
 
     ErrorCode runSequence(const std::set<SessionId> &requests, bool sync = false);
     ErrorCode runParallel(const std::set<SessionId> &requests, bool sync = false);
+    ErrorCode runWithCallBack(const std::set<SessionId> &requests, const TensorCallBackWithInfo& enterCallback, const TensorCallBackWithInfo& exitCallback,
+                              bool sync = false);
 
 private:
     static SessionId sNextSessionId;
@@ -42,6 +44,7 @@ private:
 
         ErrorCode prepare();
         ErrorCode run();
+        ErrorCode runWithCallBack(const TensorCallBackWithInfo& enterCallback, const TensorCallBackWithInfo& exitCallback);
 
     private:
         // sessions that should run parallel

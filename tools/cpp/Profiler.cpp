@@ -99,6 +99,25 @@ Profiler::Record& Profiler::getNamedRecord(const OperatorInfo* op) {
     return record;
 }
 
+Profiler::Record& Profiler::getOrderedRecord(const OperatorInfo* op) {
+    auto name = op->name();
+    auto iter = mMapNameOrder.find(name);
+    if (iter != mMapNameOrder.end()) {
+        return mVectorByOrder[iter->second];
+    }
+
+    // create new
+    mMapNameOrder.insert(std::make_pair(name, mVectorByOrder.size()));
+    mVectorByOrder.push_back(Record());
+    Record &record = mVectorByOrder.back();
+    record.costTime = 0.0f;
+    record.name        = op->name();
+    record.type        = op->type();
+    record.flops       = 0.0f;
+
+    return record;
+}
+
 void Profiler::start(const OperatorInfo* info) {
     mStartTime = getTime();
     mTotalMFlops += info->flops();
@@ -107,6 +126,10 @@ void Profiler::start(const OperatorInfo* info) {
     typed.flops += info->flops();
     auto& named = getNamedRecord(info);
     named.flops += info->flops();
+    named.calledTimes++;
+    auto& ordered = getOrderedRecord(info);
+    ordered.flops += info->flops();
+    ordered.calledTimes++;
 }
 
 void Profiler::end(const OperatorInfo* info) {
@@ -114,6 +137,7 @@ void Profiler::end(const OperatorInfo* info) {
     float cost = (float)(mEndTime - mStartTime) / 1000.0f;
     mMapByType[info->type()].costTime += cost;
     mMapByName[info->name()].costTime += cost;
+    mVectorByOrder[mMapNameOrder[info->name()]].costTime += cost;
     mTotalTime += cost;
 }
 
@@ -191,6 +215,23 @@ void Profiler::printTimeByName(int loops) {
         rows.emplace_back(columns);
     }
     printTable("Sort by node name !", header, rows);
+}
+
+
+void Profiler::printTimeByOrder(int loops) {
+    const std::vector<std::string> header = {"Node Name", "Op Type", "Avg(ms)", "%", "Flops Rate"};
+    std::vector<std::vector<std::string>> rows;
+    // sort by name
+    for (auto& record: mVectorByOrder) {
+        std::vector<std::string> columns;
+        columns.push_back(record.name);
+        columns.push_back(record.type);
+        columns.push_back(toString(record.costTime / (float)loops));
+        columns.push_back(toString((record.costTime / (float)mTotalTime) * 100));
+        columns.push_back(toString((record.flops / (float)mTotalMFlops) * 100));
+        rows.emplace_back(columns);
+    }
+    printTable("Sort by node execution order !", header, rows);
 }
 
 } // namespace MNN
