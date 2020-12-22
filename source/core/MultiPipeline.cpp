@@ -89,6 +89,7 @@ ErrorCode MultiPipeline::runWithCallBack(const TensorCallBackWithInfo &enterCall
 MultiUnit::MultiUnit(std::vector<std::vector<Unit*>> units, Backend* backend)
     :mUnits(units), mBackend(backend), mMultiExecution(nullptr) {
     bool supportMultiExecution = true;
+    std::string name;
     std::string type;
     float flops;
     // Fuse when there is multiple units
@@ -103,6 +104,11 @@ MultiUnit::MultiUnit(std::vector<std::vector<Unit*>> units, Backend* backend)
                 subPipelineOutput.push_back(unit->mOutputs);
                 executions.push_back(unit->mExecution.get());
                 supportMultiExecution &= unit->mExecution->fusionable();
+                if (!name.empty()) {
+                    name += "+";
+                    type += "+";
+                }
+                name += unit->name();
                 type += unit->type();
                 flops += unit->flops();
             }
@@ -117,6 +123,7 @@ MultiUnit::MultiUnit(std::vector<std::vector<Unit*>> units, Backend* backend)
             if (creator) {
                 // merge ops & prepare kernel
                 mMultiExecution = std::shared_ptr<MultiExecution>(creator->onCreate(multiExecutions, backend));
+                mMultiExecution->mContent->name = name;
                 mMultiExecution->mContent->type = type;
                 mMultiExecution->mContent->flops = flops;
             }

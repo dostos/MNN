@@ -56,7 +56,6 @@ ErrorCode OpenCLMultiExecution::onPrepare(const MultiExecutionTensors &inputs, c
         }
     }
     
-    mContent->name = mKernelContent->name;
     return NO_ERROR;    
 }
 

@@ -201,7 +201,7 @@ void Profiler::printTimeByType(int loops) {
 }
 
 void Profiler::printTimeByName(int loops) {
-    const std::vector<std::string> header = {"Node Name", "Op Type", "Avg(ms)", "%", "Flops Rate"};
+    const std::vector<std::string> header = {"Node Name", "Op Type", "Avg(ms)", "%", "Called times", "Flops Rate"};
     std::vector<std::vector<std::string>> rows;
     // sort by name
     for (auto iter: mMapByName) {
@@ -211,6 +211,7 @@ void Profiler::printTimeByName(int loops) {
         columns.push_back(record.type);
         columns.push_back(toString(record.costTime / (float)loops));
         columns.push_back(toString((record.costTime / (float)mTotalTime) * 100));
+        columns.push_back(toString(record.calledTimes / loops));
         columns.push_back(toString((record.flops / (float)mTotalMFlops) * 100));
         rows.emplace_back(columns);
     }
@@ -219,7 +220,7 @@ void Profiler::printTimeByName(int loops) {
 
 
 void Profiler::printTimeByOrder(int loops) {
-    const std::vector<std::string> header = {"Node Name", "Op Type", "Avg(ms)", "%", "Flops Rate"};
+    const std::vector<std::string> header = {"Node Name", "Op Type", "Avg(ms)", "%", "Called times", "Flops Rate"};
     std::vector<std::vector<std::string>> rows;
     // sort by name
     for (auto& record: mVectorByOrder) {
@@ -228,6 +229,7 @@ void Profiler::printTimeByOrder(int loops) {
         columns.push_back(record.type);
         columns.push_back(toString(record.costTime / (float)loops));
         columns.push_back(toString((record.costTime / (float)mTotalTime) * 100));
+        columns.push_back(toString(record.calledTimes / loops));
         columns.push_back(toString((record.flops / (float)mTotalMFlops) * 100));
         rows.emplace_back(columns);
     }
