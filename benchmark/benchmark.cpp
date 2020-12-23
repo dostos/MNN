@@ -173,7 +173,6 @@ std::vector<float> doBench(std::vector<Model>& models, int loop, int warmup = 10
             if (inputShape[0] != batch) {
                 inputShape[0] = batch;
                 nets[i]->resizeTensor(input, inputShape);
-                std::cout << "Resized to " << batch << std::endl;
             }
             sessionIds.insert(multiSession.addSession(session));
         }
@@ -298,15 +297,12 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
     if (inputShape[0] != batch) {
         inputShape[0] = batch;
         net->resizeTensor(input, inputShape);
-        std::cout << "Resized to " << batch << std::endl;
     }
 
     
     if (session->getNeedResize()) {
         session->resize();
     }
-
-    std::cout << "Preparation end." << std::endl;
 
     const MNN::Backend *inBackend = net->getBackend(session, input);
 
