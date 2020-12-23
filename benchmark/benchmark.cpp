@@ -603,7 +603,7 @@ int main(int argc, const char *argv[]) {
     if (mode == 0) {
         std::vector<float> costs = doBench(models, loop, warmup, forward, false, numberThread, precision, batch, fuseCount, profile);
         displayStats("all", costs);
-    } else {
+    } else if (mode == 1){
         std::vector<float> avg;
         for (auto &m : models)
         {
@@ -612,6 +612,12 @@ int main(int argc, const char *argv[]) {
         }
         for (auto& time : avg) {
             std::cout << time << " ";
+        }
+    } else  {
+        for (auto& model : models) {
+            std::vector<Model> tempModels{model};
+            std::vector<float> costs = doBench(tempModels, loop, warmup, forward, false, numberThread, precision, batch, fuseCount, profile);
+            displayStats(model.name, costs);
         }
     }
     return 0;
