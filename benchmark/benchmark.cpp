@@ -376,7 +376,7 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
     return costs;
 }
 
-void displayStats(const std::string &name, const std::vector<float> &costs) {
+float displayStats(const std::string &name, const std::vector<float> &costs) {
     float max = 0, min = FLT_MAX, sum = 0, avg;
     for (auto v : costs) {
         max = fmax(max, v);
@@ -386,6 +386,7 @@ void displayStats(const std::string &name, const std::vector<float> &costs) {
     }
     avg = costs.size() > 0 ? sum / costs.size() : 0;
     printf("[ - ] %-24s    max = %8.3fms  min = %8.3fms  avg = %8.3fms\n", name.c_str(), max, avg == 0 ? 0 : min, avg);
+    return avg;
 }
 static inline std::string forwardType(MNNForwardType type) {
     switch (type) {
@@ -589,7 +590,7 @@ int main(int argc, const char *argv[]) {
         fuseCount = atoi(argv[9]);  
     }
     if (argc >= 11) {
-        profile = atoi(argv[10]);  
+        profile = atoi(argv[10]) > 0;  
     }
     std::cout << "Forward type: **" << forwardType(forward) << "** thread=" << numberThread << "** precision=" << precision << std::endl;
     std::vector<Model> models = findModelFiles(argv[1]);
@@ -603,9 +604,14 @@ int main(int argc, const char *argv[]) {
         std::vector<float> costs = doBench(models, loop, warmup, forward, false, numberThread, precision, batch, fuseCount, profile);
         displayStats("all", costs);
     } else {
-        for (auto &m : models) {
+        std::vector<float> avg;
+        for (auto &m : models)
+        {
             std::vector<float> costs = doBench(m, loop, warmup, forward, false, numberThread, precision, batch, profile);
-            displayStats(m.name, costs);
+            avg.push_back(displayStats(m.name, costs));
+        }
+        for (auto& time : avg) {
+            std::cout << time << " ";
         }
     }
     return 0;
