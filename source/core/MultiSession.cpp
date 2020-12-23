@@ -27,29 +27,32 @@ ErrorCode MultiSession::prepare() {
     }
 
     mMultiSessionCaches.clear();
-    for (int numSessions = 1; numSessions <= ids.size(); numSessions++) {
-        std::vector<int> validIndexes(ids.size(), 0);
-        for(int i = 0 ; i < numSessions; i++) {
-            validIndexes[i] = 1;
+    // Subset execution
+    //for (int numSessions = 1; numSessions <= ids.size(); numSessions++) {
+    int numSessions = ids.size();
+    std::vector<int> validIndexes(ids.size(), 0);
+    for (int i = 0; i < numSessions; i++)
+    {
+        validIndexes[i] = 1;
+    }
+
+    std::sort(validIndexes.begin(), validIndexes.end());
+
+    do {
+        std::set<SessionId> idSet;
+        std::vector<Session*> sessions;
+
+        for(int i = 0 ; i < ids.size(); i++) {
+            if (validIndexes[i]) {
+                idSet.insert(ids[i]);
+                sessions.push_back(mSessions[ids[i]]);
+            }
         }
 
-        std::sort(validIndexes.begin(), validIndexes.end());
+        mMultiSessionCaches[idSet] = std::make_shared<MultiSessionCache>(sessions);
 
-        do {
-            std::set<SessionId> idSet;
-            std::vector<Session*> sessions;
-
-            for(int i = 0 ; i < ids.size(); i++) {
-                if (validIndexes[i]) {
-                    idSet.insert(ids[i]);
-                    sessions.push_back(mSessions[ids[i]]);
-                }
-            }
-
-            mMultiSessionCaches[idSet] = std::make_shared<MultiSessionCache>(sessions);
-
-        } while(std::next_permutation(validIndexes.begin(), validIndexes.end()));
-    }
+    } while(std::next_permutation(validIndexes.begin(), validIndexes.end()));
+    //}
 
     for (auto multiSessionCache : mMultiSessionCaches) {
         multiSessionCache.second->prepare();
