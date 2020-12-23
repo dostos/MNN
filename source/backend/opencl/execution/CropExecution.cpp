@@ -126,7 +126,7 @@ ErrorCode CropExecution::onExecute(const std::vector<Tensor *> &inputs, const st
                                                  nullptr, &event);
     
     int costTime = (int)runtime->getCostTime(&event);
-    MNN_PRINT("kernel cost:%d    us Crop\n",costTime);
+    
 #else
     runtime->commandQueue().enqueueNDRangeKernel(mKernel, cl::NullRange,
                                                  cl::NDRange(roundUpGroupWorkSize[0], roundUpGroupWorkSize[1]),

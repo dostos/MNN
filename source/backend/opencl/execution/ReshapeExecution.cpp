@@ -137,7 +137,7 @@ ErrorCode ReshapeExecution::onExecute(const std::vector<Tensor *> &inputs, const
     MNN_CHECK_CL_SUCCESS(error);
     
     int costTime = (int)mOpenCLBackend->getOpenCLRuntime()->getCostTime(&event0);
-    MNN_PRINT("kernel cost:%d    us Reshape0\n",costTime);
+    
 
     error = runtime->commandQueue().enqueueNDRangeKernel(
         mBufferToImageKernel, cl::NullRange,
@@ -146,7 +146,7 @@ ErrorCode ReshapeExecution::onExecute(const std::vector<Tensor *> &inputs, const
     MNN_CHECK_CL_SUCCESS(error);
     
     costTime = (int)mOpenCLBackend->getOpenCLRuntime()->getCostTime(&event1);
-    MNN_PRINT("kernel cost:%d    us Reshape1\n",costTime);
+    
 #else
     error = runtime->commandQueue().enqueueNDRangeKernel(
         mImageToBufferKernel, cl::NullRange, cl::NDRange(mImageToBufferRoundUpGWS[0], mImageToBufferRoundUpGWS[1]),

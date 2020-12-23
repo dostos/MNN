@@ -154,7 +154,7 @@ ErrorCode RoiPooling::onExecute(const std::vector<Tensor *> &inputs, const std::
                        mOpenCLBackend->getOpenCLRuntime(), &event);
     
     int costTime = (int)mOpenCLBackend->getOpenCLRuntime()->getCostTime(&event);
-    MNN_PRINT("kernel cost:%d    us RoiPooling\n",costTime);
+    
 #else
     run3DKernelDefault(mKernel, mGWS, mLWS, mOpenCLBackend->getOpenCLRuntime());
 #endif

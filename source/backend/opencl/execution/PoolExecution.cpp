@@ -42,7 +42,7 @@ PoolExecution::PoolExecution(const std::vector<Tensor *> &inputs, const MNN::Op 
     mMaxWorkGroupSize = static_cast<uint32_t>(runtime->getMaxWorkGroupSize(mKernel));
 }
 bool PoolExecution::fusionable() const {
-    return false;
+    return true;
 }
 
 ErrorCode PoolExecution::onResize(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) {
@@ -178,7 +178,7 @@ ErrorCode PoolExecution::onExecute(const std::vector<Tensor *> &inputs, const st
                        mOpenCLBackend->getOpenCLRuntime(), &event);
     
     int costTime = (int)mOpenCLBackend->getOpenCLRuntime()->getCostTime(&event);
-    MNN_PRINT("kernel cost:%d    us Pooling\n",costTime);
+    
 #else
     runKernel2D(mKernel, mGlobalWorkSize, mLocalWorkSize,
                        mOpenCLBackend->getOpenCLRuntime());

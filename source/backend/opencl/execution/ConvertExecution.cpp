@@ -69,7 +69,7 @@ namespace MNN {
                                mOpenCLBackend->getOpenCLRuntime(), &event);
             
             int costTime = (int)mOpenCLBackend->getOpenCLRuntime()->getCostTime(&event);
-            MNN_PRINT("kernel cost:%d    us Convert\n",costTime);
+            
         #else
             run3DKernelDefault(mKernel, mGlobalWorkSize, mLocalWorkSize,
                                mOpenCLBackend->getOpenCLRuntime());

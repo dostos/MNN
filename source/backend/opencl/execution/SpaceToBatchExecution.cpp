@@ -77,7 +77,7 @@ ErrorCode SpaceToBatchExecution::onExecute(const std::vector<Tensor *> &inputs, 
         nullptr, &event);
     
     int costTime = (int)mOpenCLBackend->getOpenCLRuntime()->getCostTime(&event);
-    MNN_PRINT("kernel cost:%d    us SpaceToBatch\n",costTime);
+    
 #else
     runtime->commandQueue().enqueueNDRangeKernel(
         mKernel, cl::NullRange,

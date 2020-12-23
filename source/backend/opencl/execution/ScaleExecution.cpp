@@ -141,7 +141,7 @@ ErrorCode ScaleExecution::onExecute(const std::vector<Tensor *> &inputs, const s
 
 #ifdef ENABLE_OPENCL_TIME_PROFILER
     int costTime = (int)mOpenCLBackend->getOpenCLRuntime()->getCostTime(&event);
-    MNN_PRINT("kernel cost:%d    us Scale\n",costTime);
+    
 #endif
     
     MNN_CHECK_CL_SUCCESS(error);

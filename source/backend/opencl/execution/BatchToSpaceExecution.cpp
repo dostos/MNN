@@ -82,7 +82,7 @@ ErrorCode BatchToSpaceExecution::onExecute(const std::vector<Tensor *> &inputs, 
         &event);
     
     int costTime = (int)mOpenCLBackend->getOpenCLRuntime()->getCostTime(&event);
-    MNN_PRINT("kernel cost:%d    us BatchToSpace\n",costTime);
+    
 #else
     runtime->commandQueue().enqueueNDRangeKernel(
         mKernel,

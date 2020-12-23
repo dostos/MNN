@@ -176,7 +176,7 @@ ErrorCode NormalizeExecution::onExecute(const std::vector<Tensor *> &inputs, con
                        mOpenCLBackend->getOpenCLRuntime(), &event);
     
     int costTime = (int)mOpenCLBackend->getOpenCLRuntime()->getCostTime(&event);
-    MNN_PRINT("kernel cost:%d    us Normalize\n",costTime);
+    
 #else
     run3DKernelDefault(mKernel, mGlobalWorkSize, mLocalWorkSize,
                        mOpenCLBackend->getOpenCLRuntime());

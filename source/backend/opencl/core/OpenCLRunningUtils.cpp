@@ -296,7 +296,7 @@ cl_int run2DKernelDefault(const cl::Kernel &kernel, const uint32_t *gws, const s
             cl::NDRange(internalGlobalWS[0], gws1),
             cl::NDRange(params[0], params[1]), nullptr, &event);
         int costTime = (int)runtime->getCostTime(&event);
-        MNN_PRINT("kernel cost:%d    us run2DKernelDefault%d\n",costTime, idx++);
+        
     #else
         error |= runtime->commandQueue().enqueueNDRangeKernel(
             kernel, cl::NDRange(0, i * block_size),

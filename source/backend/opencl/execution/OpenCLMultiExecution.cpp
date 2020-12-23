@@ -67,7 +67,7 @@ ErrorCode OpenCLMultiExecution::onExecute() {
     cl_int error = runKernel2D(mKernel, mGlobalWorkSize, mLocalWorkSize, runtime, &event);
 
     int costTime = (int)runtime->getCostTime(&event);
-    MNN_PRINT("kernel cost:%d    us %s\n", costTime, mContent->name.c_str());
+    
 #else
     cl_int error = runKernel2D(mKernel, mGlobalWorkSize, mLocalWorkSize, runtime);
 #endif

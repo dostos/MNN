@@ -257,7 +257,7 @@ ErrorCode DepthwiseConvExecution::onExecute(const std::vector<Tensor *> &inputs,
                 &event);
     
     int costTime = (int)mOpenCLBackend->getOpenCLRuntime()->getCostTime(&event);
-    MNN_PRINT("kernel cost:%d    us DepthwiseConv\n",costTime);
+    
 #else
     runKernel2D(mKernel, mGlobalWorkSize, mLocalWorkSize,
                 mOpenCLBackend->getOpenCLRuntime());

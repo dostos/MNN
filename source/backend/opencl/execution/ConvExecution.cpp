@@ -669,7 +669,7 @@ ErrorCode ConvExecution::onExecute(const std::vector<Tensor *> &inputs, const st
                 mOpenCLBackend->getOpenCLRuntime(), &event);
     
     int costTime = (int)mOpenCLBackend->getOpenCLRuntime()->getCostTime(&event);
-    MNN_PRINT("kernel cost:%d    us Conv2D\n",costTime);
+    
 #else
     runKernel2D(mKernel, mGlobalWorkSize, mLocalWorkSize,
                 mOpenCLBackend->getOpenCLRuntime());

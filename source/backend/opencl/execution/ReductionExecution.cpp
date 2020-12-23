@@ -347,7 +347,7 @@ ErrorCode ReductionExecution::onExecute(const std::vector<Tensor *> &inputs, con
                            mOpenCLBackend->getOpenCLRuntime(), &event);
         
         int costTime = (int)mOpenCLBackend->getOpenCLRuntime()->getCostTime(&event);
-        MNN_PRINT("kernel cost:%d    us Reduct1D\n",costTime);
+        
     #else
         run3DKernelDefault(mReduct1DKernel, mGlobalWorkSize, mLocalWorkSize,
                            mOpenCLBackend->getOpenCLRuntime());
@@ -361,7 +361,7 @@ ErrorCode ReductionExecution::onExecute(const std::vector<Tensor *> &inputs, con
                            mOpenCLBackend->getOpenCLRuntime(), &event);
         
         int costTime = (int)mOpenCLBackend->getOpenCLRuntime()->getCostTime(&event);
-        MNN_PRINT("kernel cost:%d    us Reduct2D\n",costTime);
+        
     #else
         run3DKernelDefault(mReduct2DKernel, mGlobalWorkSize, mLocalWorkSize,
                            mOpenCLBackend->getOpenCLRuntime());

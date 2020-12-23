@@ -401,7 +401,7 @@ ErrorCode ConvWinograd::onExecute(const std::vector<Tensor*>& inputs, const std:
                                 mOpenCLBackend->getOpenCLRuntime(), &event);
                     
                     int costTime = (int)mOpenCLBackend->getOpenCLRuntime()->getCostTime(&event);
-                    MNN_PRINT("kernel cost:%d    us ConvWino0\n",costTime);
+                    
                 #else
                     runKernel2D(mSourceTransform[index], mGWS_S[index], mLWS_S[index],
                                 mOpenCLBackend->getOpenCLRuntime());
@@ -416,7 +416,7 @@ ErrorCode ConvWinograd::onExecute(const std::vector<Tensor*>& inputs, const std:
                                 mOpenCLBackend->getOpenCLRuntime(), &event);
                     
                     int costTime = (int)mOpenCLBackend->getOpenCLRuntime()->getCostTime(&event);
-                    MNN_PRINT("kernel cost:%d    us ConvWino1\n",costTime);
+                    
                 #else
                     runKernel2D(mMatMul[index], mGWS_M[index], mLWS_M[index],
                                 mOpenCLBackend->getOpenCLRuntime());
@@ -431,7 +431,7 @@ ErrorCode ConvWinograd::onExecute(const std::vector<Tensor*>& inputs, const std:
                                 mOpenCLBackend->getOpenCLRuntime(), &event);
                     
                     int costTime = (int)mOpenCLBackend->getOpenCLRuntime()->getCostTime(&event);
-                    MNN_PRINT("kernel cost:%d    us ConvWino2\n",costTime);
+                    
                 #else
                     runKernel2D(mDestTransform[index], mGWS_D[index], mLWS_D[index],
                                 mOpenCLBackend->getOpenCLRuntime());

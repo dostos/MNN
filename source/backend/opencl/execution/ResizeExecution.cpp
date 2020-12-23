@@ -103,7 +103,7 @@ ErrorCode ResizeExecution::onExecute(const std::vector<Tensor *> &inputs, const 
         cl::NDRange(mLWS[0], mLWS[1], mLWS[2]), nullptr, &event);
     
     int costTime = (int)mOpenCLBackend->getOpenCLRuntime()->getCostTime(&event);
-    MNN_PRINT("kernel cost:%d    us Resize\n",costTime);
+    
 #else
     auto error = runtime->commandQueue().enqueueNDRangeKernel(
         mKernel, cl::NullRange,

@@ -229,7 +229,7 @@ ErrorCode DeconvExecution::onExecute(const std::vector<Tensor *> &inputs, const 
                        &event);
     
     int costTime = (int)mOpenCLBackend->getOpenCLRuntime()->getCostTime(&event);
-    MNN_PRINT("kernel cost:%d    us Deconv\n",costTime);
+    
 #else
     run3DKernelDefault(mKernel, mGlobalWorkSize, mLocalWorkSize,
                        mOpenCLBackend->getOpenCLRuntime());

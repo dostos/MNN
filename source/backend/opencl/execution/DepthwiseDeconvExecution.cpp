@@ -169,7 +169,7 @@ ErrorCode DepthwiseDeconvExecution::onExecute(const std::vector<Tensor *> &input
                        &event);
     
     int costTime = (int)mOpenCLBackend->getOpenCLRuntime()->getCostTime(&event);
-    MNN_PRINT("kernel cost:%d    us DepthwiseDeconv\n",costTime);
+    
 #else
     run3DKernelDefault(mKernel, mGlobalWorkSize, mLocalWorkSize,
                        mOpenCLBackend->getOpenCLRuntime());

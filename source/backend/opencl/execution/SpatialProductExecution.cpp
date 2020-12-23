@@ -82,7 +82,7 @@ ErrorCode SpatialProductExecution::onExecute(const std::vector<Tensor *> &inputs
                        mOpenCLBackend->getOpenCLRuntime(), &event);
     
     int costTime = (int)mOpenCLBackend->getOpenCLRuntime()->getCostTime(&event);
-    MNN_PRINT("kernel cost:%d    us SpatialProduct\n",costTime);
+    
 #else
     run3DKernelDefault(mKernel, mGlobalWorkSize, mLocalWorkSize,
                        mOpenCLBackend->getOpenCLRuntime());
