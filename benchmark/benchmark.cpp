@@ -264,7 +264,6 @@ std::vector<float> doBench(std::vector<Model>& models, int loop, int warmup = 10
 
     if (profile) {
         profiler->printTimeByOrder(loop);
-        profiler->printTimeByName(loop);
         profiler->printTimeByType(loop);
     }
 
@@ -369,7 +368,6 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
 
     if (profile) {
         profiler->printTimeByOrder(loop);
-        profiler->printTimeByName(loop);
         profiler->printTimeByType(loop);
     }
 
