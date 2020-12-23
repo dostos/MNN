@@ -323,6 +323,10 @@ void OpenCLBackend::copyFromDevice(const Tensor* srcTensor, const Tensor* dstTen
     mOpenCLRuntime->commandQueue().enqueueReadBuffer(*mHostBuffer.second, CL_TRUE, 0, needSize, hostPtr);
 }
 void OpenCLBackend::copyToDevice(const Tensor* srcTensor, const Tensor* dstTensor) const{
+    bool needWait = false;
+#ifdef ENABLE_OPENCL_TIME_PROFILER
+    needWait = true;
+#endif
     std::vector<int> bufferShape = MNN::OpenCL::tensorShapeFormat(srcTensor);
     MNN::Tensor interBuffer(0, Tensor::TENSORFLOW);
     interBuffer.buffer().dimensions = bufferShape.size();
@@ -339,18 +343,18 @@ void OpenCLBackend::copyToDevice(const Tensor* srcTensor, const Tensor* dstTenso
     MNN_DATA_FORMAT data_format = TensorUtils::getDescribe(srcTensor)->dimensionFormat;
     if (MNN_DATA_FORMAT_NHWC == data_format) {
         OpenCL::convertNHWCBufferToImage(&interBuffer, const_cast<Tensor*>(dstTensor),
-                                         *const_cast<cl::Kernel*>(&mNHWCBufferToImageFloat), mOpenCLRuntime.get());
+                                         *const_cast<cl::Kernel*>(&mNHWCBufferToImageFloat), mOpenCLRuntime.get(), needWait);
         return;
     }
     if (MNN_DATA_FORMAT_NCHW == data_format) {
         OpenCL::convertNCHWBufferToImage(&interBuffer, const_cast<Tensor*>(dstTensor),
-                                         *const_cast<cl::Kernel*>(&mNCHWBufferToImageFloat), mOpenCLRuntime.get());
+                                         *const_cast<cl::Kernel*>(&mNCHWBufferToImageFloat), mOpenCLRuntime.get(), needWait);
         return;
     }
     if (MNN_DATA_FORMAT_NC4HW4 == data_format) {
         OpenCL::convertNC4HW4BufferToImage(&interBuffer, const_cast<Tensor*>(dstTensor),
                                            *const_cast<cl::Kernel*>(&mNC4HW4BufferToImageFloat),
-                                           mOpenCLRuntime.get());
+                                           mOpenCLRuntime.get(), needWait);
         return;
     }
     MNN_ASSERT(false);

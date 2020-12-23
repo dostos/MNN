@@ -72,6 +72,8 @@ class MNN_PUBLIC OperatorInfo {
     struct Info;
 
 public:
+    OperatorInfo(std::string name, std::string type, float flops);
+    ~OperatorInfo();
     /** Operator's name*/
     const std::string& name() const;
 
@@ -83,7 +85,6 @@ public:
 
 protected:
     OperatorInfo();
-    ~OperatorInfo();
     Info* mContent;
 };
 

@@ -20,6 +20,14 @@ OperatorInfo::OperatorInfo() {
     mContent = new Info;
     MNN_ASSERT(nullptr != mContent);
 }
+    
+OperatorInfo::OperatorInfo(std::string name, std::string type, float flops) 
+    :OperatorInfo() {
+    mContent->name = name;
+    mContent->type = type;
+    mContent->flops = flops;
+}
+
 OperatorInfo::~OperatorInfo() {
     delete mContent;
 }

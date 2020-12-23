@@ -75,6 +75,8 @@ class MNN_PUBLIC OperatorInfo {
     struct Info;
 
 public:
+    OperatorInfo(std::string name, std::string type, float flops);
+    ~OperatorInfo();
     /** Operator's name*/
     const std::string& name() const;
 
@@ -84,10 +86,9 @@ public:
     /** Operator's flops, in M*/
     float flops() const;
 
-    Info* mContent;
 protected:
     OperatorInfo();
-    ~OperatorInfo();
+    Info* mContent;
 };
 
 typedef std::function<bool(const std::vector<Tensor*>&, const std::string& /*opName*/)> TensorCallBack;
