@@ -213,23 +213,42 @@ std::vector<float> doBench(std::vector<Model>& models, int loop, int warmup = 10
         profiler->end(info);
         return true;
     };
+    
+    auto beginMemoryEvent = [&](std::string event) {
+        MNN::OperatorInfo info(event, event, 0.f);
+        beginCallBack({}, &info);
+    };
+    auto afterMemoryEvent = [&](std::string event) {
+        MNN::OperatorInfo info(event, event, 0.f);
+        afterCallBack({}, &info);
+    };
+
     profiler->clear();
 
     std::vector<float> costs;
     for (int round = 0; round < loop; round++) {
         auto timeBegin = getTimeInUs();
 
+        if (profile)
+            beginMemoryEvent("HostToDevice");
         for (int j = 0; j < inputs.size(); j++) {
             inputs[j]->copyFromHostTensor(givenTensors[j].get());
         }
+        if (profile)
+            afterMemoryEvent("HostToDevice");
+
         if (profile)
             multiSession.runWithCallBack(sessionIds, beginCallBack, afterCallBack, true);
         else
             multiSession.runParallel(sessionIds);
         
+        if (profile)
+            beginMemoryEvent("DeviceToHost");
         for (int j = 0; j < outputs.size(); j++) {
             outputs[j]->copyToHostTensor(expectedTensors[j].get());
         }
+        if (profile)
+            afterMemoryEvent("DeviceToHost");
 
         auto timeEnd = getTimeInUs();
         costs.push_back((timeEnd - timeBegin) / 1000.0);
@@ -245,6 +264,7 @@ std::vector<float> doBench(std::vector<Model>& models, int loop, int warmup = 10
 
     if (profile) {
         profiler->printTimeByOrder(loop);
+        profiler->printTimeByName(loop);
         profiler->printTimeByType(loop);
     }
 
@@ -307,22 +327,41 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
     };
     profiler->clear();
 
+    auto beginMemoryEvent = [&](std::string event) {
+        MNN::OperatorInfo info(event, event, 0.f);
+        beginCallBack({}, &info);
+    };
+    auto afterMemoryEvent = [&](std::string event) {
+        MNN::OperatorInfo info(event, event, 0.f);
+        afterCallBack({}, &info);
+    };
+
     // Warming up...
     for (int i = 0; i < warmup; ++i) {
         input->copyFromHostTensor(givenTensor.get());
         session->run();
         outputTensor->copyToHostTensor(expectTensor.get());
     }
+
     for (int round = 0; round < loop; round++) {
         auto timeBegin = getTimeInUs();
-        input->copyFromHostTensor(givenTensor.get());
         
+        if (profile)
+            beginMemoryEvent("HostToDevice");
+        input->copyFromHostTensor(givenTensor.get());
+        if (profile)
+            afterMemoryEvent("HostToDevice");
+
         if (profile)
             session->runWithCallBack(beginCallBack, afterCallBack, true);
         else
             session->run();
 
+        if (profile)
+            beginMemoryEvent("DeviceToHost");
         outputTensor->copyToHostTensor(expectTensor.get());
+        if (profile)
+            afterMemoryEvent("DeviceToHost");
 
         auto timeEnd = getTimeInUs();
         costs.push_back((timeEnd - timeBegin) / 1000.0);
@@ -330,6 +369,7 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
 
     if (profile) {
         profiler->printTimeByOrder(loop);
+        profiler->printTimeByName(loop);
         profiler->printTimeByType(loop);
     }
 
