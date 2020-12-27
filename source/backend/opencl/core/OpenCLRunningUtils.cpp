@@ -154,6 +154,51 @@ std::vector<uint32_t> localWS3DDefault(const std::vector<uint32_t> &gws, const u
     return lws;
 }
 
+std::vector<uint32_t> localWS2DDefault(const std::vector<uint32_t> &gws, const uint32_t maxWorkGroupSize,
+                                       OpenCLRuntime *runtime) {
+                                           std::vector<uint32_t> lws(4, 0);
+    GpuType gpuType             = runtime->getGpuType();
+    uint32_t deviceComputeUnits = runtime->deviceComputeUnits();
+    if (gpuType == GpuType::ADRENO) {
+        int coreNum   = deviceComputeUnits;
+        int remain    = gws[0] % coreNum;
+        int groupSize = gws[0] / coreNum;
+        if (remain == 0) {
+            lws[0] = groupSize;
+        } else {
+            while (groupSize) {
+                int remain = gws[0] % groupSize;
+                if (remain == 0 && groupSize <= maxWorkGroupSize) {
+                    lws[0] = groupSize;
+                    break;
+                }
+                groupSize--;
+            }
+        }
+        lws[0] = std::max<uint32_t>(std::min<uint32_t>(maxWorkGroupSize, lws[0]), 1);
+
+        remain    = gws[1] % coreNum;
+        groupSize = gws[1] / coreNum;
+        if (remain == 0) {
+            lws[1] = groupSize;
+        } else {
+            while (groupSize) {
+                int remain = gws[1] % groupSize;
+                if (remain == 0) {
+                    lws[1] = groupSize;
+                    break;
+                }
+                groupSize--;
+            }
+        }
+        lws[1] = std::max<uint32_t>(std::min<uint32_t>(maxWorkGroupSize / lws[0], lws[1]), 1);
+    } else {
+        lws[0] = deviceComputeUnits * 2;
+        lws[1] = 4;
+    }
+    return lws;
+}
+
 void printKernelExecutionError(cl_int error, const std::vector<uint32_t> &gws, const std::vector<uint32_t> &lws) {
     if (error == CL_INVALID_WORK_GROUP_SIZE) {
         MNN_PRINT("CL_INVALID_WORK_GROUP_SIZE gws : ");

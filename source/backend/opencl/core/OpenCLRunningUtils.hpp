@@ -111,6 +111,9 @@ cl_int runTurnKernelLWS2D(const ::cl::Kernel &kernel, const std::vector<uint32_t
 
 std::vector<uint32_t> localWS3DDefault(const std::vector<uint32_t> &gws, const uint32_t maxWorkGroupSize,
                                        OpenCLRuntime *runtime);
+                                       
+std::vector<uint32_t> localWS2DDefault(const std::vector<uint32_t> &gws, const uint32_t maxWorkGroupSize,
+                                       OpenCLRuntime *runtime);
 void copyBufferToImage(OpenCLRuntime *runtime, const cl::Buffer &buffer, const cl::Image &image, int w, int h);
 
 } // namespace OpenCL

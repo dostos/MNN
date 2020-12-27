@@ -370,7 +370,7 @@ std::vector<float> doBench(Model &model, int loop, int warmup = 10, int forward 
     return costs;
 }
 
-float displayStats(const std::string &name, const std::vector<float> &costs) {
+std::pair<float, float> displayStats(const std::string &name, const std::vector<float> &costs) {
     float max = 0, min = FLT_MAX, sum = 0, avg;
     for (auto v : costs) {
         max = fmax(max, v);
@@ -379,8 +379,13 @@ float displayStats(const std::string &name, const std::vector<float> &costs) {
         //printf("[ - ] cost：%f ms\n", v);
     }
     avg = costs.size() > 0 ? sum / costs.size() : 0;
-    printf("[ - ] %-24s    max = %8.3fms  min = %8.3fms  avg = %8.3fms\n", name.c_str(), max, avg == 0 ? 0 : min, avg);
-    return avg;
+    float stddev = 0;
+    for (auto v : costs) {
+        stddev += pow(v - avg, 2);
+    }
+    stddev = sqrt(stddev / costs.size());
+    printf("[ - ] %-24s    max = %8.3fms  min = %8.3fms  avg = %8.3fms stddev = %8.3fms\n", name.c_str(), max, avg == 0 ? 0 : min, avg, stddev);
+    return {avg, stddev};
 }
 static inline std::string forwardType(MNNForwardType type) {
     switch (type) {
@@ -598,16 +603,28 @@ int main(int argc, const char *argv[]) {
         std::vector<float> costs = doBench(models, loop, warmup, forward, false, numberThread, precision, batch, fuseCount, profile);
         displayStats("all", costs);
     } else if (mode == 1){
-        std::vector<float> avg;
+        std::vector<std::pair<float,float>> avgStddev;
         for (auto &m : models)
         {
             std::vector<float> costs = doBench(m, loop, warmup, forward, false, numberThread, precision, batch, profile);
-            avg.push_back(displayStats(m.name, costs));
+            avgStddev.push_back(displayStats(m.name, costs));
         }
-        for (auto& time : avg) {
-            std::cout << time << " ";
+        std::cout << batch << " ";
+        for (auto &time : avgStddev)
+        {
+            std::cout << time.first << " ";
         }
-    } else  {
+        std::cout << std::endl;
+        
+        std::cout << batch << " ";
+        for (auto &time : avgStddev)
+        {
+            std::cout << time.second << " ";
+        }
+        std::cout << std::endl;
+    }
+    else
+    {
         for (auto& model : models) {
             std::vector<Model> tempModels{model};
             std::vector<float> costs = doBench(tempModels, loop, warmup, forward, false, numberThread, precision, batch, fuseCount, profile);

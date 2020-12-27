@@ -691,10 +691,6 @@ public:
         }
 
         auto conv2D = op->main_as_Convolution2D();
-        
-        if (ConvWinograd::valid(conv2D->common(), inputs[0])) {
-            return new ConvWinograd(conv2D, op, backend);
-        }
 
         return new ConvExecution(inputs, op, backend);
     }

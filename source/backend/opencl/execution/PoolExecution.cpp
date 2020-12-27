@@ -36,13 +36,13 @@ PoolExecution::PoolExecution(const std::vector<Tensor *> &inputs, const MNN::Op 
     auto runtime           = mOpenCLBackend->getOpenCLRuntime();
 
     if (mPoolType == PoolType_AVEPOOL) {
-        buildOptions.emplace("-DPOOL_AVG");
+        mBuildOptions.emplace("-DPOOL_AVG");
     }
     mKernel           = runtime->buildKernel(mProgramName, mKernelName, buildOptions);
     mMaxWorkGroupSize = static_cast<uint32_t>(runtime->getMaxWorkGroupSize(mKernel));
 }
 bool PoolExecution::fusionable() const {
-    return true;
+    return false;
 }
 
 ErrorCode PoolExecution::onResize(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) {
@@ -105,7 +105,7 @@ ErrorCode PoolExecution::onPrepare(const std::vector<Tensor *> &inputs, const st
     int strideShape[2]     = {mStrides[0], mStrides[1]};
     int kernelShape[2]     = {mKernels[0], mKernels[1]};
 
-    mLocalWorkSize = poolLocalWS(mGlobalWorkSize, mMaxWorkGroupSize);
+    mLocalWorkSize = localWS2DDefault(mGlobalWorkSize, mMaxWorkGroupSize, mOpenCLBackend->getOpenCLRuntime());
 
     kernel->setArg(argIdx++, mGlobalWorkSize[0]);
     kernel->setArg(argIdx++, mGlobalWorkSize[1]);
@@ -121,50 +121,6 @@ ErrorCode PoolExecution::onPrepare(const std::vector<Tensor *> &inputs, const st
     MNN_PRINT("end PoolExecution onResize !\n");
 #endif
     return NO_ERROR;
-}
-
-std::vector<uint32_t> PoolExecution::poolLocalWS(const std::vector<uint32_t> &gws, const uint32_t maxWorkGroupSize) {
-    std::vector<uint32_t> lws(4, 0);
-    GpuType gpuType             = mOpenCLBackend->getOpenCLRuntime()->getGpuType();
-    uint32_t deviceComputeUnits = mOpenCLBackend->getOpenCLRuntime()->deviceComputeUnits();
-    if (gpuType == GpuType::ADRENO) {
-        int coreNum   = deviceComputeUnits;
-        int remain    = gws[0] % coreNum;
-        int groupSize = gws[0] / coreNum;
-        if (remain == 0) {
-            lws[0] = groupSize;
-        } else {
-            while (groupSize) {
-                int remain = gws[0] % groupSize;
-                if (remain == 0 && groupSize <= maxWorkGroupSize) {
-                    lws[0] = groupSize;
-                    break;
-                }
-                groupSize--;
-            }
-        }
-        lws[0] = std::max<uint32_t>(std::min<uint32_t>(maxWorkGroupSize, lws[0]), 1);
-
-        remain    = gws[1] % coreNum;
-        groupSize = gws[1] / coreNum;
-        if (remain == 0) {
-            lws[1] = groupSize;
-        } else {
-            while (groupSize) {
-                int remain = gws[1] % groupSize;
-                if (remain == 0) {
-                    lws[1] = groupSize;
-                    break;
-                }
-                groupSize--;
-            }
-        }
-        lws[1] = std::max<uint32_t>(std::min<uint32_t>(maxWorkGroupSize / lws[0], lws[1]), 1);
-    } else {
-        lws[0] = deviceComputeUnits * 2;
-        lws[1] = 4;
-    }
-    return lws;
 }
 
 ErrorCode PoolExecution::onExecute(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) {

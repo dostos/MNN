@@ -30,8 +30,6 @@ public:
                                 cl::Kernel* kernel, uint32_t& argIdx, std::vector<uint32_t> offset) override;
     virtual ErrorCode onExecute(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) override;
 
-    std::vector<uint32_t> poolLocalWS(const std::vector<uint32_t> &gws, const uint32_t maxWorkGroupSize);
-
 private:
     const Pool *mPoolParams;
     PoolType mPoolType;
