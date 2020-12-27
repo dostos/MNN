@@ -184,6 +184,96 @@ Interpreter* createFromModel(Model& model) {
     return Interpreter::createFromBuffer(modelBuffer, bufferSize);
 }
 
+
+static std::vector<float> runNet(std::vector<std::shared_ptr<Interpreter>> nets, int forward = MNN_FORWARD_CPU, int numberThread = 4, int precision = 2, int batch = 1, int fuseCount = 1) {
+    
+    MNN::BackendConfig backendConfig;
+    backendConfig.precision = (MNN::BackendConfig::PrecisionMode)precision;
+    backendConfig.power = MNN::BackendConfig::Power_High;
+
+    MNN::Backend::Info info;
+    info.type = static_cast<MNNForwardType>(forward);
+    info.numThread = numberThread;
+    info.user = &backendConfig;
+
+    auto backend = MNN::BackendFactory::create(info);
+
+    MNN::ScheduleConfig config;
+    MNN::MultiSession multiSession;
+    config.backend = backend;
+
+    std::vector<MNN::Session*> sessions;
+    std::vector<MNN::Tensor *> inputs, outputs;
+    std::vector<std::shared_ptr<MNN::Tensor>> givenTensors, expectedTensors, expectedTensorsSingle;
+    std::set<MNN::SessionId> sessionIds;
+
+    for (int i = 0; i < nets.size(); i++) {
+        for (int j = 0; j < fuseCount; j++) {
+            MNN::Session *session = nets[i]->createSession(config);
+            sessions.push_back(session);
+            inputs.push_back(nets[i]->getSessionInput(session, NULL));
+
+            MNN::Tensor *input = inputs.back();
+            auto inputShape = input->shape();
+            if (inputShape[0] != batch) {
+                inputShape[0] = batch;
+                nets[i]->resizeTensor(input, inputShape);
+            }
+            sessionIds.insert(multiSession.addSession(session));
+        }
+    }
+
+    multiSession.prepare();
+    
+
+    for (int i = 0; i < nets.size(); i++) {
+        for (int j = 0; j < fuseCount; j++) {
+            MNN::Session *session = sessions[i * fuseCount + j];
+            outputs.push_back(nets[i]->getSessionOutput(session, NULL));
+
+            givenTensors.push_back(std::shared_ptr<MNN::Tensor>(MNN::Tensor::createHostTensorFromDevice(inputs.back(), false)));
+            setInputData(givenTensors.back().get(), 5.0f);
+            expectedTensors.push_back(std::shared_ptr<MNN::Tensor>(MNN::Tensor::createHostTensorFromDevice(outputs.back(), false)));
+            expectedTensorsSingle.push_back(std::shared_ptr<MNN::Tensor>(MNN::Tensor::createHostTensorFromDevice(outputs.back(), false)));
+
+        }
+    }
+
+
+    for (int j = 0; j < inputs.size(); j++) {
+        inputs[j]->copyFromHostTensor(givenTensors[j].get());
+    }
+    multiSession.runParallel(sessionIds);
+    for (int j = 0; j < outputs.size(); j++) {
+        outputs[j]->copyToHostTensor(expectedTensors[j].get());
+    }
+
+    for (int j = 0; j < inputs.size(); j++) {
+        inputs[j]->copyFromHostTensor(givenTensors[j].get());
+    }
+    for (auto session : sessions) {
+        session->run();
+    }
+
+    for (int j = 0; j < outputs.size(); j++) {
+        outputs[j]->copyToHostTensor(expectedTensorsSingle[j].get());
+    }
+
+    
+    for (int j = 0; j < outputs.size(); j++) {
+        if(!MNN::TensorUtils::compareTensors(expectedTensors[j].get(), expectedTensorsSingle[j].get())) {
+            std::cout << "Different tensor detected!" << std::endl;
+            expectedTensors[j]->print();
+            expectedTensorsSingle[j]->print();
+        }
+        
+        expectedTensors[j]->print();
+        expectedTensorsSingle[j]->print();
+    }
+
+    return {};
+}
+
 static std::vector<float> runOpCombinations(std::vector<std::shared_ptr<Interpreter>> nets, int loop, int warmup = 10, int forward = MNN_FORWARD_CPU, 
                            int numberThread = 4, int precision = 2, int combination = 2) {
     
@@ -336,18 +426,19 @@ int main(int argc, const char* argv[]) {
     if (mode == 0) {
         for (int i = 0; i < 2; i++) {
             auto x = _Input({1, 3, 224, 224}, NC4HW4);
-            x = _Conv(rand() % 5, rand() % 5, x, {3, 24}, {1, 1}, SAME, {2, 2}, {1, 1}, 1);
-            x = _Conv(rand() % 5, rand() % 5, x, {24, 24}, {1, 1}, SAME, {2, 2}, {1, 1}, 1);
+            x = _Conv(1, 0, x, {3, 24}, {3, 3}, SAME, {2, 2}, {1, 1}, 1);
+            x = _Conv(1, 0, x, {24, 16}, {3, 3}, SAME, {2, 2}, {1, 1}, 1);
             nets.push_back(std::shared_ptr<MNN::Interpreter>(createFromVARP(x)));
         }
+        runNet(nets, forward, numberThread, precision);
     } else if (mode == 1) {
         std::vector<Model> models = findModelFiles(argv[1]);
         for(auto& model : models) {
             nets.push_back(std::shared_ptr<MNN::Interpreter>(createFromModel(model)));
         }
+        runOpCombinations(nets, loop, warmup, forward, numberThread, precision, combination);
     }
 
-    runOpCombinations(nets, loop, warmup, forward, numberThread, precision, combination);
 
     return 0;
 }
