@@ -204,7 +204,7 @@ static std::vector<float> runNet(std::vector<std::shared_ptr<Interpreter>> nets,
 
     std::vector<MNN::Session*> sessions;
     std::vector<MNN::Tensor *> inputs, outputs;
-    std::vector<std::shared_ptr<MNN::Tensor>> givenTensors, expectedTensors, expectedTensorsSingle;
+    std::vector<MNN::Tensor *> givenTensors, expectedTensors, expectedTensorsSingle;
     std::set<MNN::SessionId> sessionIds;
 
     for (int i = 0; i < nets.size(); i++) {
@@ -231,37 +231,33 @@ static std::vector<float> runNet(std::vector<std::shared_ptr<Interpreter>> nets,
             MNN::Session *session = sessions[i * fuseCount + j];
             outputs.push_back(nets[i]->getSessionOutput(session, NULL));
 
-            givenTensors.push_back(std::shared_ptr<MNN::Tensor>(MNN::Tensor::createHostTensorFromDevice(inputs.back(), false)));
-            setInputData(givenTensors.back().get(), 5.0f);
-            expectedTensors.push_back(std::shared_ptr<MNN::Tensor>(MNN::Tensor::createHostTensorFromDevice(outputs.back(), false)));
-            expectedTensorsSingle.push_back(std::shared_ptr<MNN::Tensor>(MNN::Tensor::createHostTensorFromDevice(outputs.back(), false)));
+            givenTensors.push_back(MNN::Tensor::createHostTensorFromDevice(inputs.back(), false));
+            setInputData(givenTensors.back(), 5.0f);
+            expectedTensors.push_back(MNN::Tensor::createHostTensorFromDevice(outputs.back(), false));
+            expectedTensorsSingle.push_back(MNN::Tensor::createHostTensorFromDevice(outputs.back(), false));
 
         }
     }
 
 
-    for (int j = 0; j < inputs.size(); j++) {
-        inputs[j]->copyFromHostTensor(givenTensors[j].get());
-    }
+    backend->onCopyBuffers(givenTensors, inputs);
     multiSession.runParallel(sessionIds);
-    for (int j = 0; j < outputs.size(); j++) {
-        outputs[j]->copyToHostTensor(expectedTensors[j].get());
-    }
+    backend->onCopyBuffers(outputs, expectedTensors);
 
     for (int j = 0; j < inputs.size(); j++) {
-        inputs[j]->copyFromHostTensor(givenTensors[j].get());
+        inputs[j]->copyFromHostTensor(givenTensors[j]);
     }
     for (auto session : sessions) {
         session->run();
     }
 
     for (int j = 0; j < outputs.size(); j++) {
-        outputs[j]->copyToHostTensor(expectedTensorsSingle[j].get());
+        outputs[j]->copyToHostTensor(expectedTensorsSingle[j]);
     }
 
     
     for (int j = 0; j < outputs.size(); j++) {
-        if(!MNN::TensorUtils::compareTensors(expectedTensors[j].get(), expectedTensorsSingle[j].get())) {
+        if(!MNN::TensorUtils::compareTensors(expectedTensors[j], expectedTensorsSingle[j])) {
             std::cout << "Different tensor detected!" << std::endl;
             expectedTensors[j]->print();
             expectedTensorsSingle[j]->print();

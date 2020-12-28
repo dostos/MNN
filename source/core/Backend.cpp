@@ -24,6 +24,14 @@ static std::map<MNNForwardType, std::pair<const BackendCreator*, bool>>& GetExtr
     return *gExtraCreator;
 }
 
+void Backend::onCopyBuffers(const std::vector<Tensor *> &srcTensors, const std::vector<Tensor *> &dstTensors) const {
+    MNN_ASSERT(srcTensors.size() == dstTensors.size());
+
+    for (int i = 0; i < srcTensors.size(); i++) {
+        onCopyBuffer(srcTensors[i], dstTensors[i]);
+    }
+}
+
 const BackendCreator* MNNGetExtraBackendCreator(MNNForwardType type) {
     registerBackend();
 

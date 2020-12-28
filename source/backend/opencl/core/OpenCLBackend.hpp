@@ -84,6 +84,7 @@ public:
     virtual bool onWaitFinish() override;
 
     virtual void onCopyBuffer(const Tensor *srcTensor, const Tensor *dstTensor) const override;
+    virtual void onCopyBuffers(const std::vector<Tensor *> &srcTensors, const std::vector<Tensor *> &dstTensors) const override;
 
     class Creator {
     public:
@@ -107,10 +108,12 @@ public:
 private:
     void copyFromDevice(const Tensor* srcTensor, const Tensor* dstTensor) const;
     void copyToDevice(const Tensor* srcTensor, const Tensor* dstTensor) const;
+    void copyFromDevices(const std::vector<std::pair<Tensor*, Tensor*>>& tensors) const;
+    void copyToDevices(const std::vector<std::pair<Tensor*, Tensor*>>& tensors) const;
     void copyFromDeviceInt8(const Tensor* srcTensor, const Tensor* dstTensor) const;
     void copyToDeviceInt8(const Tensor* srcTensor, const Tensor* dstTensor) const;
 
-    void _allocHostBuffer(int length) const;
+    std::shared_ptr<cl::Buffer> _getHostBuffer(int length, size_t index = 0) const;
     cl::Kernel mImageToNCHWBufferFloat;
     cl::Kernel mImageToNC4HW4BufferFloat;
     cl::Kernel mImageToNHWCBufferFloat;
@@ -118,13 +121,16 @@ private:
     cl::Kernel mNCHWBufferToImageFloat;
     cl::Kernel mNHWCBufferToImageFloat;
     cl::Kernel mNHWCBufferToImageInt8;
+
+    mutable std::map<std::string, cl::Kernel> mImageKernels;
+
     std::shared_ptr<ImagePool> mImagePool;
     std::shared_ptr<ImagePool> mStaticImagePool;
     std::shared_ptr<BufferPool> mBufferPool;
     std::shared_ptr<BufferPoolInt8> mBufferPoolInt8;
     std::shared_ptr<OpenCLRuntime> mOpenCLRuntime;
 
-    mutable std::pair<int, std::shared_ptr<cl::Buffer>> mHostBuffer;
+    mutable std::map<size_t, std::pair<int, std::shared_ptr<cl::Buffer>>> mHostBuffers;
     mutable std::pair<int, std::shared_ptr<SharedBuffer>> mSharedBuffer;
     BackendConfig::PrecisionMode mPrecision;
     bool mIsCreateError{false};

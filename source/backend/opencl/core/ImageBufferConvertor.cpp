@@ -10,6 +10,21 @@
 
 namespace MNN {
 namespace OpenCL {
+
+cl::Kernel getFusedKernel(OpenCLRuntime *runtime, std::string kernelName, int n) {
+    std::vector<const KernelContent*> contents;
+    KernelCompiler &compiler = runtime->KernelCompiler();
+    std::string programSource = runtime->getProgramSource("buffer_to_image");
+    for (int i = 0; i < n; i++) {
+        contents.push_back(compiler.parse(kernelName, programSource));
+    }
+    auto kernelContent = compiler.fuse(contents);
+
+    std::set<std::string> buildOptions;
+    return runtime->buildKernelFromSource(kernelContent->name, kernelContent->source, buildOptions);
+}
+
+
 bool convertNCHWBufferToImage(const Tensor *input, Tensor *output, cl::Kernel &bufferToImageKernel,
                               OpenCLRuntime *runtime, bool needWait) {
     std::vector<int> outputShape = tensorShapeFormat(input);
@@ -159,6 +174,52 @@ bool convertNC4HW4BufferToImage(const Tensor *input, Tensor *output, cl::Kernel 
     return true;
 }
 
+bool convertNC4HW4BufferToImages(const std::vector<std::pair<Tensor*, Tensor*>>& tensors, cl::Kernel &bufferToImageKernel,
+                                OpenCLRuntime *runtime, bool needWait) {
+    if (bufferToImageKernel.get() == nullptr) {
+        bufferToImageKernel = getFusedKernel(runtime, "nc4hw4_buffer_to_image", tensors.size());
+    }
+
+    uint32_t argIdx = 0;
+    uint32_t gws[2] = {0, 0};
+    uint32_t offset[2] = {0, 0};
+    const uint32_t maxWorkGroupSize = static_cast<uint32_t>(runtime->getMaxWorkGroupSize(bufferToImageKernel));
+    const std::vector<uint32_t> lws = {16, std::max((uint32_t)1, maxWorkGroupSize / 16)};
+
+    for (int i = 0; i < tensors.size(); i++) {
+        bufferToImageKernel.setArg(argIdx++, sizeof(offset), offset);
+        uint32_t out_gws[2] = {static_cast<uint32_t>(UP_DIV(tensors[i].first->channel(), 4) * tensors[i].first->width()),
+                                            static_cast<uint32_t>(tensors[i].first->batch() * tensors[i].first->height())};
+        int outputImageShape[2] = {tensors[i].first->height(), tensors[i].first->width()};
+        bufferToImageKernel.setArg(argIdx++, out_gws[0]);
+        bufferToImageKernel.setArg(argIdx++, out_gws[1]);
+        bufferToImageKernel.setArg(argIdx++, openCLBuffer(tensors[i].first));
+        bufferToImageKernel.setArg(argIdx++, sizeof(outputImageShape), outputImageShape);
+        bufferToImageKernel.setArg(argIdx++, UP_DIV(tensors[i].first->channel(), 4));
+        bufferToImageKernel.setArg(argIdx++, openCLImage(tensors[i].second));
+
+        gws[0] += out_gws[0];
+        gws[1] = std::max(gws[1], out_gws[1]);;
+        offset[0] += out_gws[0];
+    }
+
+    cl::Event event;
+    cl_int error;
+    std::vector<uint32_t> roundUpGroupWorkSize(lws.size());
+    for (size_t i = 0; i < lws.size(); ++i) {
+        roundUpGroupWorkSize[i] = ROUND_UP(gws[i], lws[i]);
+    }
+    error = runtime->commandQueue().enqueueNDRangeKernel(bufferToImageKernel, cl::NullRange,
+                                                         cl::NDRange(roundUpGroupWorkSize[0], roundUpGroupWorkSize[1]),
+                                                         cl::NDRange(lws[0], lws[1]), nullptr, &event);
+    MNN_CHECK_CL_SUCCESS(error);
+
+    if (true == needWait) {
+        event.wait();
+    }
+    return true;
+}
+
 /**
  * @brief convert image to nc/4hwc%4 buffer.
  * @param input      input tensor.
@@ -194,6 +255,54 @@ bool convertImageToNC4HW4Buffer(const Tensor *input, Tensor *output, cl::Kernel 
     std::vector<uint32_t> roundUpGroupWorkSize(lws.size());
     for (size_t i = 0; i < lws.size(); ++i) {
         roundUpGroupWorkSize[i] = ROUND_UP(in_gws[i], lws[i]);
+    }
+    error = runtime->commandQueue().enqueueNDRangeKernel(imageToBufferKernel, cl::NullRange,
+                                                         cl::NDRange(roundUpGroupWorkSize[0], roundUpGroupWorkSize[1]),
+                                                         cl::NDRange(lws[0], lws[1]), nullptr, &event);
+    MNN_CHECK_CL_SUCCESS(error);
+
+    if (true == needWait) {
+        event.wait();
+    }
+    return true;
+}
+
+
+bool convertImageToNC4HW4Buffers(const std::vector<std::pair<Tensor*, Tensor*>>& tensors, cl::Kernel& imageToBufferKernel,
+                                OpenCLRuntime *runtime, bool needWait) {
+    if (imageToBufferKernel.get() == nullptr) {
+        imageToBufferKernel = getFusedKernel(runtime, "image_to_nc4hw4_buffer", tensors.size());
+    }
+
+    uint32_t argIdx = 0;
+    uint32_t gws[2] = {0, 0};
+    uint32_t offset[2] = {0, 0};
+    const uint32_t maxWorkGroupSize = static_cast<uint32_t>(runtime->getMaxWorkGroupSize(imageToBufferKernel));
+    const std::vector<uint32_t> lws = {16, std::max((uint32_t)1, maxWorkGroupSize / 16)};
+
+    for (int i = 0; i < tensors.size(); i++) {
+        std::vector<int> inputShape = tensorShapeFormat(tensors[i].first);
+        imageToBufferKernel.setArg(argIdx++, sizeof(offset), offset);
+        uint32_t in_gws[2]          = {static_cast<uint32_t>(UP_DIV(inputShape[3], 4) * inputShape[2]),
+                            static_cast<uint32_t>(inputShape[0] * inputShape[1])};
+        int outputImageShape[2] = {inputShape.at(1), inputShape.at(2)};
+        imageToBufferKernel.setArg(argIdx++, in_gws[0]);
+        imageToBufferKernel.setArg(argIdx++, in_gws[1]);
+        imageToBufferKernel.setArg(argIdx++, openCLBuffer(tensors[i].second));
+        imageToBufferKernel.setArg(argIdx++, sizeof(outputImageShape), outputImageShape);
+        imageToBufferKernel.setArg(argIdx++, static_cast<uint32_t>(UP_DIV(inputShape.at(3), 4)));
+        imageToBufferKernel.setArg(argIdx++, openCLImage(tensors[i].first));
+
+        gws[0] += in_gws[0];
+        gws[1] = std::max(gws[1], in_gws[1]);;
+        offset[0] += in_gws[0];
+    }
+
+    cl::Event event;
+    cl_int error;
+    std::vector<uint32_t> roundUpGroupWorkSize(lws.size());
+    for (size_t i = 0; i < lws.size(); ++i) {
+        roundUpGroupWorkSize[i] = ROUND_UP(gws[i], lws[i]);
     }
     error = runtime->commandQueue().enqueueNDRangeKernel(imageToBufferKernel, cl::NullRange,
                                                          cl::NDRange(roundUpGroupWorkSize[0], roundUpGroupWorkSize[1]),

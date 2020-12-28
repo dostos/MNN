@@ -59,6 +59,8 @@ bool convertImageToNCHWBuffer(const Tensor *input, Tensor *output, cl::Kernel &i
  */
 bool convertNC4HW4BufferToImage(const Tensor *input, Tensor *output, cl::Kernel &bufferToImageKernel,
                                 OpenCLRuntime *runtime, bool needWait = false);
+bool convertNC4HW4BufferToImages(const std::vector<std::pair<Tensor*, Tensor*>>& tensors, cl::Kernel &bufferToImageKernel,
+                                OpenCLRuntime *runtime, bool needWait = false);
 
 /**
  * @brief convert image to nc/4hwc%4 buffer.
@@ -70,6 +72,8 @@ bool convertNC4HW4BufferToImage(const Tensor *input, Tensor *output, cl::Kernel 
  * @return true if success, false otherwise.
  */
 bool convertImageToNC4HW4Buffer(const Tensor *input, Tensor *output, cl::Kernel &imageToBufferKernel,
+                                OpenCLRuntime *runtime, bool needWait = false);
+bool convertImageToNC4HW4Buffers(const std::vector<std::pair<Tensor*, Tensor*>>& tensors, cl::Kernel &imageToBufferKernel,
                                 OpenCLRuntime *runtime, bool needWait = false);
 /**
  * @brief convert image to nhwc buffer.
@@ -98,6 +102,7 @@ private:
     std::string mImageToBufferKernelName;
     cl::Kernel mBufferToImageKernel;
     std::string mBufferToImageKernelName;
+
 };
 
 } // namespace OpenCL

@@ -159,7 +159,7 @@ std::vector<float> doBench(std::vector<Model>& models, int loop, int warmup = 10
 
     std::vector<MNN::Session*> sessions;
     std::vector<MNN::Tensor *> inputs, outputs;
-    std::vector<std::shared_ptr<MNN::Tensor>> givenTensors, expectedTensors;
+    std::vector<MNN::Tensor*> givenTensors, expectedTensors;
     std::set<MNN::SessionId> sessionIds;
 
     for (int i = 0; i < models.size(); i++) {
@@ -186,21 +186,17 @@ std::vector<float> doBench(std::vector<Model>& models, int loop, int warmup = 10
             MNN::Session *session = sessions[i * fuseCount + j];
             outputs.push_back(nets[i]->getSessionOutput(session, NULL));
 
-            givenTensors.push_back(std::shared_ptr<MNN::Tensor>(MNN::Tensor::createHostTensorFromDevice(inputs.back(), false)));
-            setInputData(givenTensors.back().get(), 5.0f);
-            expectedTensors.push_back(std::shared_ptr<MNN::Tensor>(MNN::Tensor::createHostTensorFromDevice(outputs.back(), false)));
+            givenTensors.push_back(MNN::Tensor::createHostTensorFromDevice(inputs.back(), false));
+            setInputData(givenTensors.back(), 5.0f);
+            expectedTensors.push_back(MNN::Tensor::createHostTensorFromDevice(outputs.back(), false));
         }
     }
 
 
     for (int i = 0; i < warmup; ++i) {
-        for (int j = 0; j < inputs.size(); j++) {
-            inputs[j]->copyFromHostTensor(givenTensors[j].get());
-        }
+        backend->onCopyBuffers(givenTensors, inputs);
         multiSession.runParallel(sessionIds);
-        for (int j = 0; j < outputs.size(); j++) {
-            outputs[j]->copyToHostTensor(expectedTensors[j].get());
-        }
+        backend->onCopyBuffers(outputs, expectedTensors);
     }
     
     auto profiler      = MNN::Profiler::getInstance();
@@ -230,9 +226,7 @@ std::vector<float> doBench(std::vector<Model>& models, int loop, int warmup = 10
 
         if (profile)
             beginMemoryEvent("HostToDevice");
-        for (int j = 0; j < inputs.size(); j++) {
-            inputs[j]->copyFromHostTensor(givenTensors[j].get());
-        }
+        backend->onCopyBuffers(givenTensors, inputs);
         if (profile)
             afterMemoryEvent("HostToDevice");
 
@@ -243,9 +237,7 @@ std::vector<float> doBench(std::vector<Model>& models, int loop, int warmup = 10
         
         if (profile)
             beginMemoryEvent("DeviceToHost");
-        for (int j = 0; j < outputs.size(); j++) {
-            outputs[j]->copyToHostTensor(expectedTensors[j].get());
-        }
+        backend->onCopyBuffers(outputs, expectedTensors);
         if (profile)
             afterMemoryEvent("DeviceToHost");
 
@@ -255,7 +247,7 @@ std::vector<float> doBench(std::vector<Model>& models, int loop, int warmup = 10
 
     for (int i = 0; i < models.size(); i++) {
         for (int j = 0; j < fuseCount - 1; j++) {
-            if (!MNN::TensorUtils::compareTensors(expectedTensors[i * fuseCount + j].get(), expectedTensors[i * fuseCount + j + 1].get())) {
+            if (!MNN::TensorUtils::compareTensors(expectedTensors[i * fuseCount + j], expectedTensors[i * fuseCount + j + 1])) {
                 std::cout << "Different tensor detected!" << std::endl;
             }
         }
