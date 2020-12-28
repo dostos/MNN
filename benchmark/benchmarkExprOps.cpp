@@ -266,9 +266,6 @@ static std::vector<float> runNet(std::vector<std::shared_ptr<Interpreter>> nets,
             expectedTensors[j]->print();
             expectedTensorsSingle[j]->print();
         }
-        
-        expectedTensors[j]->print();
-        expectedTensorsSingle[j]->print();
     }
 
     return {};
@@ -428,6 +425,13 @@ int main(int argc, const char* argv[]) {
             auto x = _Input({1, 3, 224, 224}, NC4HW4);
             x = _Conv(1, 0, x, {3, 24}, {3, 3}, SAME, {2, 2}, {1, 1}, 1);
             x = _Conv(1, 0, x, {24, 16}, {3, 3}, SAME, {2, 2}, {1, 1}, 1);
+            x = _Conv(1, 0, x, {16, 16}, {1, 1}, SAME, {2, 2}, {1, 1}, 1);
+            x = _Conv(1, 0, x, {16, 1}, {1, 1}, SAME, {2, 2}, {1, 1}, 1);
+            x = _Conv(1, 0, x, {1, 1}, {1, 1}, SAME, {2, 2}, {1, 1}, 1);
+            x = _Conv(1, 0, x, {1, 16}, {1, 1}, SAME, {2, 2}, {1, 1}, 1);
+            x = _MaxPool(x, {4, 4});
+            x = _Convert(x, NC4HW4);
+            x = _Convert(x, NC4HW4);
             nets.push_back(std::shared_ptr<MNN::Interpreter>(createFromVARP(x)));
         }
         runNet(nets, forward, numberThread, precision);
