@@ -364,14 +364,86 @@ static std::vector<float> runOpCombinations(std::vector<std::shared_ptr<Interpre
         auto timeEnd = getTimeInUs();
 
         for (auto& unit : targetUnitSet) {
-            unit->mInputs[0]->printShape();
-            unit->mOutputs[0]->printShape();
-            std::cout << unit->name() + " ";
+            std::cout << unit->name() + " " + unit->type() + " " + std::to_string(unit->flops()) + " ";
         }
 
         double fusedTime = ((timeEnd - timeBegin) / 1000.0) / loop;
-        std::cout << " reference time : " << sumReferenceTime << " fused time : " << fusedTime << " efficiency : " << fusedTime / sumReferenceTime << std::endl;
+        std::cout << " " << sumReferenceTime << " " << fusedTime << " " << fusedTime / sumReferenceTime << std::endl;
     } while (std::next_permutation(v.begin(), v.end()));
+
+    return {};
+}
+
+
+static std::vector<float> runOpNaiveBatching(std::shared_ptr<Interpreter> net, int loop, int warmup = 10, int forward = MNN_FORWARD_CPU, 
+                           int numberThread = 4, int precision = 2, int combination = 2) {
+    
+    MNN::BackendConfig backendConfig;
+    backendConfig.precision = (MNN::BackendConfig::PrecisionMode)precision;
+    backendConfig.power = MNN::BackendConfig::Power_High;
+
+    MNN::Backend::Info info;
+    info.type = static_cast<MNNForwardType>(forward);
+    info.numThread = numberThread;
+    info.user = &backendConfig;
+
+    auto backend = MNN::BackendFactory::create(info);
+
+    MNN::ScheduleConfig config;
+    config.backend = backend;
+
+    MNN::Session *session = net->createSession(config);
+
+    std::map<Unit *, double> referenceTime;
+    std::vector<Unit*> units;
+
+    for (auto &pipeline : session->mPipelines) {
+        for (auto & unit: pipeline->mUnits) {
+            for (int i = 0; i < warmup; i++) {
+                unit->execute();
+            }
+            backend->onWaitFinish();
+            double timeBegin = getTimeInUs();
+            for (int i = 0; i < loop; i++) {
+                unit->execute();
+            }
+            backend->onWaitFinish();
+            double timeEnd = getTimeInUs();
+            referenceTime[unit.get()] = ((timeEnd - timeBegin)) / 1000.0 / (double)loop;
+            units.push_back(unit.get());
+        }
+    }
+
+    MNN::Tensor *input = net->getSessionInput(session, NULL);
+
+    auto inputShape = input->shape();
+
+    if (inputShape[0] != combination) {
+        inputShape[0] = combination;
+        net->resizeTensor(input, inputShape);
+    }
+
+    
+    if (session->getNeedResize()) {
+        session->resize();
+    }  
+
+    for (auto& unit : units) {
+        for (int i = 0; i < warmup; i++) {
+            unit->execute();
+        }
+        backend->onWaitFinish();
+        double timeBegin = getTimeInUs();
+        for (int i = 0; i < loop; i++) {
+            unit->execute();
+        }
+        backend->onWaitFinish();
+        auto timeEnd = getTimeInUs();
+        std::cout << unit->name() + " " + unit->type() + " " + std::to_string(unit->flops()) + " ";
+        double fusedTime = ((timeEnd - timeBegin) / 1000.0) / loop;
+        std::cout << " " << referenceTime[unit] * combination << " " << fusedTime << " " << fusedTime / (referenceTime[unit] * combination) << std::endl;
+
+    }
 
     return {};
 }
@@ -437,6 +509,13 @@ int main(int argc, const char* argv[]) {
             nets.push_back(std::shared_ptr<MNN::Interpreter>(createFromModel(model)));
         }
         runOpCombinations(nets, loop, warmup, forward, numberThread, precision, combination);
+    } else if (mode == 2) {
+        std::vector<Model> models = findModelFiles(argv[1]);
+        for(auto& model : models) {
+            runOpNaiveBatching(std::shared_ptr<MNN::Interpreter>(createFromModel(model)), loop, warmup, forward, numberThread, precision, combination);
+        }
+        
+
     }
 
 
