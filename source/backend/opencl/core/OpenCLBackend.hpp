@@ -14,6 +14,7 @@
 
 #include <list>
 #include <vector>
+#include <map>
 #include "backend/opencl/core/BufferPool.hpp"
 #include "backend/opencl/core/ImageBufferConvertor.hpp"
 #include "backend/opencl/core/ImagePool.hpp"

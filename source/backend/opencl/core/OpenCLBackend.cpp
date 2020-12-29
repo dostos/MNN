@@ -524,11 +524,25 @@ void OpenCLBackend::onCopyBuffers(const std::vector<Tensor *> &srcTensors, const
         copyFromDeviceInt8(tensors.first, tensors.second);
     }
 
-    if (!ctd.empty())
-        copyToDevices(ctd);
+    if (!ctd.empty()) {
+        if (ctd.size() == 1) {
+            copyToDevice(ctd.front().first, ctd.front().second);
+        }
+        else
+        {
+            copyToDevices(ctd);
+        }
+    }
 
-    if (!cfd.empty())
-        copyFromDevices(cfd);
+    if (!cfd.empty()) {
+        if (cfd.size() == 1) {
+            copyFromDevice(cfd.front().first, cfd.front().second);
+        }
+        else
+        {
+            copyFromDevices(cfd);
+        }
+    }
 
 #ifdef LOG_VERBOSE
     MNN_PRINT("end onCopyBuffer !\n");

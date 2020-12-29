@@ -182,7 +182,13 @@ public:
      * @param dstTensor dest buffer provider.
      */
     virtual void onCopyBuffer(const Tensor* srcTensor, const Tensor* dstTensor) const = 0;
-    virtual void onCopyBuffers(const std::vector<Tensor *> &srcTensors, const std::vector<Tensor *> &dstTensors) const;
+    virtual void onCopyBuffers(const std::vector<Tensor *> &srcTensors, const std::vector<Tensor *> &dstTensors) const {
+        MNN_ASSERT(srcTensors.size() == dstTensors.size());
+
+        for (int i = 0; i < srcTensors.size(); i++) {
+            onCopyBuffer(srcTensors[i], dstTensors[i]);
+        }
+    }
 
     /**
      * @brief get backend memory allocator
