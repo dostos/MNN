@@ -1,8 +1,8 @@
 {
     "cmake.debugConfig": {
         "args": [
-            "${workspaceRoot}/benchmark/models_small",
-            "0",
+            "${workspaceRoot}/benchmark/models",
+            "2",
             "100", // loop
             "100", // warm up
             "3", // forward

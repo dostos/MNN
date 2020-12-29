@@ -559,7 +559,7 @@ int main(int argc, const char *argv[]) {
     int precision = 2;
     int batch = 1;
     int fuseCount = 1;
-    bool profile = true;
+    bool profile = false;
     if (argc <= 2) {
         std::cout << "Usage: " << argv[0] << " models_folder [mode] [loop_count] [warmup] [forwardtype] [numberThread] [precision] [batch] [fuseCount] [profile]" << std::endl;
         return 1;

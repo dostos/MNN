@@ -15,29 +15,17 @@ namespace MNN {
     namespace OpenCL {
 
         ConvertExecution::ConvertExecution(const std::vector<Tensor*>& inputs, const MNN::Op* op, Backend* backend)
-        : FusionableExecution(backend, "convert", "convert") {
+        : Execution(backend) {
             mOpenCLBackend = static_cast<OpenCLBackend*>(backend);
+            std::string kernelName;
             std::set<std::string> buildOptions;
 
-            mKernel    = mOpenCLBackend->getOpenCLRuntime()->buildKernel(mProgramName, mKernelName, buildOptions);
+            kernelName = "convert";
+            mKernel    = mOpenCLBackend->getOpenCLRuntime()->buildKernel(kernelName, kernelName, buildOptions);
             mMaxWorkGroupSize = static_cast<uint32_t>(mOpenCLBackend->getOpenCLRuntime()->getMaxWorkGroupSize(mKernel));
         }
 
         ErrorCode ConvertExecution::onResize(const std::vector<Tensor*>& inputs, const std::vector<Tensor*>& outputs) {
-            uint32_t argIdx = 0;
-            return onPrepare(inputs, outputs, nullptr, argIdx, {});
-        }
-        
-        ErrorCode ConvertExecution::onPrepare(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs, 
-                                    cl::Kernel* kernel, uint32_t& argIdx, std::vector<uint32_t> offset) {
-
-            if (kernel == nullptr) {
-                kernel = &mKernel;
-            } else {
-                uint32_t offsetArgs[2] = {offset[0], offset[1]};
-                kernel->setArg(argIdx++, sizeof(offsetArgs), offsetArgs);
-            }
-
             Tensor* input  = inputs[0];
             Tensor* output = outputs[0];
 
@@ -51,19 +39,23 @@ namespace MNN {
 
             const int channelBlocks = UP_DIV(channels, 4);
 
-            mGlobalWorkSize = {static_cast<uint32_t>(channelBlocks * width),
+            const std::vector<uint32_t> gws = {static_cast<uint32_t>(channelBlocks), static_cast<uint32_t>(width),
                 static_cast<uint32_t>(height * batch)};
 
-            kernel->setArg(argIdx++, mGlobalWorkSize[0]);
-            kernel->setArg(argIdx++, mGlobalWorkSize[1]);
+            int idx = 0;
+            mKernel.setArg(idx++, gws[0]);
+            mKernel.setArg(idx++, gws[1]);
+            mKernel.setArg(idx++, gws[2]);
 
-            kernel->setArg(argIdx++, openCLImage(input));
-            kernel->setArg(argIdx++, openCLImage(output));
+            mKernel.setArg(idx++, openCLImage(input));
+            mKernel.setArg(idx++, openCLImage(output));
 
             auto runtime                    = mOpenCLBackend->getOpenCLRuntime();
+            mGlobalWorkSize = {static_cast<uint32_t>(channelBlocks), static_cast<uint32_t>(width),
+                static_cast<uint32_t>(height * batch)};
 
-            mLocalWorkSize = localWS2DDefault(mGlobalWorkSize, mMaxWorkGroupSize, mOpenCLBackend->getOpenCLRuntime());
-            return NO_ERROR; 
+            mLocalWorkSize = localWS3DDefault(gws, mMaxWorkGroupSize, mOpenCLBackend->getOpenCLRuntime());
+            return NO_ERROR;
         }
 
         ErrorCode ConvertExecution::onExecute(const std::vector<Tensor*>& inputs, const std::vector<Tensor*>& outputs) {
@@ -73,13 +65,13 @@ namespace MNN {
 
         #ifdef ENABLE_OPENCL_TIME_PROFILER
             cl::Event event;
-            runKernel2D(mKernel, mGlobalWorkSize, mLocalWorkSize,
+            run3DKernelDefault(mKernel, mGlobalWorkSize, mLocalWorkSize,
                                mOpenCLBackend->getOpenCLRuntime(), &event);
             
             int costTime = (int)mOpenCLBackend->getOpenCLRuntime()->getCostTime(&event);
-            
+            MNN_PRINT("kernel cost:%d    us Convert\n",costTime);
         #else
-            runKernel2D(mKernel, mGlobalWorkSize, mLocalWorkSize,
+            run3DKernelDefault(mKernel, mGlobalWorkSize, mLocalWorkSize,
                                mOpenCLBackend->getOpenCLRuntime());
         #endif
             
