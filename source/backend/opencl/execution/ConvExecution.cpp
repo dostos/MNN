@@ -407,6 +407,8 @@ ConvExecution::ConvExecution(const std::vector<Tensor *> &inputs, const MNN::Op 
                 mKernelName = "conv_2d_1x1";
             }
         }
+        
+        mName = "Conv2D_1x1";
     }
 
     if(mConv1x1Opt && !mUseLocalMem){

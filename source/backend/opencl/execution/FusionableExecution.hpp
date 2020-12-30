@@ -24,7 +24,6 @@ public:
     const std::vector<uint32_t> &getLws() const;
 
 protected:
-    std::string mName;
     std::string mProgramName;
     std::string mKernelName;
     

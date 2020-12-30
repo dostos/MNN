@@ -27,7 +27,6 @@ public:
     virtual ~ConvCommonExecution();
 
 protected:
-    std::string mName;
     std::shared_ptr<Tensor> mBias;
 };
 

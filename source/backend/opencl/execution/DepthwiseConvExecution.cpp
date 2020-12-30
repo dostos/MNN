@@ -22,6 +22,7 @@ DepthwiseConvExecution::DepthwiseConvExecution(const std::vector<Tensor *> &inpu
     mConv2dCommonParams = mCon2dParams->common();
     mStrides            = {mConv2dCommonParams->strideY(), mConv2dCommonParams->strideX()};
     mDilations          = {mConv2dCommonParams->dilateY(), mConv2dCommonParams->dilateX()};
+    mName = "DepthwiseConv2D";
 
     mPaddings[0]    = mConv2dCommonParams->padY() * 2;
     mPaddings[1]    = mConv2dCommonParams->padX() * 2;
@@ -63,6 +64,7 @@ DepthwiseConvExecution::DepthwiseConvExecution(const std::vector<Tensor *> &inpu
     if (mConv2dCommonParams->strideX() == 1 && mConv2dCommonParams->strideY() == 1 &&
         mConv2dCommonParams->dilateX() == 1 && mConv2dCommonParams->dilateY() == 1) {
         mKernelName = "depthwise_conv2d_s1";
+        mName = "DepthwiseConv2D_s1";
     }
 
     if (mConv2dCommonParams->relu() == true) {

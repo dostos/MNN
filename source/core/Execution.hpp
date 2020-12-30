@@ -122,8 +122,13 @@ public:
         return mBackEnd;
     }
 
+    std::string name() const {
+        return mName;
+    }
+
 protected:
     bool mValid = true;
+    std::string mName;
 
 private:
     Backend *mBackEnd;

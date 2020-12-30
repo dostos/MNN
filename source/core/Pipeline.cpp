@@ -101,6 +101,9 @@ bool Unit::_createExecution(Backend* bn, Backend* cpuBn) {
         auto tempExecution = mExecution;
         mExecution.reset(new WrapExecution(cpuBn, tempExecution));
     }
+    if (mExecution->valid() && !mExecution->name().empty()) {
+        mContent->name = mExecution->name();
+    }
     return mExecution->valid();
 }
 
