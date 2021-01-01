@@ -5,7 +5,7 @@ __kernel void normalize_kernel(GLOBAL_SIZE_3_DIMS(0) __read_only image2d_t input
     const int width_idx    = get_global_id(1);
     const int hb_idx       = get_global_id(2);
 
-    DEAL_NON_UNIFORM_DIM3(0, chan_blk_idx, width_idx, hb_idx);
+    SKIP_ID_3_DIMS(0, chan_blk_idx, width_idx, hb_idx);
     int chan_blks;
     if (0 == remain_channels) {
         chan_blks = global_size_dim0;

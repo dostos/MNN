@@ -6,7 +6,7 @@ __kernel void interp(GLOBAL_SIZE_3_DIMS(0) __read_only image2d_t input, __write_
     const int output_width_block_idx        = get_global_id(1);
     const int output_batch_height_block_idx = get_global_id(2);
 
-    DEAL_NON_UNIFORM_DIM3(0, output_channel_block_idx, output_width_block_idx, output_batch_height_block_idx);
+    SKIP_ID_3_DIMS(0, output_channel_block_idx, output_width_block_idx, output_batch_height_block_idx);
 
     const int output_batch_idx  = output_batch_height_block_idx / output_height;
     const int output_height_idx = output_batch_height_block_idx % output_height;

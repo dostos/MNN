@@ -12,7 +12,7 @@ void conv_2d_1x1_mali(GLOBAL_SIZE_2_DIMS(0) __private const int out_w_blocks, __
     const int out_c_w_idx = get_global_id(0); //c/4 w
     const int out_b_h_idx  = get_global_id(1); //b h
 
-    DEAL_NON_UNIFORM_DIM2(0, out_c_w_idx, out_b_h_idx);
+    SKIP_ID_2_DIMS(0, out_c_w_idx, out_b_h_idx);
 
     const int out_c_idx = out_c_w_idx / out_w_blocks;
     const int out_w_idx = out_c_w_idx % out_w_blocks;
@@ -127,7 +127,7 @@ __kernel void conv_2d_1x1_local(GLOBAL_SIZE_3_DIMS(0) __read_only image2d_t inpu
     const int out_w_idx = get_global_id(1); //w
     const int out_b_h_idx  = get_global_id(2); //b h
 
-    DEAL_NON_UNIFORM_DIM3(0, out_c_idx, out_w_idx, out_b_h_idx);
+    SKIP_ID_3_DIMS(0, out_c_idx, out_w_idx, out_b_h_idx);
 
     const int out_w4_idx = mul24(out_w_idx, 4);
 
@@ -233,7 +233,7 @@ void conv_2d_1x1(GLOBAL_SIZE_2_DIMS(0) __read_only image2d_t input, __read_only 
 
     const int output_channel_width_idx = get_global_id(0);
     const int output_batch_height_idx  = get_global_id(1);
-    DEAL_NON_UNIFORM_DIM2(0, output_channel_width_idx, output_batch_height_idx);
+    SKIP_ID_2_DIMS(0, output_channel_width_idx, output_batch_height_idx);
 
     const int output_channel_block_idx = output_channel_width_idx / output_width_4;
     const int output_width_block_idx   = output_channel_width_idx % output_width_4;
@@ -340,7 +340,7 @@ void conv_2d(GLOBAL_SIZE_2_DIMS(0) __read_only image2d_t input, __read_only imag
 
     const int output_channel_width_idx = get_global_id(0);
     const int output_batch_height_idx  = get_global_id(1);
-    DEAL_NON_UNIFORM_DIM2(0, output_channel_width_idx, output_batch_height_idx);
+    SKIP_ID_2_DIMS(0, output_channel_width_idx, output_batch_height_idx);
 
     const int out_channel_block_idx = output_channel_width_idx / out_width_blocks;
     const int out_height_block_idx   = output_channel_width_idx % out_width_blocks;

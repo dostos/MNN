@@ -130,9 +130,9 @@ const KernelContent*  KernelCompiler::fuse(std::vector<const KernelContent* > ke
                 content.replace(match[0].first, match[0].second, newGlobalId);
             }
 
-            // Update DEAL_NON_UNIFORM_DIM2 to skip useless work elements
+            // Update SKIP_ID_2_DIMS to skip useless work elements
             std::smatch match;
-            while (std::regex_search(content, match, std::regex{"(DEAL_NON_UNIFORM_DIM[\\d+]\\()0"})) {
+            while (std::regex_search(content, match, std::regex{"(SKIP_ID_[\\d+]_DIMS\\()0"})) {
                 content.replace(match[0].first, match[0].second, std::string(match[1]) + std::to_string(i));
             };
         }

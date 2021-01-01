@@ -10,7 +10,7 @@ __kernel void softmax_channel(GLOBAL_SIZE_3_DIMS(0)
     const int width_idx    = get_global_id(1);
     const int batch_height_idx       = get_global_id(2);
 
-    DEAL_NON_UNIFORM_DIM3(0, channel_block_idx, width_idx, batch_height_idx);
+    SKIP_ID_3_DIMS(0, channel_block_idx, width_idx, batch_height_idx);
 
     const int width     = output_width;
 

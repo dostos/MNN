@@ -7,7 +7,7 @@ __kernel void roi_pooling(GLOBAL_SIZE_3_DIMS(0) __read_only image2d_t input, __r
     const int out_width_idx   = get_global_id(1);
     const int out_hb_idx      = get_global_id(2);
 
-    DEAL_NON_UNIFORM_DIM3(0, out_channel_idx, out_width_idx, out_hb_idx);
+    SKIP_ID_3_DIMS(0, out_channel_idx, out_width_idx, out_hb_idx);
     const int out_width = global_size_dim1;
 
     const int roi_batch_idx  = out_hb_idx / out_height * roi_height;

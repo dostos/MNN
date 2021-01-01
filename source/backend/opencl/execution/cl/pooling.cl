@@ -9,7 +9,7 @@ __kernel void pooling(GLOBAL_SIZE_2_DIMS(0) __read_only image2d_t input,
     const int output_channel_width_idx = get_global_id(0);
     const int output_batch_height_idx = get_global_id(1);
 
-    DEAL_NON_UNIFORM_DIM2(0, output_channel_width_idx, output_batch_height_idx);
+    SKIP_ID_2_DIMS(0, output_channel_width_idx, output_batch_height_idx);
  
     const int output_channel_idx      = output_channel_width_idx / output_width;
     const int output_width_idx        = output_channel_width_idx - mul24(output_channel_idx, output_width);

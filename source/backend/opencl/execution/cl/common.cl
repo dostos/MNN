@@ -20,12 +20,12 @@
     out##i = mad(in_sm##i[local_idx].z, weights2, out##i); \
     out##i = mad(in_sm##i[local_idx].w, weights3, out##i);
 
-#define DEAL_NON_UNIFORM_DIM2(i, input1, input2)                       \
+#define SKIP_ID_2_DIMS(i, input1, input2)                       \
     if (input1 >= global_size_dim0##i || input2 >= global_size_dim1##i) { \
         return;                                                     \
     }
 
-#define DEAL_NON_UNIFORM_DIM3(i, input1, input2, input3)                                             \
+#define SKIP_ID_3_DIMS(i, input1, input2, input3)                                             \
     if (input1 >= global_size_dim0##i || input2 >= global_size_dim1##i || input3 >= global_size_dim2##i) { \
         return;                                                                                   \
     }
