@@ -418,9 +418,15 @@ uint64_t OpenCLRuntime::getMaxWorkGroupSize(const cl::Kernel &kernel) {
     return maxWorkGroupSize;
 }
 
-uint64_t OpenCLRuntime::GetKernelWaveSize(const cl::Kernel &kernel) {
+uint64_t OpenCLRuntime::getKernelWaveSize(const cl::Kernel &kernel) {
     uint64_t kernelWaveSize = 0;
     MNN_ASSERT(0 == kernel.getWorkGroupInfo(*mFirstGPUDevicePtr, CL_KERNEL_WAVE_SIZE_QCOM, &kernelWaveSize));
+    return kernelWaveSize;
+}
+
+uint64_t OpenCLRuntime::getKernelPreferredWorkGroupSize(const cl::Kernel &kernel) {
+    uint64_t kernelWaveSize = 0;
+    MNN_ASSERT(0 == kernel.getWorkGroupInfo(*mFirstGPUDevicePtr, CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE , &kernelWaveSize));
     return kernelWaveSize;
 }
 

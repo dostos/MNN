@@ -57,7 +57,8 @@ public:
     uint32_t deviceComputeUnits() const;
     uint32_t maxFreq() const;
     uint64_t getMaxWorkGroupSize(const ::cl::Kernel &kernel);
-    uint64_t GetKernelWaveSize(const cl::Kernel &kernel);
+    uint64_t getKernelWaveSize(const cl::Kernel &kernel);
+    uint64_t getKernelPreferredWorkGroupSize(const cl::Kernel &kernel);
     //uint64_t getMaxLocalMem() const;
     GpuType getGpuType();
     uint64_t maxAllocSize() const;

@@ -58,9 +58,9 @@ ErrorCode ReductionExecution::generateReductionGWSLWS(const std::vector<uint32_t
     if (runtime->getGpuType() == ADRENO) {
         uint32_t waveSize;
         if (mAxis.size() == 1) {
-            waveSize = static_cast<uint32_t>(runtime->GetKernelWaveSize(mReduct1DKernel));
+            waveSize = static_cast<uint32_t>(runtime->getKernelWaveSize(mReduct1DKernel));
         } else {
-            waveSize = static_cast<uint32_t>(runtime->GetKernelWaveSize(mReduct2DKernel));
+            waveSize = static_cast<uint32_t>(runtime->getKernelWaveSize(mReduct2DKernel));
         }
         mGlobalWorkSize = {4, (waveSize / 4), paramArray[0] * paramArray[2]};
     } else {
