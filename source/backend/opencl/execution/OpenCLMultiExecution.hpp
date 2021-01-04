@@ -19,6 +19,8 @@ public:
     virtual ErrorCode onExecuteCallback(const TensorCallBackWithInfo &enterCallback, const TensorCallBackWithInfo &exitCallback) override;
 
 private:
+    std::vector<uint32_t> tuneLocalWS(const std::vector<uint32_t> &gws, const uint32_t maxWorkGroupSize);
+
     uint32_t mArgIdx = 0;
     std::vector<uint32_t> mGlobalWorkSize = {0, 0};
     std::vector<uint32_t> mOffset = {0, 0};
