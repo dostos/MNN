@@ -36,25 +36,26 @@ ErrorCode OpenCLMultiExecution::onPrepare(const MultiExecutionTensors &inputs, c
 
     // Compile kernel
     mKernel = mBackend->getOpenCLRuntime()->buildKernelFromSource(mKernelContent->name, mKernelContent->source, buildOptions);
-    
+
     for (int subPipelineIdx = 0; subPipelineIdx < mExecutions.size(); subPipelineIdx++) {
         for (int executionIdx = 0; executionIdx < mExecutions[subPipelineIdx].size(); executionIdx++) {
             auto fusionableExecution = dynamic_cast<FusionableExecution *>(mExecutions[subPipelineIdx][executionIdx]);
             
             fusionableExecution->onPrepare(inputs[subPipelineIdx][executionIdx], outputs[subPipelineIdx][executionIdx], &mKernel, mArgIdx, mOffset);
             MNN_ASSERT(fusionableExecution->getGws().size() == 2);
-            auto roundGws = OpenCL::roundGws(fusionableExecution->getGws(), fusionableExecution->getLws());
+
+            auto gws = fusionableExecution->getGws();
+            uint32_t roundGws = ROUND_UP(fusionableExecution->getGws()[0], mBackend->getOpenCLRuntime()->getKernelPreferredWorkGroupSize(mKernel));
+            fusionableExecution->setGws({roundGws, gws[1]});
             // Expand gws in fixed dimension
-            mGlobalWorkSize[0] += roundGws[0];
-            mGlobalWorkSize[1] = std::max(roundGws[1], mGlobalWorkSize[1]);
+            mGlobalWorkSize[0] += roundGws;
+            mGlobalWorkSize[1] = std::max(gws[1], mGlobalWorkSize[1]);
 
-            mOffset[0] += roundGws[0];
-
-            for (int i = 0; i < 2; i++) {
-                mLocalWorkSize[i] = std::max(fusionableExecution->getLws()[i], mLocalWorkSize[i]);
-            }
+            mOffset[0] += roundGws;
         }
     }
+
+    mLocalWorkSize = tuneLocalWS(mGlobalWorkSize, mBackend->getOpenCLRuntime()->getMaxWorkGroupSize(mKernel));
     
     return NO_ERROR;    
 }
@@ -77,10 +78,18 @@ ErrorCode OpenCLMultiExecution::onExecute() {
         return NO_EXECUTION;
     } else 
         return NO_ERROR;
-}   
+}
 
 
- ErrorCode OpenCLMultiExecution::onExecuteCallback(const TensorCallBackWithInfo &enterCallback, const TensorCallBackWithInfo &exitCallback) {
+std::vector<uint32_t> OpenCLMultiExecution::getGlobalWorkloadSize() const {
+    return mGlobalWorkSize;
+}
+
+std::vector<uint32_t> OpenCLMultiExecution::getLocalWorkloadSize() const {
+    return mLocalWorkSize;
+}
+
+ErrorCode OpenCLMultiExecution::onExecuteCallback(const TensorCallBackWithInfo &enterCallback, const TensorCallBackWithInfo &exitCallback) {
 
     auto runtime = mBackend->getOpenCLRuntime();
     cl::Event event;
@@ -95,8 +104,58 @@ ErrorCode OpenCLMultiExecution::onExecute() {
         return NO_EXECUTION;
     } else 
         return NO_ERROR;
-    }   
- }
+}
+
+
+std::vector<uint32_t> OpenCLMultiExecution::tuneLocalWS(const std::vector<uint32_t> &gws, const uint32_t maxWorkGroupSize) {
+    MNN_ASSERT(gws.size() == 2);
+    
+    auto& tunedLws = mBackend->getOpenCLRuntime()->tunedLwsMap();
+    //std::pair<std::string, std::vector<uint32_t>> info = std::make_pair(mName + "conv2dGeneralLocalWS", gws);
+    //if (tunedLws.find(info) != tunedLws.end()) {
+    //    //printf("conv2dGeneralLocalWS Found! gws:%d %d lws:%d %d\n", gws[0], gws[1], tunedLws[info][0], tunedLws[info][1]);
+    //    return tunedLws[info];
+    //}
+    
+    std::vector<uint32_t> lws(3, 1);
+    std::vector<uint32_t> lws_prefer(4, 1);
+    int min_cost = INT_MAX;
+    while(lws[1] <= gws[1]*2 || lws[1] <= 4) {
+        lws[0] = 1;
+        while(lws[0] <= gws[0]*2  || lws[0] <= 4) {
+            if(lws[0]*lws[1]*lws[2] <= maxWorkGroupSize) {
+                cl::Event event;
+                std::vector<uint32_t> internalGlobalWS(2, 1);
+                for (size_t i = 0; i < gws.size(); ++i) {
+                    internalGlobalWS[i] = ROUND_UP(gws[i], std::max((uint32_t)1, lws[i]));
+                }
+                cl_int error = mBackend->getOpenCLRuntime()->commandQueue().enqueueNDRangeKernel(
+                                mKernel, cl::NullRange,
+                                cl::NDRange(internalGlobalWS[0], internalGlobalWS[1]),
+                                cl::NDRange(lws[0], lws[1]),
+                                nullptr, &event);
+                MNN_CHECK_CL_SUCCESS(error);
+
+                int cost_time = (int)mBackend->getOpenCLRuntime()->getCostTime(&event);
+                if(cost_time < min_cost) {
+                    min_cost = cost_time;
+                    lws_prefer[0] = lws[0];
+                    lws_prefer[1] = lws[1];
+                }
+            }
+            lws[0] *= 2;
+        }
+        lws[1] *= 2;
+    }
+
+    //if (tunedLws.find(info) == tunedLws.end()) {
+    //    //printf("conv2dGeneralLocalWS %d Insert! gws:%d %d, lws:%d %d\n", (int)tunedLws.size(), gws[0], gws[1], lws_prefer[0], lws_prefer[1]);
+    //    tunedLws.insert(std::make_pair(info, lws_prefer));
+    //}
+    
+    return lws_prefer;
+}
+}
 
 
 class OpenCLMultiExecutionCreator : public MultiExecution::Creator {

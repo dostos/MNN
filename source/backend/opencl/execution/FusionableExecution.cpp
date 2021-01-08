@@ -24,6 +24,10 @@ namespace OpenCL {
     const std::vector<uint32_t> &FusionableExecution::getGws() const {
         return mGlobalWorkSize;
     }
+    
+    void FusionableExecution::setGws(std::vector<uint32_t> gws) {
+        mGlobalWorkSize = gws;
+    }
 
     const std::vector<uint32_t> &FusionableExecution::getLws() const {
         return mLocalWorkSize;

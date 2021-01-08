@@ -21,6 +21,7 @@ public:
     const std::set<std::string> &getBuildOptions() const;
 
     const std::vector<uint32_t> &getGws() const;
+    void setGws(std::vector<uint32_t> gws);
     const std::vector<uint32_t> &getLws() const;
 
 protected:
