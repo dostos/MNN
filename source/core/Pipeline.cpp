@@ -102,7 +102,7 @@ bool Unit::_createExecution(Backend* bn, Backend* cpuBn) {
         mExecution.reset(new WrapExecution(cpuBn, tempExecution));
     }
     if (mExecution->valid() && !mExecution->name().empty()) {
-        mContent->name = mExecution->name();
+        mContent->type = mExecution->name();
     }
     return mExecution->valid();
 }
