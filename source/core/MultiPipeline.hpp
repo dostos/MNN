@@ -13,7 +13,7 @@ class Pipeline;
 class Unit;
 class MultiUnit;
 
-class MultiPipeline
+class MNN_PUBLIC MultiPipeline
 {
 public:
     MultiPipeline(std::vector<Pipeline *> pipelines, Backend *backend);
@@ -21,6 +21,10 @@ public:
     ErrorCode prepare();
     ErrorCode run();
     ErrorCode runWithCallBack(const TensorCallBackWithInfo &enterCallback, const TensorCallBackWithInfo &exitCallback);
+
+    const std::vector<std::shared_ptr<MultiUnit>> &getMultiUnits() const {
+        return mMultiUnits;
+    }
 
 private:
     Backend *mBackend;
@@ -36,6 +40,15 @@ public:
     ErrorCode prepare();
     ErrorCode execute();
     ErrorCode executeCallBack(const TensorCallBackWithInfo &enterCallback, const TensorCallBackWithInfo &exitCallback);
+
+    const std::vector<std::vector<Unit *>> &getUnits() const {
+        return mUnits;
+    }
+
+    const MultiExecution* getMultiExecution() const {
+        return mMultiExecution.get();
+    }
+
 private:
     Backend *mBackend;
     // units that should run parallel 

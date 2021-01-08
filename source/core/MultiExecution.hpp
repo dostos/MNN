@@ -27,6 +27,14 @@ public:
     virtual ErrorCode onExecute() = 0;
     virtual ErrorCode onExecuteCallback(const TensorCallBackWithInfo &enterCallback, const TensorCallBackWithInfo &exitCallback) = 0;
 
+    virtual std::vector<uint32_t> getGlobalWorkloadSize() const {
+        return {0, 0};
+    }
+
+    virtual std::vector<uint32_t> getLocalWorkloadSize() const {
+        return {0, 0};
+    }
+
     class Creator : public NonCopyable {
     public:
         virtual ~Creator() = default;

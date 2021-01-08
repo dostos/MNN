@@ -441,8 +441,102 @@ static std::vector<float> runOpNaiveBatching(std::shared_ptr<Interpreter> net, i
         auto timeEnd = getTimeInUs();
         std::cout << unit->name() + " " + unit->type() + " " + std::to_string(unit->flops()) + " ";
         double fusedTime = ((timeEnd - timeBegin) / 1000.0) / loop;
-        std::cout << " " << referenceTime[unit] * combination << " " << fusedTime << " " << fusedTime / (referenceTime[unit] * combination) << std::endl;
+        std::cout << referenceTime[unit] * combination << " " << fusedTime << " " << fusedTime / (referenceTime[unit] * combination) << std::endl;
 
+    }
+
+    return {};
+}
+
+
+static std::vector<float> runOpFlexBatch(std::vector<std::shared_ptr<Interpreter>> nets, int loop, int warmup = 10, int forward = MNN_FORWARD_CPU, 
+                           int numberThread = 4, int precision = 2) {
+                                
+    MNN::BackendConfig backendConfig;
+    backendConfig.precision = (MNN::BackendConfig::PrecisionMode)precision;
+    backendConfig.power = MNN::BackendConfig::Power_High;
+
+    MNN::Backend::Info info;
+    info.type = static_cast<MNNForwardType>(forward);
+    info.numThread = numberThread;
+    info.user = &backendConfig;
+
+    auto backend = MNN::BackendFactory::create(info);
+
+    MNN::ScheduleConfig config;
+    MNN::MultiSession multiSession;
+    config.backend = backend;
+
+    std::vector<MNN::Session*> sessions;
+    std::vector<MNN::Tensor *> inputs, outputs;
+    std::vector<MNN::Tensor*> givenTensors, expectedTensors;
+    std::set<MNN::SessionId> sessionIds;
+
+    for (int i = 0; i < nets.size(); i++) {
+        MNN::Session *session = nets[i]->createSession(config);
+        sessions.push_back(session);
+        inputs.push_back(nets[i]->getSessionInput(session, NULL));
+        sessionIds.insert(multiSession.addSession(session));
+    }
+
+    std::map<Unit *, double> referenceTime;
+
+    for (auto& session : sessions) {
+        for (auto &pipeline : session->mPipelines) {
+            for (auto & unit: pipeline->mUnits) {
+                for (int i = 0; i < warmup; i++) {
+                    unit->execute();
+                }
+                backend->onWaitFinish();
+                double timeBegin = getTimeInUs();
+                for (int i = 0; i < loop; i++) {
+                    unit->execute();
+                }
+                backend->onWaitFinish();
+                double timeEnd = getTimeInUs();
+                referenceTime[unit.get()] = ((timeEnd - timeBegin)) / 1000.0 / (double)loop;
+            }
+        }
+    }
+
+    multiSession.prepare();
+
+    const MNN::MultiSession::MultiSessionCache* multiSessionCache = multiSession.getMultiSessionCache(sessionIds);
+
+    for (auto & multiPipeline : multiSessionCache->getMultiPipelines()) {
+        for (auto & multiUnits : multiPipeline->getMultiUnits()) {
+            for (int i = 0; i < warmup; i++) {
+                multiUnits->execute();
+            }
+            backend->onWaitFinish();
+            double timeBegin = getTimeInUs();
+            for (int i = 0; i < loop; i++) {
+                multiUnits->execute();
+            }
+            backend->onWaitFinish();
+            auto timeEnd = getTimeInUs();
+            double reference = 0;
+            for (auto &units : multiUnits->getUnits())
+            {
+                for (auto & unit : units) {
+                    std::cout << unit->name() + " " + unit->type() + " " + std::to_string(unit->flops()) + " ";
+                    reference += referenceTime[unit];
+                }
+            }
+            
+            double fusedTime = ((timeEnd - timeBegin) / 1000.0) / loop;
+            
+            std::cout << reference << " " << fusedTime << " " << fusedTime / reference;
+            if (multiUnits->getMultiExecution()) { 
+                std::cout << " " <<
+                multiUnits->getMultiExecution()->getGlobalWorkloadSize()[0] << " " << 
+                multiUnits->getMultiExecution()->getGlobalWorkloadSize()[1] << " " <<
+                multiUnits->getMultiExecution()->getGlobalWorkloadSize()[0] * multiUnits->getMultiExecution()->getGlobalWorkloadSize()[1] << 
+                std::endl;
+            } else {
+                std::cout << std::endl;
+            }
+        }
     }
 
     return {};
@@ -487,8 +581,8 @@ int main(int argc, const char* argv[]) {
 
     std::cout << "--------> Benchmarking... loop = " << argv[3] << ", warmup = " << warmup << std::endl;
 
-    std::vector<std::shared_ptr<MNN::Interpreter>> nets;
-    if (mode == 0) {
+    if (mode == 0) {   
+        std::vector<std::shared_ptr<MNN::Interpreter>> nets;
         for (int i = 0; i < 2; i++) {
             auto x = _Input({1, 3, 224, 224}, NC4HW4);
             x = _Conv(1, 0, x, {3, 24}, {3, 3}, SAME, {2, 2}, {1, 1}, 1);
@@ -504,6 +598,7 @@ int main(int argc, const char* argv[]) {
         }
         runNet(nets, forward, numberThread, precision);
     } else if (mode == 1) {
+        std::vector<std::shared_ptr<MNN::Interpreter>> nets;
         std::vector<Model> models = findModelFiles(argv[1]);
         for(auto& model : models) {
             nets.push_back(std::shared_ptr<MNN::Interpreter>(createFromModel(model)));
@@ -514,8 +609,15 @@ int main(int argc, const char* argv[]) {
         for(auto& model : models) {
             runOpNaiveBatching(std::shared_ptr<MNN::Interpreter>(createFromModel(model)), loop, warmup, forward, numberThread, precision, combination);
         }
-        
-
+    } else if (mode == 3) {
+        std::vector<Model> models = findModelFiles(argv[1]);
+        for(auto& model : models) {
+            std::vector<std::shared_ptr<MNN::Interpreter>> nets;
+            for (int i = 0; i < combination; i++) {
+                nets.push_back(std::shared_ptr<MNN::Interpreter>(createFromModel(model)));
+            }
+            runOpFlexBatch(nets, loop, warmup, forward, numberThread, precision);
+        }
     }
 
 

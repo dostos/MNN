@@ -31,11 +31,6 @@ public:
     ErrorCode runWithCallBack(const std::set<SessionId> &requests, const TensorCallBackWithInfo& enterCallback, const TensorCallBackWithInfo& exitCallback,
                               bool sync = false);
 
-private:
-    static SessionId sNextSessionId;
-    Backend *mBackend = nullptr;
-    std::map<SessionId, Session *> mSessions;
-
     // Cache for multi-session execution
     class MultiSessionCache
     {
@@ -46,11 +41,30 @@ private:
         ErrorCode run();
         ErrorCode runWithCallBack(const TensorCallBackWithInfo& enterCallback, const TensorCallBackWithInfo& exitCallback);
 
+        const std::vector<std::shared_ptr<MultiPipeline>>& getMultiPipelines() const {
+            return mMultiPipelines;
+        }
+
     private:
         // sessions that should run parallel
         const std::vector<Session *> mSessions;
         std::vector<std::shared_ptr<MultiPipeline>> mMultiPipelines;
     };
+
+    const MultiSessionCache* getMultiSessionCache(std::set<SessionId> sessionIds) {
+        if (mMultiSessionCaches.find(sessionIds) != mMultiSessionCaches.end()) {
+            return mMultiSessionCaches[sessionIds].get();
+        }
+        else
+        {
+            return nullptr;
+        }
+    }
+
+private:
+    static SessionId sNextSessionId;
+    Backend *mBackend = nullptr;
+    std::map<SessionId, Session *> mSessions;
 
     std::map<std::set<SessionId>, std::shared_ptr<MultiSessionCache>> mMultiSessionCaches;
 };
