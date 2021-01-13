@@ -23,26 +23,40 @@ ErrorCode MultiPipeline::prepare() {
         // Use unit's flops to rebuild units
         mMultiUnits.clear();
 
-        int unitIndex = 0;
-        std::vector<std::vector<Unit *>> multiUnits;
-        do {
-            multiUnits.clear();
-            
+        std::vector<std::vector<Unit *>> fusableMultiUnits, unfusableMultiUnits;
+        std::vector<uint32_t> unitIndexes(mPipelines.size());
+        do
+        {
+            unfusableMultiUnits.clear();
+            fusableMultiUnits.clear();
+
             for(int pipelineIndex = 0 ; pipelineIndex < mPipelines.size(); pipelineIndex++) {
-                std::vector<Unit*> units;
-                if (unitIndex < mPipelines[pipelineIndex]->mUnits.size()) {
-                    units.push_back(mPipelines[pipelineIndex]->mUnits[unitIndex].get());
+                std::vector<Unit*> fusableUnits, unfusableUnits;
+                while (unitIndexes[pipelineIndex] < mPipelines[pipelineIndex]->mUnits.size()) {
+                    auto unit = mPipelines[pipelineIndex]->mUnits[unitIndexes[pipelineIndex]++];
+                    if (unit->mExecution->fusionable() &&
+                        unit->flops() < 10.f) {
+                        fusableUnits.push_back(unit.get());
+                        break;
+                    } else {
+                        unfusableUnits.push_back(unit.get());
+                    }
                 }
                 
-                if (!units.empty())
-                    multiUnits.push_back(units);
+                if (!fusableUnits.empty())
+                    fusableMultiUnits.push_back(fusableUnits);
+                if (!unfusableUnits.empty())
+                    unfusableMultiUnits.push_back(unfusableUnits);
             }
 
-            if (!multiUnits.empty()) {
-                mMultiUnits.push_back(std::make_shared<MultiUnit>(multiUnits, mBackend));
+            if (!unfusableMultiUnits.empty()) {
+                mMultiUnits.push_back(std::make_shared<MultiUnit>(unfusableMultiUnits, mBackend));
             }
-            unitIndex++;
-        } while(!multiUnits.empty());
+            
+            if (!fusableMultiUnits.empty()) {
+                mMultiUnits.push_back(std::make_shared<MultiUnit>(fusableMultiUnits, mBackend));
+            }
+        } while (!unfusableMultiUnits.empty() || ! fusableMultiUnits.empty());
     }
 
     // Prepare multi unit
