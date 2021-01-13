@@ -551,9 +551,10 @@ int main(int argc, const char *argv[]) {
     int precision = 2;
     int batch = 1;
     int fuseCount = 1;
-    bool profile = true;
+    int combination = 2;
+    bool profile = false;
     if (argc <= 2) {
-        std::cout << "Usage: " << argv[0] << " models_folder [mode] [loop_count] [warmup] [forwardtype] [numberThread] [precision] [batch] [fuseCount] [profile]" << std::endl;
+        std::cout << "Usage: " << argv[0] << " models_folder [mode] [loop_count] [warmup] [forwardtype] [numberThread] [precision] [batch] [fuseCount] [combination] [profile]" << std::endl;
         return 1;
     }
     if (argc >= 3) {
@@ -581,7 +582,10 @@ int main(int argc, const char *argv[]) {
         fuseCount = atoi(argv[9]);  
     }
     if (argc >= 11) {
-        profile = atoi(argv[10]) > 0;  
+        combination = atoi(argv[10]);  
+    }
+    if (argc >= 12) {
+        profile = atoi(argv[11]) > 0;  
     }
     std::cout << "Forward type: **" << forwardType(forward) << "** thread=" << numberThread << "** precision=" << precision << std::endl;
     std::vector<Model> models = findModelFiles(argv[1]);
@@ -615,13 +619,25 @@ int main(int argc, const char *argv[]) {
         }
         std::cout << std::endl;
     }
-    else
-    {
-        for (auto& model : models) {
-            std::vector<Model> tempModels{model};
-            std::vector<float> costs = doBench(tempModels, loop, warmup, forward, false, numberThread, precision, batch, fuseCount, profile);
-            displayStats(model.name, costs);
+    else{
+        std::vector<int> indices(models.size(), 0);
+        for (int i = 0; i < combination; i++) {
+            indices[i] = 1;
         }
+
+        do {
+            std::vector<Model> tempModels;
+            std::string name;
+            for (int i = 0; i < indices.size(); i++) {
+                if (indices[i]) {
+                    tempModels.push_back(models[i]);
+                    name += models[i].name + " ";
+                }
+            }
+            std::vector<float> costs = doBench(tempModels, loop, warmup, forward, false, numberThread, precision, batch, fuseCount, profile);
+            displayStats(name, costs);
+
+        } while (std::next_permutation(indices.begin(), indices.end()));
     }
     return 0;
 }
